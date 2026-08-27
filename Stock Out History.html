@@ -1,0 +1,203 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+
+    <meta charset="UTF-8">
+
+    <title>Stock Out History</title>
+
+    <link rel="stylesheet" href="Stock.css">
+
+</head>
+
+<body>
+
+<h1>📤 Stock Out History</h1>
+
+
+<!-- ================================
+     BACK TO DASHBOARD
+================================ -->
+
+<button
+    type="button"
+    onclick="window.location.href='Dashboard.html'"
+>
+    🏠 Back to Dashboard
+</button>
+
+
+<br><br>
+
+
+<!-- ================================
+     SEARCH & FILTER
+================================ -->
+
+<div>
+
+    <label for="itemSearch">
+        🔎 Item Name / Code:
+    </label>
+
+    <input
+        type="text"
+        id="itemSearch"
+        placeholder="Search Item Name or Code"
+        oninput="filterHistory()"
+    >
+
+
+    <br><br>
+
+
+    <label for="monthFilter">
+        Month:
+    </label>
+
+    <select
+        id="monthFilter"
+        onchange="filterHistory()"
+    >
+
+        <option value="">All Months</option>
+
+        <option value="01">January</option>
+        <option value="02">February</option>
+        <option value="03">March</option>
+        <option value="04">April</option>
+        <option value="05">May</option>
+        <option value="06">June</option>
+        <option value="07">July</option>
+        <option value="08">August</option>
+        <option value="09">September</option>
+        <option value="10">October</option>
+        <option value="11">November</option>
+        <option value="12">December</option>
+
+    </select>
+
+
+    <br><br>
+
+
+    <label for="yearFilter">
+        Year:
+    </label>
+
+    <select
+        id="yearFilter"
+        onchange="filterHistory()"
+    >
+
+        <option value="">All Years</option>
+
+    </select>
+
+
+    <br><br>
+
+
+    <label for="fromDate">
+        From Date:
+    </label>
+
+    <input
+        type="date"
+        id="fromDate"
+        onchange="filterHistory()"
+    >
+
+
+    <br><br>
+
+
+    <label for="toDate">
+        To Date:
+    </label>
+
+    <input
+        type="date"
+        id="toDate"
+        onchange="filterHistory()"
+    >
+
+
+    <br><br>
+
+
+    <button
+        type="button"
+        onclick="clearFilters()"
+    >
+        🔄 Clear Filters
+    </button>
+
+</div>
+
+
+<br>
+
+
+<!-- ================================
+     SELECTED ITEM INFO
+================================ -->
+
+<div id="selectedItemInfo">
+
+    Stock Out History — All Items
+
+</div>
+
+
+<br>
+
+
+<!-- ================================
+     HISTORY TABLE
+================================ -->
+
+<table border="1">
+
+    <thead>
+
+        <tr>
+
+            <th>Date</th>
+
+            <th>Time</th>
+
+            <th>Item Code</th>
+
+            <th>Item Name</th>
+
+            <th>Unit</th>
+
+            <th>Source</th>
+
+            <th>Supplier</th>
+
+            <th>Location</th>
+
+            <th>Department</th>
+
+            <th>Quantity</th>
+
+            <th>Action</th>
+
+        </tr>
+
+    </thead>
+
+
+    <tbody id="historyBody"></tbody>
+
+</table>
+
+
+<script src="Stock Out History.js"></script>
+
+</body>
+
+</html>
