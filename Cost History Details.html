@@ -1,0 +1,304 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+
+    <title>Cost History Details</title>
+
+    <style>
+
+        body {
+            margin: 0;
+            padding: 25px;
+            font-family: Arial, sans-serif;
+            background-color: #f2f5f9;
+        }
+
+        .company-name {
+            text-align: center;
+            font-size: 20px;
+            font-weight: bold;
+            color: #12355b;
+        }
+
+        h1 {
+            text-align: center;
+            color: #12355b;
+        }
+
+        #historyTitle {
+            text-align: center;
+            font-size: 18px;
+            font-weight: bold;
+            margin-bottom: 20px;
+        }
+
+        .controls {
+            background-color: white;
+            padding: 15px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+        }
+
+        button {
+            padding: 9px 16px;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            background-color: #12355b;
+            color: white;
+            margin: 5px;
+        }
+
+        button:hover {
+            opacity: 0.9;
+        }
+
+        .table-container {
+            width: 100%;
+            overflow-x: auto;
+            background-color: white;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            min-width: 1500px;
+        }
+
+        th {
+            background-color: #12355b;
+            color: white;
+            padding: 10px;
+            border: 1px solid #ddd;
+            white-space: nowrap;
+        }
+
+        td {
+            padding: 9px;
+            border: 1px solid #ddd;
+            white-space: nowrap;
+        }
+
+        tr:hover {
+            background-color: #f2f5f9;
+        }
+
+        .total-row {
+            font-weight: bold;
+            background-color: #e8eef5;
+        }
+
+        .empty-message {
+            text-align: center;
+            padding: 25px;
+            font-weight: bold;
+        }
+
+        @media print {
+
+            body {
+                background-color: white;
+                padding: 0;
+            }
+
+            .no-print {
+                display: none !important;
+            }
+
+            .table-container {
+                overflow: visible;
+            }
+
+            table {
+                min-width: 0;
+                font-size: 8px;
+            }
+
+            th,
+            td {
+                padding: 5px;
+            }
+
+            @page {
+                size: A4 landscape;
+                margin: 8mm;
+            }
+
+        }
+
+    </style>
+
+</head>
+
+
+<body>
+
+
+<!-- =====================================
+     COMPANY
+===================================== -->
+
+<div class="company-name">
+
+    MECAS ENGINEERING PVT LIMITED SUNDAR
+
+</div>
+
+
+<h1>
+
+    COST HISTORY DETAILS
+
+</h1>
+
+
+<div id="historyTitle">
+
+    Loading...
+
+</div>
+
+
+<!-- =====================================
+     BUTTONS
+===================================== -->
+
+<div class="controls no-print">
+<div>
+    <button
+        type="button"
+        onclick="backToCostHistory()"
+    >
+
+        ⬅ Back to Cost History
+
+    </button>
+    <button
+    type="button"
+    onclick="window.location.href='Dashboard.html'"
+>
+    🏠 Back to Dashboard
+</button>
+</div>
+
+
+    <button
+        type="button"
+        onclick="printCostDetails()"
+    >
+
+        🖨️ Print
+
+    </button>
+
+</div>
+
+
+<!-- =====================================
+     TABLE
+===================================== -->
+
+<div class="table-container">
+
+
+<table>
+
+    <thead>
+
+        <tr>
+
+            <th>
+                Category
+            </th>
+
+            <th>
+                ID #
+            </th>
+
+            <th>
+                Item Description
+            </th>
+
+            <th>
+                Specification
+            </th>
+
+            <th>
+                Source / Company
+            </th>
+
+            <th>
+                Rate
+            </th>
+
+            <th>
+                Available Quantity
+            </th>
+
+            <th>
+                Available Qty × Rate
+            </th>
+
+            <th>
+                Approved Demand Qty
+            </th>
+
+            <th>
+                Approved Demand Cost
+            </th>
+
+        </tr>
+
+    </thead>
+
+
+    <tbody id="detailsBody">
+
+    </tbody>
+
+
+    <tfoot>
+
+        <tr class="total-row">
+
+            <td colspan="7">
+
+                TOTAL
+
+            </td>
+
+            <td id="totalStockCost">
+
+                Rs. 0
+
+            </td>
+
+            <td id="totalDemandQty">
+
+                0
+
+            </td>
+
+            <td id="totalDemandCost">
+
+                Rs. 0
+
+            </td>
+
+        </tr>
+
+    </tfoot>
+
+</table>
+
+
+</div>
+
+
+<script src="Cost History Details .js"></script>
+
+
+</body>
+
+</html>
