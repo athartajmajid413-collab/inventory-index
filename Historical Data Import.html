@@ -1,0 +1,633 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+
+    <meta charset="UTF-8">
+
+    <meta
+        name="viewport"
+        content="width=device-width, initial-scale=1.0"
+    >
+
+    <title>Historical Data Import</title>
+
+
+    <style>
+
+        *{
+            box-sizing:border-box;
+        }
+
+
+        body{
+            margin:0;
+            font-family:Arial,sans-serif;
+            background:#f2f5f9;
+            color:#222;
+        }
+
+
+        .container{
+            max-width:1100px;
+            margin:30px auto;
+            padding:20px;
+        }
+
+
+        .header,
+        .card{
+            background:white;
+            border-radius:15px;
+            padding:22px;
+            box-shadow:0 5px 15px rgba(0,0,0,.10);
+            margin-bottom:20px;
+        }
+
+
+        h1,
+        h2{
+            color:#12355b;
+        }
+
+
+        .row{
+            display:flex;
+            gap:12px;
+            flex-wrap:wrap;
+            align-items:center;
+        }
+
+
+        input[type=file]{
+            padding:12px;
+            border:1px solid #ccc;
+            border-radius:8px;
+            background:white;
+            flex:1;
+            min-width:280px;
+        }
+
+
+        button{
+            padding:11px 16px;
+            border:0;
+            border-radius:8px;
+            cursor:pointer;
+            font-weight:bold;
+        }
+
+
+        button:hover{
+            opacity:.9;
+        }
+
+
+        .blue{
+            background:#1677ff;
+            color:white;
+        }
+
+
+        .green{
+            background:#16a085;
+            color:white;
+        }
+
+
+        .gray{
+            background:#777;
+            color:white;
+        }
+
+
+        .orange{
+            background:#e67e22;
+            color:white;
+        }
+
+
+        .info{
+            padding:14px;
+            background:#eef5ff;
+            border-radius:8px;
+            line-height:1.7;
+        }
+
+
+        .success{
+            padding:14px;
+            background:#e8f8ef;
+            border-radius:8px;
+            color:#176b3a;
+            line-height:1.7;
+        }
+
+
+        .warning{
+            padding:14px;
+            background:#fff4df;
+            border-radius:8px;
+            color:#7a5100;
+            line-height:1.7;
+        }
+
+
+        .error{
+            padding:14px;
+            background:#ffeaea;
+            border-radius:8px;
+            color:#9b1c1c;
+            line-height:1.7;
+        }
+
+
+        .stats{
+            display:grid;
+            grid-template-columns:
+                repeat(4,1fr);
+            gap:15px;
+            margin-bottom:20px;
+        }
+
+
+        .stat{
+            padding:18px;
+            border-radius:12px;
+            background:#12355b;
+            color:white;
+        }
+
+
+        .stat b{
+            font-size:28px;
+            display:block;
+            margin-top:6px;
+        }
+
+
+        .balance-card{
+            background:#16a085;
+        }
+
+
+        .log-card{
+            background:#111;
+            color:#eee;
+        }
+
+
+        #log{
+            max-height:300px;
+            overflow:auto;
+            background:#111;
+            color:#eee;
+            padding:12px;
+            border-radius:8px;
+            font-family:monospace;
+            font-size:13px;
+            line-height:1.7;
+        }
+
+
+        .status{
+            margin-top:15px;
+            padding:12px;
+            border-radius:8px;
+            font-weight:bold;
+        }
+
+
+        .status-ok{
+            background:#e8f8ef;
+            color:#176b3a;
+        }
+
+
+        .status-error{
+            background:#ffeaea;
+            color:#9b1c1c;
+        }
+
+
+        .status-wait{
+            background:#fff4df;
+            color:#7a5100;
+        }
+
+
+        @media(max-width:800px){
+
+            .stats{
+                grid-template-columns:
+                    repeat(2,1fr);
+            }
+
+        }
+
+
+        @media(max-width:500px){
+
+            .stats{
+                grid-template-columns:1fr;
+            }
+
+
+            .container{
+                padding:10px;
+            }
+
+
+            .header,
+            .card{
+                padding:16px;
+            }
+
+        }
+
+    </style>
+
+</head>
+
+
+<body>
+
+
+<div class="container">
+
+
+    <!-- =====================================
+         HEADER
+    ====================================== -->
+
+    <div class="header">
+
+        <button
+            class="gray"
+            onclick="goDashboard()"
+        >
+            🏠 Back to Dashboard
+        </button>
+
+
+        <h1>
+            📥 Historical Data Import
+        </h1>
+
+
+        <p>
+            Excel se Master Items, Stock In,
+            Stock Out aur Current Balance ka
+            historical data import karein.
+        </p>
+
+    </div>
+
+
+
+    <!-- =====================================
+         EXCEL SELECT
+    ====================================== -->
+
+    <div class="card">
+
+        <h2>
+            1. Excel File Select Karein
+        </h2>
+
+
+        <div class="row">
+
+            <input
+                type="file"
+                id="excelFile"
+                accept=".xlsx,.xls"
+            >
+
+
+            <button
+                class="blue"
+                onclick="previewExcel()"
+            >
+                🔎 Check Excel
+            </button>
+
+        </div>
+
+
+        <div
+            id="libraryStatus"
+            class="status status-wait"
+        >
+            Excel library check ho rahi hai...
+        </div>
+
+
+        <div
+            id="fileInfo"
+            class="info"
+            style="margin-top:15px"
+        >
+            Abhi Excel file select nahi ki gayi.
+        </div>
+
+    </div>
+
+
+
+    <!-- =====================================
+         IMPORT
+    ====================================== -->
+
+    <div class="card">
+
+        <h2>
+            2. Import Historical Data
+        </h2>
+
+
+        <div class="warning">
+
+            ⚠️ Import ke baad data aapke existing
+            <b>items</b> aur
+            <b>history</b>
+            LocalStorage mein save hoga.
+
+            <br><br>
+
+            Existing items duplicate nahi honge.
+
+            <br>
+
+            Duplicate history records bhi
+            dobara save nahi honge.
+
+        </div>
+
+
+        <br>
+
+
+        <button
+            class="green"
+            onclick="importHistoricalData()"
+        >
+            ✅ Import Historical Data
+        </button>
+
+
+        <button
+            class="gray"
+            onclick="clearImportLog()"
+        >
+            🧹 Clear Log
+        </button>
+
+    </div>
+
+
+
+    <!-- =====================================
+         STATISTICS
+    ====================================== -->
+
+    <div class="stats">
+
+
+        <div class="stat">
+
+            New Items
+
+            <b id="newItems">
+                0
+            </b>
+
+        </div>
+
+
+        <div class="stat">
+
+            Stock In
+
+            <b id="stockInCount">
+                0
+            </b>
+
+        </div>
+
+
+        <div class="stat">
+
+            Stock Out
+
+            <b id="stockOutCount">
+                0
+            </b>
+
+        </div>
+
+
+        <div class="stat">
+
+            Skipped
+
+            <b id="skippedCount">
+                0
+            </b>
+
+        </div>
+
+    </div>
+
+
+
+    <!-- =====================================
+         BALANCE INFORMATION
+    ====================================== -->
+
+    <div class="card">
+
+        <h2>
+            📊 Stock Balance
+        </h2>
+
+
+        <div class="success">
+
+            Import complete hone ke baad har item
+            ke liye calculation hogi:
+
+            <br><br>
+
+            <b>
+                Opening Stock
+                +
+                Stock In
+                −
+                Stock Out
+                =
+                Current Balance
+            </b>
+
+            <br><br>
+
+            Current Balance
+            <b>
+                items
+            </b>
+            LocalStorage mein save hoga.
+
+        </div>
+
+    </div>
+
+
+
+    <!-- =====================================
+         LOG
+    ====================================== -->
+
+    <div class="card">
+
+        <h2>
+            Import Log
+        </h2>
+
+
+        <div id="log">
+            Ready...
+        </div>
+
+    </div>
+
+
+</div>
+
+
+
+<!-- =========================================
+     XLSX LIBRARY
+========================================= -->
+
+<script
+    src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"
+    onload="xlsxLoaded()"
+    onerror="xlsxLoadError()"
+></script>
+
+
+
+<!-- =========================================
+     HISTORICAL DATA JS
+========================================= -->
+
+<script
+    src="Historical Data Import.js"
+></script>
+
+
+
+<script>
+
+
+// ==========================================
+// XLSX LIBRARY STATUS
+// ==========================================
+
+function xlsxLoaded(){
+
+    let status =
+        document.getElementById(
+            "libraryStatus"
+        );
+
+
+    if(
+        typeof XLSX !== "undefined"
+    ){
+
+        status.className =
+            "status status-ok";
+
+
+        status.innerHTML =
+            "✔ Excel library successfully load ho gayi hai.";
+
+    }
+    else{
+
+        xlsxLoadError();
+    }
+
+}
+
+
+
+// ==========================================
+// XLSX ERROR
+// ==========================================
+
+function xlsxLoadError(){
+
+    let status =
+        document.getElementById(
+            "libraryStatus"
+        );
+
+
+    status.className =
+        "status status-error";
+
+
+    status.innerHTML =
+        "❌ Excel library load nahi hui. " +
+        "Internet connection check karein.";
+}
+
+
+
+// ==========================================
+// DASHBOARD
+// ==========================================
+
+function goDashboard(){
+
+    window.location.href =
+        "Dashboard.html";
+}
+
+
+
+// ==========================================
+// PAGE LOAD CHECK
+// ==========================================
+
+window.addEventListener(
+    "load",
+    function(){
+
+        setTimeout(
+            function(){
+
+                if(
+                    typeof XLSX === "undefined"
+                ){
+
+                    xlsxLoadError();
+
+                }
+
+            },
+            1500
+        );
+
+    }
+);
+
+
+</script>
+
+
+</body>
+
+</html>

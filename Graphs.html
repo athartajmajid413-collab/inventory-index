@@ -1,0 +1,683 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+
+    <meta charset="UTF-8">
+
+    <title>Store Graphs</title>
+
+    <style>
+
+        *{
+            box-sizing:border-box;
+        }
+
+        body{
+            margin:0;
+            font-family:Arial,sans-serif;
+            background:#f2f5f9;
+        }
+
+        .main{
+            padding:25px;
+        }
+
+        .back-btn{
+            padding:10px 18px;
+            border:none;
+            border-radius:8px;
+            background:#12355b;
+            color:white;
+            font-size:15px;
+            cursor:pointer;
+            margin-bottom:20px;
+        }
+
+        .top-header{
+            background:white;
+            padding:20px 25px;
+            border-radius:12px;
+            margin-bottom:25px;
+
+            display:flex;
+            justify-content:space-between;
+            align-items:center;
+
+            box-shadow:0 3px 10px rgba(0,0,0,.10);
+        }
+
+        .top-header h1{
+            margin:0;
+            color:#12355b;
+        }
+
+        .top-header p{
+            margin:5px 0 0;
+            color:#777;
+        }
+
+        .user-box{
+            background:#e8f1ff;
+            color:#12355b;
+            padding:10px 18px;
+            border-radius:8px;
+            font-weight:bold;
+        }
+
+        .page-title{
+            color:#12355b;
+            margin-bottom:20px;
+        }
+
+        /* =========================
+           FILTER
+        ========================= */
+
+        .filter-box{
+            background:white;
+            padding:22px;
+            border-radius:15px;
+            margin-bottom:25px;
+            box-shadow:0 5px 15px rgba(0,0,0,.10);
+        }
+
+        .filter-box h2{
+            margin-top:0;
+            color:#12355b;
+        }
+
+        .filter-row{
+            display:flex;
+            flex-wrap:wrap;
+            gap:12px;
+            align-items:center;
+        }
+
+        .filter-row label{
+            font-weight:bold;
+            color:#333;
+        }
+
+        .filter-row select{
+            padding:11px;
+            border:1px solid #ccc;
+            border-radius:7px;
+            min-width:150px;
+            font-size:15px;
+        }
+
+        .update-btn{
+            padding:11px 18px;
+            border:none;
+            border-radius:7px;
+            background:#1677ff;
+            color:white;
+            font-weight:bold;
+            cursor:pointer;
+        }
+
+        .update-btn:hover{
+            opacity:.9;
+        }
+
+        /* =========================
+           ITEM INFO
+        ========================= */
+
+        .item-info{
+            background:#e8f1ff;
+            color:#12355b;
+            padding:15px;
+            border-radius:10px;
+            margin-top:15px;
+            font-weight:bold;
+        }
+
+        /* =========================
+           GRAPH CARDS
+        ========================= */
+
+        .graph-section{
+            margin-bottom:30px;
+        }
+
+        .graph-card{
+            background:white;
+            padding:25px;
+            border-radius:18px;
+            box-shadow:0 5px 18px rgba(0,0,0,.12);
+            width:100%;
+        }
+
+        .graph-card h2{
+            margin-top:0;
+            color:#12355b;
+        }
+
+        .graph-description{
+            color:#666;
+            margin-bottom:15px;
+        }
+
+        .chart-box{
+            width:100%;
+            height:480px;
+            position:relative;
+        }
+
+        /* =========================
+           TABLE
+        ========================= */
+
+        .table-box{
+            margin-top:25px;
+            overflow-x:auto;
+        }
+
+        .data-table{
+            width:100%;
+            border-collapse:collapse;
+            min-width:750px;
+        }
+
+        .data-table th{
+            background:#12355b;
+            color:white;
+            padding:12px;
+            text-align:left;
+        }
+
+        .data-table td{
+            padding:11px;
+            border-bottom:1px solid #ddd;
+        }
+
+        .data-table tr:hover{
+            background:#f5f8fc;
+        }
+
+        /* =========================
+           SUMMARY CARDS
+        ========================= */
+
+        .summary-grid{
+            display:grid;
+            grid-template-columns:repeat(4,1fr);
+            gap:15px;
+            margin-bottom:25px;
+        }
+
+        .summary-card{
+            background:white;
+            padding:20px;
+            border-radius:14px;
+            box-shadow:0 4px 12px rgba(0,0,0,.10);
+        }
+
+        .summary-card h3{
+            margin:0;
+            color:#666;
+            font-size:15px;
+        }
+
+        .summary-card .number{
+            font-size:26px;
+            font-weight:bold;
+            color:#12355b;
+            margin-top:8px;
+        }
+
+        /* =========================
+           MOBILE
+        ========================= */
+
+        @media(max-width:1000px){
+
+            .summary-grid{
+                grid-template-columns:repeat(2,1fr);
+            }
+
+        }
+
+        @media(max-width:650px){
+
+            .main{
+                padding:12px;
+            }
+
+            .top-header{
+                flex-direction:column;
+                gap:12px;
+                text-align:center;
+            }
+
+            .summary-grid{
+                grid-template-columns:1fr;
+            }
+
+            .chart-box{
+                height:350px;
+            }
+
+            .filter-row{
+                flex-direction:column;
+                align-items:stretch;
+            }
+
+            .filter-row select,
+            .update-btn{
+                width:100%;
+            }
+
+        }
+
+    </style>
+
+</head>
+
+
+<body>
+
+<div class="main">
+
+
+    <!-- BACK -->
+
+    <button
+        class="back-btn"
+        onclick="window.location.href='Dashboard.html'"
+    >
+        🏠 Back to Dashboard
+    </button>
+
+
+    <!-- HEADER -->
+
+    <div class="top-header">
+
+        <div>
+
+            <h1>
+                STORE MANAGEMENT SYSTEM
+            </h1>
+
+            <p>
+                Inventory & Store Control
+            </p>
+
+        </div>
+
+        <div class="user-box">
+            👤 Admin
+        </div>
+
+    </div>
+
+
+    <h1 class="page-title">
+        📈 Store Graphs & Analysis
+    </h1>
+
+
+    <!-- =========================
+         FILTER
+    ========================= -->
+
+    <div class="filter-box">
+
+        <h2>
+            🔎 Graph Filter
+        </h2>
+
+        <div class="filter-row">
+
+            <label>
+                Item:
+            </label>
+
+            <select id="itemSelect">
+
+                <option value="all">
+                    📊 All Items
+                </option>
+
+            </select>
+
+
+            <label>
+                Period:
+            </label>
+
+            <select
+                id="periodType"
+                onchange="changePeriodType()"
+            >
+
+                <option value="month">
+                    Month Wise
+                </option>
+
+                <option value="year">
+                    Year Wise
+                </option>
+
+            </select>
+
+
+            <label>
+                Year:
+            </label>
+
+            <select id="yearSelect">
+            </select>
+
+
+            <label id="monthLabel">
+                Month:
+            </label>
+
+            <select id="monthSelect">
+
+                <option value="1">January</option>
+                <option value="2">February</option>
+                <option value="3">March</option>
+                <option value="4">April</option>
+                <option value="5">May</option>
+                <option value="6">June</option>
+                <option value="7">July</option>
+                <option value="8">August</option>
+                <option value="9">September</option>
+                <option value="10">October</option>
+                <option value="11">November</option>
+                <option value="12">December</option>
+
+            </select>
+
+
+            <button
+                class="update-btn"
+                onclick="updateGraphs()"
+            >
+                🔄 Update Graph
+            </button>
+
+        </div>
+
+
+        <div
+            id="itemInfo"
+            class="item-info"
+        >
+            📊 Showing All Items
+        </div>
+
+    </div>
+
+
+    <!-- =========================
+         SUMMARY
+    ========================= -->
+
+    <div class="summary-grid">
+
+        <div class="summary-card">
+
+            <h3>
+                📥 Total Stock In
+            </h3>
+
+            <div
+                id="summaryStockIn"
+                class="number"
+            >
+                0
+            </div>
+
+        </div>
+
+
+        <div class="summary-card">
+
+            <h3>
+                📤 Total Stock Out
+            </h3>
+
+            <div
+                id="summaryStockOut"
+                class="number"
+            >
+                0
+            </div>
+
+        </div>
+
+
+        <div class="summary-card">
+
+            <h3>
+                📊 Total Demand
+            </h3>
+
+            <div
+                id="summaryDemand"
+                class="number"
+            >
+                0
+            </div>
+
+        </div>
+
+
+        <div class="summary-card">
+
+            <h3>
+                💰 Purchase Cost
+            </h3>
+
+            <div
+                id="summaryCost"
+                class="number"
+            >
+                Rs. 0
+            </div>
+
+        </div>
+
+    </div>
+
+
+    <!-- =========================
+         GRAPH 1
+    ========================= -->
+
+    <div class="graph-section">
+
+        <div class="graph-card">
+
+            <h2>
+                📦 Stock In vs Stock Out vs Demand
+            </h2>
+
+            <div class="graph-description">
+                تمام Items کا quantity comparison
+            </div>
+
+            <div class="chart-box">
+
+                <canvas
+                    id="stockDemandChart"
+                ></canvas>
+
+            </div>
+
+        </div>
+
+    </div>
+
+
+    <!-- =========================
+         GRAPH 2
+    ========================= -->
+
+    <div class="graph-section">
+
+        <div class="graph-card">
+
+            <h2>
+                📊 Item Quantity Analysis
+            </h2>
+
+            <div class="graph-description">
+                ہر Item کی Stock In, Stock Out اور Demand
+            </div>
+
+            <div class="chart-box">
+
+                <canvas
+                    id="quantityChart"
+                ></canvas>
+
+            </div>
+
+        </div>
+
+    </div>
+
+
+    <!-- =========================
+         GRAPH 3
+    ========================= -->
+
+    <div class="graph-section">
+
+        <div class="graph-card">
+
+            <h2>
+                💰 Item Cost Analysis
+            </h2>
+
+            <div class="graph-description">
+                ہر Item کی Purchase Cost
+            </div>
+
+            <div class="chart-box">
+
+                <canvas
+                    id="costChart"
+                ></canvas>
+
+            </div>
+
+        </div>
+
+    </div>
+
+
+    <!-- =========================
+         GRAPH 4
+    ========================= -->
+
+    <div class="graph-section">
+
+        <div class="graph-card">
+
+            <h2>
+                📅 Period Wise Analysis
+            </h2>
+
+            <div class="graph-description">
+                Month Wise یا Year Wise Stock Movement
+            </div>
+
+            <div class="chart-box">
+
+                <canvas
+                    id="periodChart"
+                ></canvas>
+
+            </div>
+
+        </div>
+
+    </div>
+
+
+    <!-- =========================
+         DATA TABLE
+    ========================= -->
+
+    <div class="graph-section">
+
+        <div class="graph-card">
+
+            <h2>
+                📋 Graph Data Table
+            </h2>
+
+            <div class="table-box">
+
+                <table class="data-table">
+
+                    <thead>
+
+                        <tr>
+
+                            <th>
+                                Item Code
+                            </th>
+
+                            <th>
+                                Item Name
+                            </th>
+
+                            <th>
+                                Unit
+                            </th>
+
+                            <th>
+                                Stock In
+                            </th>
+
+                            <th>
+                                Stock Out
+                            </th>
+
+                            <th>
+                                Demand
+                            </th>
+
+                            <th>
+                                Purchase Cost
+                            </th>
+
+                        </tr>
+
+                    </thead>
+
+                    <tbody
+                        id="graphDataBody"
+                    ></tbody>
+
+                </table>
+
+            </div>
+
+        </div>
+
+    </div>
+
+
+</div>
+
+
+<!-- CHART JS -->
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+<script src="Graphs.js"></script>
+
+
+</body>
+
+</html>

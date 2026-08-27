@@ -1,0 +1,473 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+
+    <title>Cost History</title>
+
+    <link rel="stylesheet" href="Stock.css">
+
+    <style>
+
+        body {
+            margin: 0;
+            padding: 25px;
+            font-family: Arial, sans-serif;
+            background-color: #f2f5f9;
+        }
+
+        .company-name {
+            text-align: center;
+            font-size: 20px;
+            font-weight: bold;
+            color: #12355b;
+        }
+
+        h1 {
+            text-align: center;
+            color: #12355b;
+        }
+
+        .controls {
+            background-color: white;
+            padding: 20px;
+            border-radius: 12px;
+            margin-bottom: 20px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.10);
+        }
+
+        .controls label {
+            font-weight: bold;
+            margin-left: 10px;
+        }
+
+        .controls input,
+        .controls select {
+            padding: 8px;
+            margin: 5px;
+        }
+
+        button {
+            padding: 9px 16px;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            background-color: #12355b;
+            color: white;
+            margin: 5px;
+        }
+
+        button:hover {
+            opacity: 0.9;
+        }
+
+        .summary {
+            display: flex;
+            gap: 15px;
+            flex-wrap: wrap;
+            margin-bottom: 20px;
+        }
+
+        .summary-card {
+            background-color: white;
+            padding: 18px;
+            border-radius: 10px;
+            min-width: 210px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.10);
+        }
+
+        .summary-card h3 {
+            margin: 0 0 8px 0;
+            color: #12355b;
+        }
+
+        .summary-card p {
+            margin: 0;
+            font-size: 18px;
+            font-weight: bold;
+        }
+
+        .table-container {
+            width: 100%;
+            overflow-x: auto;
+            background-color: white;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            min-width: 1000px;
+        }
+
+        th {
+            background-color: #12355b;
+            color: white;
+            padding: 10px;
+            border: 1px solid #ddd;
+            white-space: nowrap;
+        }
+
+        td {
+            padding: 9px;
+            border: 1px solid #ddd;
+            white-space: nowrap;
+        }
+
+        tr:hover {
+            background-color: #f2f5f9;
+        }
+
+        .total-row {
+            font-weight: bold;
+            background-color: #e8eef5;
+        }
+
+        .empty-message {
+            text-align: center;
+            padding: 25px;
+            font-weight: bold;
+        }
+
+        @media print {
+
+            body {
+                background-color: white;
+                padding: 0;
+            }
+
+            .controls,
+            .no-print {
+                display: none !important;
+            }
+
+            .table-container {
+                overflow: visible;
+            }
+
+            table {
+                min-width: 0;
+                font-size: 10px;
+            }
+
+            th,
+            td {
+                padding: 6px;
+            }
+
+            @page {
+                size: A4 landscape;
+                margin: 8mm;
+            }
+
+        }
+
+    </style>
+
+</head>
+
+
+<body>
+
+
+<!-- =====================================
+     COMPANY
+===================================== -->
+
+<div class="company-name">
+
+    MECAS ENGINEERING PVT LIMITED SUNDAR
+
+</div>
+
+
+<h1>
+
+    COST HISTORY
+
+</h1>
+<div>
+<button
+    type="button"
+    id="backToCostButton"
+>
+    ⬅ Back to Cost
+</button>
+<button
+    type="button"
+    onclick="openYearHistory()"
+>
+    📅 Year Wise History
+</button>
+<button
+    type="button"
+    onclick="window.location.href='Dashboard.html'"
+>
+    🏠 Back to Dashboard
+</button>
+</div>
+<div class="controls">
+
+    <label>
+        Search Item:
+    </label>
+
+    <input
+        type="text"
+        id="historySearch"
+        placeholder="Item Code / Item Name"
+    >
+
+
+    <label>
+        Month:
+    </label>
+
+    <input
+        type="month"
+        id="historyMonth"
+    >
+
+
+    <button
+        type="button"
+        
+    >
+        🔎 Search
+    </button>
+
+
+    <button
+        type="button"
+        onclick="clearCostHistoryFilter()"
+    >
+        🔄 Clear Filter
+    </button>
+
+</div>
+<!-- =====================================
+     FILTER CONTROLS
+===================================== -->
+
+<div class="controls no-print">
+
+
+    <label for="historyMonth">
+
+        Month:
+
+    </label>
+
+
+    <input
+        type="month"
+        id="historyMonth"
+        onchange="showCostHistory()"
+    >
+
+
+    <label for="historyYear">
+
+        Year:
+
+    </label>
+
+
+    <select
+        id="historyYear"
+        onchange="showCostHistory()"
+    >
+
+        <option value="">
+
+            Select Year
+
+        </option>
+
+    </select>
+
+
+    <button
+        type="button"
+        onclick="showAllHistory()"
+    >
+
+        📋 Show All
+
+    </button>
+
+
+    <button
+        type="button"
+        onclick="saveCurrentCostHistory()"
+    >
+
+        💾 Save Current Cost
+
+    </button>
+
+
+    <button
+        type="button"
+        onclick="printCostHistory()"
+    >
+
+        🖨️ Print History
+
+    </button>
+
+
+</div>
+
+
+<!-- =====================================
+     SUMMARY
+===================================== -->
+
+<div class="summary">
+
+
+    <div class="summary-card">
+
+        <h3>
+            Total Months
+        </h3>
+
+        <p id="totalMonths">
+            0
+        </p>
+
+    </div>
+
+
+    <div class="summary-card">
+
+        <h3>
+            Total Stock Cost
+        </h3>
+
+        <p id="totalStockCost">
+            Rs. 0
+        </p>
+
+    </div>
+
+
+    <div class="summary-card">
+
+        <h3>
+            Total Demand Cost
+        </h3>
+
+        <p id="totalDemandCost">
+            Rs. 0
+        </p>
+
+    </div>
+
+
+</div>
+
+
+<!-- =====================================
+     HISTORY TABLE
+===================================== -->
+
+<div class="table-container">
+
+
+<table>
+
+    <thead>
+
+        <tr>
+
+            <th>
+                Year
+            </th>
+
+            <th>
+                Month
+            </th>
+
+            <th>
+                Total Items
+            </th>
+
+            <th>
+                Available Stock Cost
+            </th>
+
+            <th>
+                Approved Demand Qty
+            </th>
+
+            <th>
+                Approved Demand Cost
+            </th>
+
+            <th>
+                Saved Date
+            </th>
+            <th>
+                Action
+            </th>
+
+        </tr>
+
+    </thead>
+
+
+    <tbody id="historyBody">
+
+    </tbody>
+
+
+    <tfoot>
+
+        <tr class="total-row">
+
+            <td colspan="3">
+
+                TOTAL
+
+            </td>
+
+            <td id="footerStockCost">
+
+                Rs. 0
+
+            </td>
+
+            <td id="footerDemandQty">
+
+                0
+
+            </td>
+
+            <td id="footerDemandCost">
+
+                Rs. 0
+
+            </td>
+
+            <td>
+
+            </td>
+
+        </tr>
+
+    </tfoot>
+
+
+</table>
+
+
+</div>
+
+
+<script src="Cost History.js"></script>
+
+
+</body>
+
+</html>

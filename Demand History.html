@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+
+    <title>Demand History</title>
+
+    <style>
+
+        body {
+            margin: 0;
+            padding: 25px;
+            font-family: Arial, sans-serif;
+            background-color: #f2f5f9;
+        }
+
+        h1 {
+            text-align: center;
+            color: #12355b;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            background-color: white;
+        }
+
+        th {
+            background-color: #12355b;
+            color: white;
+            padding: 10px;
+        }
+
+        td {
+            padding: 10px;
+            border: 1px solid #ddd;
+            text-align: center;
+        }
+
+        button {
+            padding: 7px 12px;
+            margin: 2px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            background-color: #12355b;
+            color: white;
+        }
+
+        .edit-area {
+            background-color: white;
+            padding: 20px;
+            margin-bottom: 25px;
+            border-radius: 10px;
+            box-shadow: 0 3px 10px rgba(0,0,0,0.10);
+            display: none;
+        }
+
+        .edit-area h2 {
+            color: #12355b;
+        }
+
+        .edit-table {
+            width: 100%;
+            margin-top: 15px;
+        }
+
+        .edit-table input {
+            width: 90%;
+            padding: 6px;
+            box-sizing: border-box;
+        }
+
+    </style>
+
+</head>
+
+<body>
+
+
+<h1>
+    DEMAND HISTORY
+</h1>
+ <button
+        type="button"
+        onclick="window.location.href='Dashboard.html'"
+    >
+        🏠 Back to Dashboard
+    </button>
+
+
+<!-- =====================================
+     EDIT AREA
+===================================== -->
+
+<div
+    id="editArea"
+    class="edit-area"
+>
+
+    <h2>
+        Edit Demand
+    </h2>
+
+    <div id="editInfo"></div>
+
+    <div id="editItems"></div>
+
+    <br>
+
+    <button
+        type="button"
+        onclick="updateDemand()"
+    >
+        Update Demand
+    </button>
+
+    <button
+        type="button"
+        onclick="cancelEdit()"
+    >
+        Cancel
+    </button>
+
+</div>
+
+
+<!-- =====================================
+     HISTORY TABLE
+===================================== -->
+
+<table>
+
+    <thead>
+
+        <tr>
+
+            <th>Demand No</th>
+
+            <th>Demand Month</th>
+
+            <th>Items</th>
+
+            <th>Generate Date</th>
+
+            <th>Status</th>
+
+            <th>Action</th>
+
+        </tr>
+
+    </thead>
+
+
+    <tbody
+        id="demandHistoryBody"
+    >
+
+    </tbody>
+
+</table>
+
+
+<script src="Demand History.js"></script>
+
+</body>
+
+</html>

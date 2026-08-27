@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <title>Stock Issue Report</title>
+
+</head>
+
+<body>
+ <h1>Stock Issue Report</h1>
+ <label for="searchItemCode">Search Item Code:</label>
+ <input type="text" id="searchItemCode" placeholder="Enter Item Code">
+ <br><br>
+ <label for="fromDate">From Date:</label>
+<input type="date" id="fromDate">
+
+<label for="toDate">To Date:</label>
+<input type="date" id="toDate">
+
+<br><br>
+
+<button type="button" onclick="searchStockIssueByDate()">Search By Date</button>
+ <button type="button" onclick="searchStockIssue()">Search</button>
+ <button type="button" onclick="showAllStockIssue()">Show All</button>
+ <br><br>
+ <table border="1">
+    <thead>
+        <tr>
+            <th>Date</th>
+            <th>Time</th>
+            <th>Item Code</th>
+            <th>Quantity</th>
+        </tr>
+    </thead>
+    <tbody id="stockIssueBody"></tbody>
+ </table>
+ <h3>Total Stock Issue: <span id="totalStockIssue">0</span></h3>
+ <script src="stockIssueReport .js"></script>
+</body>
+
+</html>
