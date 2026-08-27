@@ -1,0 +1,241 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+
+    <meta charset="UTF-8">
+
+    <title>Stock In History</title>
+
+    <link rel="stylesheet" href="Stock.css">
+
+    <style>
+
+        body{
+            font-family:Arial,sans-serif;
+        }
+
+        .history-container{
+            padding:25px;
+        }
+
+        .filter-box{
+            background:#f5f5f5;
+            padding:20px;
+            margin:20px 0;
+            border-radius:10px;
+        }
+
+        .filter-box input,
+        .filter-box select{
+            padding:10px;
+            margin:5px;
+        }
+
+        button{
+            padding:9px 14px;
+            margin:4px;
+            cursor:pointer;
+        }
+
+        table{
+            width:100%;
+            border-collapse:collapse;
+            margin-top:20px;
+        }
+
+        th{
+            background:#12355b;
+            color:white;
+            padding:10px;
+        }
+
+        td{
+            padding:9px;
+            border-bottom:1px solid #ddd;
+            text-align:center;
+        }
+
+        tr:hover{
+            background:#f1f1f1;
+        }
+
+        .delete-btn{
+            background:#e74c3c;
+            color:white;
+            border:none;
+            border-radius:5px;
+        }
+
+        .edit-btn{
+            background:#f39c12;
+            color:white;
+            border:none;
+            border-radius:5px;
+        }
+
+        .clear-btn{
+            background:#777;
+            color:white;
+            border:none;
+            border-radius:5px;
+        }
+
+        .back-btn{
+            background:#12355b;
+            color:white;
+            border:none;
+            border-radius:5px;
+        }
+
+    </style>
+
+</head>
+
+
+<body>
+
+
+<div class="history-container">
+
+    <h1>📥 Stock In History</h1>
+
+
+    <button
+        class="back-btn"
+        onclick="window.location.href='Stock In .html'"
+    >
+        ← Back to Stock In
+    </button>
+
+    <button
+        class="back-btn"
+        onclick="window.location.href='Dashboard.html'"
+    >
+        🏠 Dashboard
+    </button>
+
+
+    <!-- ==============================
+         FILTERS
+    =============================== -->
+
+    <div class="filter-box">
+
+        <h3>🔎 Search & Filter</h3>
+
+
+        <input
+            type="text"
+            id="searchInput"
+            placeholder="Search Item Code / Item Name"
+            oninput="filterHistory()"
+        >
+
+
+        <select
+            id="monthFilter"
+            onchange="filterHistory()"
+        >
+
+            <option value="">All Months</option>
+
+            <option value="01">January</option>
+            <option value="02">February</option>
+            <option value="03">March</option>
+            <option value="04">April</option>
+            <option value="05">May</option>
+            <option value="06">June</option>
+            <option value="07">July</option>
+            <option value="08">August</option>
+            <option value="09">September</option>
+            <option value="10">October</option>
+            <option value="11">November</option>
+            <option value="12">December</option>
+
+        </select>
+
+
+        <select
+            id="yearFilter"
+            onchange="filterHistory()"
+        >
+
+            <option value="">All Years</option>
+
+        </select>
+
+
+        <label>
+            From Date:
+        </label>
+
+        <input
+            type="date"
+            id="fromDate"
+            onchange="filterHistory()"
+        >
+
+
+        <label>
+            To Date:
+        </label>
+
+        <input
+            type="date"
+            id="toDate"
+            onchange="filterHistory()"
+        >
+
+
+        <button
+            class="clear-btn"
+            onclick="clearFilters()"
+        >
+            Clear Filters
+        </button>
+
+    </div>
+
+
+    <!-- ==============================
+         HISTORY TABLE
+    =============================== -->
+
+    <table>
+
+        <thead>
+
+            <tr>
+
+                <th>Date</th>
+                <th>Time</th>
+                <th>Item Code</th>
+                <th>Item Name</th>
+                <th>Unit</th>
+                <th>Source</th>
+                <th>Supplier</th>
+                <th>Location</th>
+                <th>Quantity</th>
+                <th>Unit Cost</th>
+                <th>Total Cost</th>
+                <th>Action</th>
+
+            </tr>
+
+        </thead>
+
+
+        <tbody id="historyBody"></tbody>
+
+    </table>
+
+
+</div>
+
+
+<script src="Stock In History .js"></script>
+
+</body>
+
+</html>
