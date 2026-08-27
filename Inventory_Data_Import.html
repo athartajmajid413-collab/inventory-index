@@ -1,0 +1,323 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+
+    <meta charset="UTF-8">
+
+    <meta name="viewport"
+          content="width=device-width, initial-scale=1.0">
+
+    <title>Inventory Data Import</title>
+
+
+    <style>
+
+        body {
+
+            font-family: Arial, sans-serif;
+
+            background: #f4f6f8;
+
+            margin: 0;
+
+            padding: 30px;
+
+        }
+
+
+        .box {
+
+            max-width: 650px;
+
+            margin: auto;
+
+            background: white;
+
+            padding: 25px;
+
+            border-radius: 12px;
+
+            box-shadow: 0 3px 15px rgba(0,0,0,0.15);
+
+        }
+
+
+        h2 {
+
+            margin-top: 0;
+
+        }
+
+
+        input {
+
+            width: 100%;
+
+            padding: 12px;
+
+            box-sizing: border-box;
+
+            margin: 15px 0;
+
+        }
+
+
+        button {
+
+            padding: 12px 20px;
+
+            border: none;
+
+            border-radius: 7px;
+
+            background: #198754;
+
+            color: white;
+
+            font-size: 16px;
+
+            cursor: pointer;
+
+        }
+
+
+        button:hover {
+
+            background: #146c43;
+
+        }
+
+
+        #status {
+
+            margin-top: 18px;
+
+            padding: 12px;
+
+            border-radius: 7px;
+
+            background: #eef8f1;
+
+            white-space: pre-wrap;
+
+            line-height: 1.5;
+
+        }
+
+
+        .warning {
+
+            background: #fff4d6;
+
+            padding: 12px;
+
+            border-radius: 7px;
+
+            line-height: 1.5;
+
+        }
+
+    </style>
+
+</head>
+
+
+<body>
+
+
+<div class="box">
+
+    <h2>Inventory Data Import</h2>
+
+
+    <p>
+
+        اپنی پرانی website سے Export کی ہوئی
+
+        <b>JSON Backup File</b>
+
+        یہاں select کریں۔
+
+    </p>
+
+
+    <div class="warning">
+
+        ⚠️ Import کرنے سے پہلے نئی website کا backup رکھنا بہتر ہے۔
+
+    </div>
+
+
+    <input
+        type="file"
+        id="fileInput"
+        accept=".json,application/json"
+    >
+
+
+    <button onclick="importData()">
+
+        Import Data
+
+    </button>
+
+
+    <div id="status"></div>
+
+</div>
+
+
+
+<script>
+
+
+function importData() {
+
+
+    const input =
+        document.getElementById("fileInput");
+
+
+    const status =
+        document.getElementById("status");
+
+
+    // File check
+    if (!input.files || !input.files.length) {
+
+        status.textContent =
+            "❌ پہلے JSON backup file select کریں۔";
+
+        return;
+
+    }
+
+
+    const file = input.files[0];
+
+
+    const reader = new FileReader();
+
+
+    reader.onload = function(event) {
+
+
+        try {
+
+
+            // JSON read کریں
+            const backup =
+                JSON.parse(event.target.result);
+
+
+            // Backup validation
+            if (
+                !backup ||
+                typeof backup.data !== "object" ||
+                backup.data === null
+            ) {
+
+                throw new Error(
+                    "یہ valid Inventory backup file نہیں ہے۔"
+                );
+
+            }
+
+
+            const data =
+                backup.data;
+
+
+            const keys =
+                Object.keys(data);
+
+
+            if (!keys.length) {
+
+                throw new Error(
+                    "Backup file میں کوئی data نہیں ملا۔"
+                );
+
+            }
+
+
+            // Confirmation
+            const confirmImport = confirm(
+
+                "یہ " +
+                keys.length +
+                " LocalStorage keys import ہوں گی۔\n\n" +
+
+                "موجودہ website کے انہی keys والے data کو replace کیا جائے گا۔\n\n" +
+
+                "کیا آپ جاری رکھنا چاہتے ہیں؟"
+
+            );
+
+
+            if (!confirmImport) {
+
+                return;
+
+            }
+
+
+            // LocalStorage میں save کریں
+            keys.forEach(function(key) {
+
+                localStorage.setItem(
+                    key,
+                    String(data[key])
+                );
+
+            });
+
+
+            status.textContent =
+
+                "✅ Data successfully import ہو گیا۔\n\n" +
+
+                "Imported Keys: " +
+                keys.length +
+
+                "\n\n" +
+
+                "اب اپنی Inventory Dashboard website کو Reload کریں۔";
+
+
+        }
+
+
+        catch (error) {
+
+
+            status.textContent =
+
+                "❌ Import Error: " +
+                error.message;
+
+        }
+
+    };
+
+
+    reader.onerror = function() {
+
+        status.textContent =
+            "❌ File read نہیں ہو سکی۔";
+
+    };
+
+
+    reader.readAsText(file);
+
+}
+
+
+</script>
+
+
+</body>
+
+</html>
