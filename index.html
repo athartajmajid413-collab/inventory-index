@@ -1,0 +1,359 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+
+    <meta charset="UTF-8">
+
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>Store Management System - Login</title>
+
+
+    <style>
+
+        *{
+            box-sizing:border-box;
+        }
+
+        body{
+
+            margin:0;
+
+            min-height:100vh;
+
+            font-family:Arial,sans-serif;
+
+            background:linear-gradient(
+                135deg,
+                #12355b,
+                #1677ff
+            );
+
+            display:flex;
+
+            justify-content:center;
+
+            align-items:center;
+
+        }
+
+
+        .login-container{
+
+            width:380px;
+
+            max-width:90%;
+
+            background:white;
+
+            padding:35px;
+
+            border-radius:18px;
+
+            box-shadow:
+                0 10px 30px
+                rgba(0,0,0,.25);
+
+            text-align:center;
+
+        }
+
+
+        .logo{
+
+            width:75px;
+
+            height:75px;
+
+            margin:0 auto 15px;
+
+            background:#12355b;
+
+            color:white;
+
+            border-radius:50%;
+
+            display:flex;
+
+            justify-content:center;
+
+            align-items:center;
+
+            font-size:35px;
+
+        }
+
+
+        h1{
+
+            margin:0;
+
+            color:#12355b;
+
+            font-size:25px;
+
+        }
+
+
+        .subtitle{
+
+            margin:8px 0 25px;
+
+            color:#777;
+
+            font-size:14px;
+
+        }
+
+
+        .input-group{
+
+            text-align:left;
+
+            margin-bottom:18px;
+
+        }
+
+
+        .input-group label{
+
+            display:block;
+
+            margin-bottom:7px;
+
+            color:#333;
+
+            font-weight:bold;
+
+            font-size:14px;
+
+        }
+
+
+        .input-group input{
+
+            width:100%;
+
+            padding:13px;
+
+            border:1px solid #ccc;
+
+            border-radius:8px;
+
+            font-size:15px;
+
+            outline:none;
+
+        }
+
+
+        .input-group input:focus{
+
+            border-color:#1677ff;
+
+            box-shadow:
+                0 0 0 2px
+                rgba(22,119,255,.15);
+
+        }
+
+
+        .login-btn{
+
+            width:100%;
+
+            padding:13px;
+
+            border:none;
+
+            border-radius:8px;
+
+            background:#12355b;
+
+            color:white;
+
+            font-size:16px;
+
+            font-weight:bold;
+
+            cursor:pointer;
+
+            margin-top:5px;
+
+        }
+
+
+        .login-btn:hover{
+
+            background:#1677ff;
+
+        }
+
+
+        .error{
+
+            color:#e74c3c;
+
+            font-size:14px;
+
+            margin-top:15px;
+
+            min-height:20px;
+
+        }
+
+
+        .footer{
+
+            margin-top:25px;
+
+            color:#999;
+
+            font-size:12px;
+
+        }
+
+    </style>
+
+</head>
+
+
+<body>
+
+
+    <div class="login-container">
+
+
+        <div class="logo">
+            🏭
+        </div>
+
+
+        <h1>
+            STORE MANAGEMENT SYSTEM
+        </h1>
+
+
+        <div class="subtitle">
+            Inventory & Store Control
+        </div>
+
+
+        <form onsubmit="login(event)">
+
+
+            <div class="input-group">
+
+                <label>
+                    Username
+                </label>
+
+                <input
+                    type="text"
+                    id="username"
+                    placeholder="Enter Username"
+                    autocomplete="username"
+                    required
+                >
+
+            </div>
+
+
+            <div class="input-group">
+
+                <label>
+                    Password
+                </label>
+
+                <input
+                    type="password"
+                    id="password"
+                    placeholder="Enter Password"
+                    autocomplete="current-password"
+                    required
+                >
+
+            </div>
+
+
+            <button
+                type="submit"
+                class="login-btn"
+            >
+                🔐 Login
+            </button>
+
+
+            <div
+                id="error"
+                class="error"
+            ></div>
+
+
+        </form>
+
+
+        <div class="footer">
+
+            Store Management System
+
+        </div>
+
+
+    </div>
+
+
+
+    <script>
+
+        function login(event){
+
+            event.preventDefault();
+
+
+            const username =
+                document.getElementById("username").value.trim();
+
+            const password =
+                document.getElementById("password").value;
+
+
+            /*
+                Login Details
+            */
+
+            const correctUsername = "admin";
+
+            const correctPassword = "1234";
+
+
+            if(
+                username === correctUsername &&
+                password === correctPassword
+            ){
+
+                /*
+                    Open existing Dashboard
+                */
+
+                window.location.href =
+                    "Dashboard.html";
+
+            }
+
+            else{
+
+                document.getElementById("error").textContent =
+                    "❌ Username or Password is incorrect.";
+
+            }
+
+        }
+
+    </script>
+
+
+</body>
+
+</html>
