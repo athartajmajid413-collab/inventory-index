@@ -1,3 +1,4 @@
+
 // =====================================
 // LOAD DEMAND HISTORY
 // =====================================
@@ -16,6 +17,37 @@ let editDemandIndex = -1;
 
 
 // =====================================
+// SAFE VALUE
+// =====================================
+
+function getValue(item, fields, defaultValue = "-"){
+
+    if(!item){
+        return defaultValue;
+    }
+
+    for(let i = 0; i < fields.length; i++){
+
+        let value = item[fields[i]];
+
+        if(
+            value !== undefined &&
+            value !== null &&
+            String(value).trim() !== ""
+        ){
+
+            return value;
+
+        }
+
+    }
+
+    return defaultValue;
+
+}
+
+
+// =====================================
 // SHOW DEMAND HISTORY
 // =====================================
 
@@ -25,6 +57,10 @@ function showDemandHistory(){
         document.getElementById(
             "demandHistoryBody"
         );
+
+    if(!historyBody){
+        return;
+    }
 
     historyBody.innerHTML = "";
 
@@ -51,7 +87,12 @@ function showDemandHistory(){
             document.createElement("td");
 
         cell0.innerHTML =
-            record.demandNo || ("DEM-" + String(i + 1).padStart(3, "0"));
+            getValue(
+                record,
+                ["demandNo", "demandNumber"],
+                "DEM-" +
+                String(i + 1).padStart(3, "0")
+            );
 
         row.appendChild(cell0);
 
@@ -64,7 +105,11 @@ function showDemandHistory(){
             document.createElement("td");
 
         cell1.innerHTML =
-            record.demandMonth || "-";
+            getValue(
+                record,
+                ["demandMonth", "month"],
+                "-"
+            );
 
         row.appendChild(cell1);
 
@@ -76,26 +121,30 @@ function showDemandHistory(){
         let cell2 =
             document.createElement("td");
 
-        if(
-            Array.isArray(record.demandItems)
-        ){
+
+        let list =
+            record.demandItems ||
+            record.items ||
+            [];
+
+
+        if(Array.isArray(list)){
 
             cell2.innerHTML =
-                record.demandItems.length;
-
-        }else if(
-            Array.isArray(record.items)
-        ){
-
-            cell2.innerHTML =
-                record.items.length;
-
-        }else{
-
-            cell2.innerHTML =
-                record.items || "-";
+                list.length;
 
         }
+        else{
+
+            cell2.innerHTML =
+                getValue(
+                    record,
+                    ["items"],
+                    "-"
+                );
+
+        }
+
 
         row.appendChild(cell2);
 
@@ -108,7 +157,15 @@ function showDemandHistory(){
             document.createElement("td");
 
         cell3.innerHTML =
-            record.generateDate || "-";
+            getValue(
+                record,
+                [
+                    "generateDate",
+                    "generatedDate",
+                    "date"
+                ],
+                "-"
+            );
 
         row.appendChild(cell3);
 
@@ -121,7 +178,11 @@ function showDemandHistory(){
             document.createElement("td");
 
         cell4.innerHTML =
-            record.status || "Generated";
+            getValue(
+                record,
+                ["status"],
+                "Generated"
+            );
 
         row.appendChild(cell4);
 
@@ -134,20 +195,15 @@ function showDemandHistory(){
             document.createElement("td");
 
 
-        // =====================================
-        // PRINT PREVIEW
-        // =====================================
-
+        // PRINT
         let previewButton =
             document.createElement("button");
 
         previewButton.innerHTML =
             "Print Preview";
 
-
         previewButton.type =
             "button";
-
 
         previewButton.onclick =
             function(){
@@ -158,66 +214,49 @@ function showDemandHistory(){
 
             };
 
-
         cell5.appendChild(
             previewButton
         );
 
 
-        // =====================================
-        // EDIT BUTTON
-        // =====================================
-
+        // EDIT
         let editButton =
             document.createElement("button");
 
         editButton.innerHTML =
             "Edit";
 
-
         editButton.type =
             "button";
-
 
         editButton.onclick =
             function(){
 
-                editDemand(
-                    i
-                );
+                editDemand(i);
 
             };
-
 
         cell5.appendChild(
             editButton
         );
 
 
-        // =====================================
-        // DELETE BUTTON
-        // =====================================
-
+        // DELETE
         let deleteButton =
             document.createElement("button");
 
         deleteButton.innerHTML =
             "Delete";
 
-
         deleteButton.type =
             "button";
-
 
         deleteButton.onclick =
             function(){
 
-                deleteDemand(
-                    i
-                );
+                deleteDemand(i);
 
             };
-
 
         cell5.appendChild(
             deleteButton
@@ -253,12 +292,10 @@ function editDemand(index){
             "editArea"
         );
 
-
     let editInfo =
         document.getElementById(
             "editInfo"
         );
-
 
     let editItems =
         document.getElementById(
@@ -272,27 +309,22 @@ function editDemand(index){
 
     editInfo.innerHTML = `
 
-        <strong>
-            Demand No:
-        </strong>
-
-        ${record.demandNo || "-"}
+        <strong>Demand No:</strong>
+        ${getValue(record, ["demandNo"], "-")}
 
         &nbsp;&nbsp;&nbsp;
 
-        <strong>
-            Demand Month:
-        </strong>
-
-        ${record.demandMonth || "-"}
+        <strong>Demand Month:</strong>
+        ${getValue(record, ["demandMonth"], "-")}
 
         &nbsp;&nbsp;&nbsp;
 
-        <strong>
-            Generate Date:
-        </strong>
-
-        ${record.generateDate || "-"}
+        <strong>Generate Date:</strong>
+        ${getValue(
+            record,
+            ["generateDate", "generatedDate", "date"],
+            "-"
+        )}
 
     `;
 
@@ -300,13 +332,18 @@ function editDemand(index){
     editItems.innerHTML = "";
 
 
+    let list =
+        record.demandItems ||
+        record.items ||
+        [];
+
+
     if(
-        !record.demandItems ||
-        record.demandItems.length == 0
+        !Array.isArray(list) ||
+        list.length === 0
     ){
 
         editItems.innerHTML =
-
             "<p>No detailed items available for editing.</p>";
 
         return;
@@ -326,15 +363,10 @@ function editDemand(index){
         <tr>
 
             <th>Item Code</th>
-
             <th>Item Name</th>
-
             <th>Stock Level</th>
-
             <th>Demand Quantity</th>
-
             <th>Final Demand</th>
-
             <th>Remarks</th>
 
         </tr>
@@ -344,48 +376,47 @@ function editDemand(index){
 
     for(
         let i = 0;
-        i < record.demandItems.length;
+        i < list.length;
         i++
     ){
 
         let item =
-            record.demandItems[i];
+            list[i];
 
 
         let row =
             document.createElement("tr");
 
 
-        // =====================================
         // ITEM CODE
-        // =====================================
-
         let cell1 =
             document.createElement("td");
 
         cell1.innerHTML =
-            item.itemCode || "-";
+            getValue(
+                item,
+                ["itemCode", "code"],
+                "-"
+            );
 
         row.appendChild(cell1);
 
 
-        // =====================================
         // ITEM NAME
-        // =====================================
-
         let cell2 =
             document.createElement("td");
 
         cell2.innerHTML =
-            item.itemName || "-";
+            getValue(
+                item,
+                ["itemName", "name"],
+                "-"
+            );
 
         row.appendChild(cell2);
 
 
-        // =====================================
         // STOCK LEVEL
-        // =====================================
-
         let cell3 =
             document.createElement("td");
 
@@ -396,7 +427,11 @@ function editDemand(index){
             "number";
 
         stockInput.value =
-            item.stockLevel || "";
+            getValue(
+                item,
+                ["stockLevel"],
+                ""
+            );
 
         stockInput.dataset.field =
             "stockLevel";
@@ -411,10 +446,7 @@ function editDemand(index){
         row.appendChild(cell3);
 
 
-        // =====================================
         // DEMAND QUANTITY
-        // =====================================
-
         let cell4 =
             document.createElement("td");
 
@@ -425,7 +457,15 @@ function editDemand(index){
             "number";
 
         demandInput.value =
-            item.demandQuantity || "";
+            getValue(
+                item,
+                [
+                    "demandQuantity",
+                    "demandQty",
+                    "quantity"
+                ],
+                ""
+            );
 
         demandInput.dataset.field =
             "demandQuantity";
@@ -440,10 +480,7 @@ function editDemand(index){
         row.appendChild(cell4);
 
 
-        // =====================================
         // FINAL DEMAND
-        // =====================================
-
         let cell5 =
             document.createElement("td");
 
@@ -454,7 +491,15 @@ function editDemand(index){
             "number";
 
         finalInput.value =
-            item.finalDemand || "";
+            getValue(
+                item,
+                [
+                    "finalDemand",
+                    "approvedQty",
+                    "approvedQuantity"
+                ],
+                ""
+            );
 
         finalInput.dataset.field =
             "finalDemand";
@@ -469,10 +514,7 @@ function editDemand(index){
         row.appendChild(cell5);
 
 
-        // =====================================
         // REMARKS
-        // =====================================
-
         let cell6 =
             document.createElement("td");
 
@@ -482,10 +524,17 @@ function editDemand(index){
         remarksInput.type =
             "text";
 
+        let remarks =
+            getValue(
+                item,
+                ["remarks", "remark"],
+                ""
+            );
+
         remarksInput.value =
-            item.remarks == "-" ?
+            remarks === "-" ?
             "" :
-            item.remarks || "";
+            remarks;
 
         remarksInput.dataset.field =
             "remarks";
@@ -524,7 +573,7 @@ function editDemand(index){
 function updateDemand(){
 
     if(
-        editDemandIndex == -1
+        editDemandIndex === -1
     ){
 
         return;
@@ -536,6 +585,12 @@ function updateDemand(){
         demandHistory[
             editDemandIndex
         ];
+
+
+    let list =
+        record.demandItems ||
+        record.items ||
+        [];
 
 
     let inputs =
@@ -564,16 +619,18 @@ function updateDemand(){
             input.dataset.field;
 
 
-        if(
-            record.demandItems[index]
-        ){
+        if(list[index]){
 
-            record.demandItems[index][field] =
+            list[index][field] =
                 input.value;
 
         }
 
     }
+
+
+    record.demandItems =
+        list;
 
 
     record.status =
@@ -644,9 +701,7 @@ function deleteDemand(index){
         );
 
 
-    if(
-        confirmDelete == false
-    ){
+    if(!confirmDelete){
 
         return;
 
@@ -668,7 +723,7 @@ function deleteDemand(index){
 
 
     if(
-        editDemandIndex == index
+        editDemandIndex === index
     ){
 
         cancelEdit();
@@ -687,14 +742,20 @@ function deleteDemand(index){
 
 
 // =====================================
-// PRINT PREVIEW
+// PRINT DEMAND PREVIEW
 // =====================================
 
 function printDemandPreview(record){
 
+    let list =
+        record.demandItems ||
+        record.items ||
+        [];
+
+
     if(
-        !record.demandItems ||
-        record.demandItems.length == 0
+        !Array.isArray(list) ||
+        list.length === 0
     ){
 
         alert(
@@ -710,8 +771,19 @@ function printDemandPreview(record){
         window.open(
             "",
             "",
-            "width=1200,height=800"
+            "width=1400,height=900"
         );
+
+
+    if(!printWindow){
+
+        alert(
+            "Please allow pop-ups for this website."
+        );
+
+        return;
+
+    }
 
 
     let today =
@@ -725,54 +797,87 @@ function printDemandPreview(record){
 
 
     let demandNo =
-        record.demandNo || "-";
+        getValue(
+            record,
+            [
+                "demandNo",
+                "demandNumber"
+            ],
+            "-"
+        );
 
+
+    let demandMonth =
+        getValue(
+            record,
+            [
+                "demandMonth",
+                "month"
+            ],
+            "-"
+        );
+
+
+    // =====================================
+    // BUILD PRINT HTML
+    // =====================================
 
     let printContent = `
+
+<!DOCTYPE html>
 
 <html>
 
 <head>
 
+<meta charset="UTF-8">
+
 <title>
 ${demandNo} - Monthly Demand
 </title>
 
-
 <style>
+
+*{
+    box-sizing:border-box;
+}
 
 body{
 
     font-family:
-        Arial, sans-serif;
+        Arial,
+        sans-serif;
 
     padding:
-        20px;
+        15px;
+
+    margin:
+        0;
 
 }
-
 
 h2{
 
     text-align:
         center;
 
-    margin-bottom:
-        5px;
+    margin:
+        5px 0;
+
+    color:
+        #12355b;
 
 }
-
 
 h1{
 
     text-align:
         center;
 
-    margin-top:
-        5px;
+    margin:
+        5px 0 15px;
 
 }
-
 
 .info-section{
 
@@ -782,14 +887,22 @@ h1{
     justify-content:
         space-between;
 
+    gap:
+        15px;
+
     margin-top:
         15px;
 
     font-size:
-        14px;
+        13px;
+
+    border:
+        1px solid #999;
+
+    padding:
+        10px;
 
 }
-
 
 table{
 
@@ -800,10 +913,12 @@ table{
         collapse;
 
     margin-top:
-        20px;
+        15px;
+
+    font-size:
+        10px;
 
 }
-
 
 th{
 
@@ -813,11 +928,16 @@ th{
     color:
         white;
 
+    border:
+        1px solid #555;
+
     padding:
-        8px;
+        6px;
+
+    text-align:
+        center;
 
 }
-
 
 td{
 
@@ -825,10 +945,12 @@ td{
         1px solid #999;
 
     padding:
-        7px;
+        5px;
+
+    text-align:
+        center;
 
 }
-
 
 .approval-section{
 
@@ -839,13 +961,12 @@ td{
         space-between;
 
     margin-top:
-        40px;
+        45px;
 
     font-size:
-        14px;
+        13px;
 
 }
-
 
 .approval-section span{
 
@@ -853,7 +974,6 @@ td{
         nowrap;
 
 }
-
 
 @media print{
 
@@ -863,7 +983,29 @@ td{
             A4 landscape;
 
         margin:
-            10mm;
+            8mm;
+
+    }
+
+    body{
+
+        padding:
+            0;
+
+    }
+
+    table{
+
+        font-size:
+            9px;
+
+    }
+
+    th,
+    td{
+
+        padding:
+            4px;
 
     }
 
@@ -872,7 +1014,6 @@ td{
 </style>
 
 </head>
-
 
 <body>
 
@@ -889,37 +1030,37 @@ MONTHLY DEMAND
 
 <div class="info-section">
 
-<span>
+    <span>
 
-<strong>
-Demand No:
-</strong>
+        <strong>
+        Demand No:
+        </strong>
 
-${demandNo}
+        ${demandNo}
 
-</span>
-
-
-<span>
-
-<strong>
-Demand Month:
-</strong>
-
-${record.demandMonth || "-"}
-
-</span>
+    </span>
 
 
-<span>
+    <span>
 
-<strong>
-Print Date:
-</strong>
+        <strong>
+        Demand Month:
+        </strong>
 
-${printDate}
+        ${demandMonth}
 
-</span>
+    </span>
+
+
+    <span>
+
+        <strong>
+        Print Date:
+        </strong>
+
+        ${printDate}
+
+    </span>
 
 </div>
 
@@ -958,7 +1099,7 @@ ${printDate}
 
 <th>Current Stock</th>
 
-<th>Demand Quantity</th>
+<th>Demand Qty</th>
 
 <th>Final Demand</th>
 
@@ -968,59 +1109,300 @@ ${printDate}
 
 </thead>
 
-
 <tbody>
 
 `;
 
 
+    // =====================================
+    // PRINT EACH ITEM
+    // =====================================
+
     for(
         let i = 0;
-        i < record.demandItems.length;
+        i < list.length;
         i++
     ){
 
         let item =
-            record.demandItems[i];
+            list[i];
+
+
+        let category =
+            getValue(
+                item,
+                ["category"],
+                "-"
+            );
+
+
+        let itemCode =
+            getValue(
+                item,
+                [
+                    "itemCode",
+                    "code"
+                ],
+                "-"
+            );
+
+
+        let itemName =
+            getValue(
+                item,
+                [
+                    "itemName",
+                    "name"
+                ],
+                "-"
+            );
+
+
+        let specification =
+            getValue(
+                item,
+                [
+                    "specification",
+                    "spec"
+                ],
+                "-"
+            );
+
+
+        let source =
+            getValue(
+                item,
+                [
+                    "source",
+                    "supplier",
+                    "sourceSupplier"
+                ],
+                "-"
+            );
+
+
+        let latestPurchaseDate =
+            getValue(
+                item,
+                [
+                    "latestPurchaseDate",
+                    "latestDate",
+                    "purchaseDate"
+                ],
+                "-"
+            );
+
+
+        // =====================================
+        // LATEST RATE
+        // =====================================
+
+        let latestRate =
+            getValue(
+                item,
+                [
+                    "latestRate",
+                    "latestPurchaseRate",
+                    "unitCost",
+                    "purchaseRate",
+                    "rate",
+                    "cost"
+                ],
+                "-"
+            );
+
+
+        // =====================================
+        // UNIT
+        // =====================================
+
+        let unit =
+            getValue(
+                item,
+                [
+                    "unit",
+                    "uom"
+                ],
+                "-"
+            );
+
+
+        // =====================================
+        // PACKING
+        // =====================================
+
+        let packingQty =
+            getValue(
+                item,
+                [
+                    "packingQty",
+                    "packQty",
+                    "packingQuantity"
+                ],
+                "-"
+            );
+
+
+        let packedUnit =
+            getValue(
+                item,
+                [
+                    "packedUnit",
+                    "packingUnit"
+                ],
+                "-"
+            );
+
+
+        // =====================================
+        // AVERAGE
+        // =====================================
+
+        let average =
+            getValue(
+                item,
+                [
+                    "average",
+                    "avgConsumption",
+                    "averageConsumption",
+                    "consumption"
+                ],
+                "-"
+            );
+
+
+        // =====================================
+        // STOCK LEVEL
+        // =====================================
+
+        let stockLevel =
+            getValue(
+                item,
+                [
+                    "stockLevel",
+                    "stock"
+                ],
+                "-"
+            );
+
+
+        // =====================================
+        // REQUIRED STOCK
+        // =====================================
+
+        let requiredStock =
+            getValue(
+                item,
+                [
+                    "requiredStock",
+                    "requiredQty"
+                ],
+                "-"
+            );
+
+
+        // =====================================
+        // CURRENT STOCK
+        // =====================================
+
+        let currentStock =
+            getValue(
+                item,
+                [
+                    "currentStock",
+                    "currentQty",
+                    "balanceStock"
+                ],
+                "-"
+            );
+
+
+        // =====================================
+        // DEMAND QUANTITY
+        // =====================================
+
+        let demandQuantity =
+            getValue(
+                item,
+                [
+                    "demandQuantity",
+                    "demandQty",
+                    "demand",
+                    "quantity"
+                ],
+                "-"
+            );
+
+
+        // =====================================
+        // FINAL DEMAND
+        // =====================================
+
+        let finalDemand =
+            getValue(
+                item,
+                [
+                    "finalDemand",
+                    "approvedQty",
+                    "approvedQuantity",
+                    "finalQty"
+                ],
+                "-"
+            );
+
+
+        // =====================================
+        // REMARKS
+        // =====================================
+
+        let remarks =
+            getValue(
+                item,
+                [
+                    "remarks",
+                    "remark"
+                ],
+                "-"
+            );
 
 
         printContent += `
 
 <tr>
 
-<td>${item.category || "-"}</td>
+<td>${category}</td>
 
-<td>${item.itemCode || "-"}</td>
+<td>${itemCode}</td>
 
-<td>${item.itemName || "-"}</td>
+<td>${itemName}</td>
 
-<td>${item.specification || "-"}</td>
+<td>${specification}</td>
 
-<td>${item.source || "-"}</td>
+<td>${source}</td>
 
-<td>${item.latestPurchaseDate || "-"}</td>
+<td>${latestPurchaseDate}</td>
 
-<td>${item.latestRate || "-"}</td>
+<td>${latestRate}</td>
 
-<td>${item.unit || "-"}</td>
+<td>${unit}</td>
 
-<td>${item.packingQty || "-"}</td>
+<td>${packingQty}</td>
 
-<td>${item.packedUnit || "-"}</td>
+<td>${packedUnit}</td>
 
-<td>${item.average || "-"}</td>
+<td>${average}</td>
 
-<td>${item.stockLevel || "-"}</td>
+<td>${stockLevel}</td>
 
-<td>${item.requiredStock || "-"}</td>
+<td>${requiredStock}</td>
 
-<td>${item.currentStock || "-"}</td>
+<td>${currentStock}</td>
 
-<td>${item.demandQuantity || "-"}</td>
+<td>${demandQuantity}</td>
 
-<td>${item.finalDemand || "-"}</td>
+<td>${finalDemand}</td>
 
-<td>${item.remarks || "-"}</td>
+<td>${remarks}</td>
 
 </tr>
 
@@ -1038,19 +1420,17 @@ ${printDate}
 
 <div class="approval-section">
 
-<span>
-Prepared By: __________________
-</span>
+    <span>
+        Prepared By: __________________
+    </span>
 
+    <span>
+        Verified By: __________________
+    </span>
 
-<span>
-Verified By: __________________
-</span>
-
-
-<span>
-Approved By: __________________
-</span>
+    <span>
+        Approved By: __________________
+    </span>
 
 </div>
 
@@ -1062,15 +1442,29 @@ Approved By: __________________
 `;
 
 
+    printWindow.document.open();
+
     printWindow.document.write(
         printContent
     );
 
     printWindow.document.close();
 
-    printWindow.focus();
 
-    printWindow.print();
+    // =====================================
+    // WAIT FOR PRINT WINDOW
+    // =====================================
+
+    setTimeout(
+        function(){
+
+            printWindow.focus();
+
+            printWindow.print();
+
+        },
+        500
+    );
 
 }
 
