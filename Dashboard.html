@@ -1,353 +1,361 @@
 <!DOCTYPE html>
+
 <html>
+
 <head>
 
-    <meta charset="UTF-8">
+```
+<meta charset="UTF-8">
 
-    <title>Store Management Dashboard</title>
+<title>Store Management Dashboard</title>
 
-    <style>
+<style>
 
-        *{
-            box-sizing:border-box;
-        }
+    *{
+        box-sizing:border-box;
+    }
 
-        body{
-            margin:0;
-            font-family:Arial,sans-serif;
-            background:#f2f5f9;
-        }
+    body{
+        margin:0;
+        font-family:Arial,sans-serif;
+        background:#f2f5f9;
+    }
 
-        /* ================================
-           SIDEBAR
-        ================================= */
+    /* ================================
+       SIDEBAR
+    ================================= */
 
-        .sidebar{
-            width:220px;
-            min-height:100vh;
-            background:#12355b;
-            padding:20px;
-            position:fixed;
-            left:0;
-            top:0;
-            z-index:10;
-        }
+    .sidebar{
+        width:220px;
+        min-height:100vh;
+        background:#12355b;
+        padding:20px;
+        position:fixed;
+        left:0;
+        top:0;
+        z-index:10;
+    }
 
-        .sidebar h2{
-            color:white;
-            text-align:center;
-            margin:0 0 30px;
-        }
+    .sidebar h2{
+        color:white;
+        text-align:center;
+        margin:0 0 30px;
+    }
 
-        .sidebar button{
-            width:100%;
-            padding:12px;
-            margin-bottom:10px;
-            border:none;
-            border-radius:8px;
-            background:white;
-            color:#12355b;
-            font-size:15px;
-            cursor:pointer;
-            text-align:left;
-        }
+    .sidebar button{
+        width:100%;
+        padding:12px;
+        margin-bottom:10px;
+        border:none;
+        border-radius:8px;
+        background:white;
+        color:#12355b;
+        font-size:15px;
+        cursor:pointer;
+        text-align:left;
+    }
 
-        .sidebar button:hover{
-            background:#e8f1ff;
-            transform:translateY(-2px);
-        }
+    .sidebar button:hover{
+        background:#e8f1ff;
+        transform:translateY(-2px);
+    }
 
+    /* ================================
+       DASHBOARD
+    ================================= */
 
-        /* ================================
-           DASHBOARD
-        ================================= */
+    .dashboard{
+        margin-left:220px;
+        padding:25px;
+    }
 
-        .dashboard{
-            margin-left:220px;
-            padding:25px;
-        }
+    /* ================================
+       HEADER
+    ================================= */
 
+    .top-header{
+        background:white;
+        padding:18px 25px;
+        border-radius:12px;
+        margin-bottom:20px;
+        display:flex;
+        justify-content:space-between;
+        align-items:center;
+        box-shadow:0 3px 10px rgba(0,0,0,.10);
+    }
 
-        /* ================================
-           HEADER
-        ================================= */
+    .top-header h1{
+        margin:0;
+        color:#12355b;
+    }
 
-        .top-header{
-            background:white;
-            padding:18px 25px;
-            border-radius:12px;
-            margin-bottom:20px;
-            display:flex;
-            justify-content:space-between;
-            align-items:center;
-            box-shadow:0 3px 10px rgba(0,0,0,.10);
-        }
+    .top-header p{
+        margin:5px 0 0;
+        color:#777;
+    }
 
-        .top-header h1{
-            margin:0;
-            color:#12355b;
-        }
+    .user-box{
+        background:#e8f1ff;
+        color:#12355b;
+        padding:10px 18px;
+        border-radius:8px;
+        font-weight:bold;
+    }
 
-        .top-header p{
-            margin:5px 0 0;
-            color:#777;
-        }
+    /* ================================
+       SEARCH
+    ================================= */
 
-        .user-box{
-            background:#e8f1ff;
-            color:#12355b;
-            padding:10px 18px;
-            border-radius:8px;
-            font-weight:bold;
-        }
+    .search-box{
+        background:white;
+        padding:20px;
+        border-radius:15px;
+        margin-bottom:25px;
+        box-shadow:0 5px 15px rgba(0,0,0,.10);
+    }
 
+    .search-box h2{
+        margin:0 0 15px;
+        color:#12355b;
+    }
 
-        /* ================================
-           SEARCH
-        ================================= */
+    .search-row{
+        display:flex;
+        gap:10px;
+        flex-wrap:wrap;
+    }
 
-        .search-box{
-            background:white;
-            padding:20px;
-            border-radius:15px;
-            margin-bottom:25px;
-            box-shadow:0 5px 15px rgba(0,0,0,.10);
-        }
+    .search-row input{
+        flex:1;
+        min-width:220px;
+        padding:13px;
+        border:1px solid #ccc;
+        border-radius:8px;
+        font-size:16px;
+    }
 
-        .search-box h2{
-            margin:0 0 15px;
-            color:#12355b;
-        }
+    .search-row button{
+        padding:10px 15px;
+        border:none;
+        border-radius:7px;
+        cursor:pointer;
+        font-weight:bold;
+    }
 
-        .search-row{
-            display:flex;
-            gap:10px;
-            flex-wrap:wrap;
-        }
+    .clear-btn{
+        background:#777;
+        color:white;
+    }
 
-        .search-row input{
-            flex:1;
-            min-width:220px;
-            padding:13px;
-            border:1px solid #ccc;
-            border-radius:8px;
-            font-size:16px;
-        }
+    .search-info{
+        margin-top:12px;
+        color:#555;
+    }
 
-        .search-row button{
-            padding:10px 15px;
-            border:none;
-            border-radius:7px;
-            cursor:pointer;
-            font-weight:bold;
-        }
+    /* ================================
+       CARDS
+    ================================= */
 
-        .clear-btn{
-            background:#777;
-            color:white;
-        }
+    .dashboard-cards{
+        display:grid;
+        grid-template-columns:repeat(3,1fr);
+        gap:20px;
+    }
 
-        .search-info{
-            margin-top:12px;
-            color:#555;
-        }
+    .card{
+        padding:20px;
+        border-radius:15px;
+        color:white;
+        box-shadow:0 5px 15px rgba(0,0,0,.15);
+        min-height:220px;
+    }
 
+    .card h3{
+        margin:0 0 12px;
+    }
 
-        /* ================================
-           CARDS
-        ================================= */
+    .big-number{
+        font-size:30px;
+        font-weight:bold;
+        margin:10px 0;
+    }
+
+    .card-info{
+        min-height:65px;
+        font-size:15px;
+        line-height:1.6;
+    }
+
+    .buttons{
+        display:flex;
+        gap:7px;
+        flex-wrap:wrap;
+        margin-top:15px;
+    }
+
+    .buttons button{
+        padding:8px 11px;
+        border:none;
+        border-radius:6px;
+        cursor:pointer;
+        font-weight:bold;
+    }
+
+    .blue{
+        background:#1677ff;
+    }
+
+    .green{
+        background:#16a085;
+    }
+
+    .red{
+        background:#e74c3c;
+    }
+
+    .orange{
+        background:#f39c12;
+    }
+
+    .purple{
+        background:#8e44ad;
+    }
+
+    .darkorange{
+        background:#d35400;
+    }
+
+    .graph{
+        background:#34495e;
+    }
+
+    .graph-card{
+        grid-column:1/-1;
+        min-height:400px;
+    }
+
+    /* ================================
+       GRAPH
+    ================================= */
+
+    .graph-container{
+        background:white;
+        padding:15px;
+        border-radius:10px;
+        margin-top:10px;
+        height:260px;
+        position:relative;
+    }
+
+    #dashboardGraph{
+        width:100% !important;
+        height:100% !important;
+    }
+
+    /* ================================
+       CURRENT STOCK TABLE
+    ================================= */
+
+    .stock-section{
+        background:white;
+        margin-top:30px;
+        padding:25px;
+        border-radius:15px;
+        box-shadow:0 5px 15px rgba(0,0,0,.10);
+    }
+
+    .stock-section h2{
+        color:#12355b;
+        margin-top:0;
+    }
+
+    .table-wrapper{
+        overflow-x:auto;
+    }
+
+    .stock-table{
+        width:100%;
+        border-collapse:collapse;
+        min-width:900px;
+    }
+
+    .stock-table th{
+        background:#12355b;
+        color:white;
+        padding:11px;
+        text-align:left;
+        white-space:nowrap;
+    }
+
+    .stock-table td{
+        padding:11px;
+        border-bottom:1px solid #ddd;
+        white-space:nowrap;
+    }
+
+    .low{
+        background:#e74c3c !important;
+        color:white;
+        font-weight:bold;
+    }
+
+    .yellow{
+        background:#f1c40f !important;
+        color:#000;
+        font-weight:bold;
+    }
+
+    .normal{
+        background:#d5f5e3 !important;
+        color:#1e8449;
+        font-weight:bold;
+    }
+
+    /* ================================
+       MOBILE
+    ================================= */
+
+    @media(max-width:1000px){
 
         .dashboard-cards{
-            display:grid;
-            grid-template-columns:repeat(3,1fr);
-            gap:20px;
+            grid-template-columns:repeat(2,1fr);
         }
 
-        .card{
-            padding:20px;
-            border-radius:15px;
-            color:white;
-            box-shadow:0 5px 15px rgba(0,0,0,.15);
-            min-height:220px;
+    }
+
+    @media(max-width:750px){
+
+        .sidebar{
+            position:relative;
+            width:100%;
+            min-height:auto;
         }
 
-        .card h3{
-            margin:0 0 12px;
+        .dashboard{
+            margin-left:0;
         }
 
-        .big-number{
-            font-size:30px;
-            font-weight:bold;
-            margin:10px 0;
+        .dashboard-cards{
+            grid-template-columns:1fr;
         }
 
-        .card-info{
-            min-height:65px;
-            font-size:15px;
-            line-height:1.6;
-        }
-
-        .buttons{
-            display:flex;
-            gap:7px;
-            flex-wrap:wrap;
-            margin-top:15px;
-        }
-
-        .buttons button{
-            padding:8px 11px;
-            border:none;
-            border-radius:6px;
-            cursor:pointer;
-            font-weight:bold;
-        }
-
-        .blue{
-            background:#1677ff;
-        }
-
-        .green{
-            background:#16a085;
-        }
-
-        .red{
-            background:#e74c3c;
-        }
-
-        .orange{
-            background:#f39c12;
-        }
-
-        .purple{
-            background:#8e44ad;
-        }
-
-        .darkorange{
-            background:#d35400;
-        }
-
-        .graph{
-            background:#34495e;
+        .top-header{
+            flex-direction:column;
+            gap:10px;
         }
 
         .graph-card{
-            grid-column:1/-1;
-            min-height:400px;
+            grid-column:auto;
         }
 
+    }
 
-        /* ================================
-           GRAPH
-        ================================= */
-
-        .graph-container{
-            background:white;
-            padding:15px;
-            border-radius:10px;
-            margin-top:10px;
-            height:260px;
-            position:relative;
-        }
-
-        #dashboardGraph{
-            width:100% !important;
-            height:100% !important;
-        }
-
-
-        /* ================================
-           CURRENT STOCK
-        ================================= */
-
-        .stock-section{
-            background:white;
-            margin-top:30px;
-            padding:25px;
-            border-radius:15px;
-            box-shadow:0 5px 15px rgba(0,0,0,.10);
-        }
-
-        .stock-section h2{
-            color:#12355b;
-            margin-top:0;
-        }
-
-        .stock-table{
-            width:100%;
-            border-collapse:collapse;
-        }
-
-        .stock-table th{
-            background:#12355b;
-            color:white;
-            padding:11px;
-            text-align:left;
-        }
-
-        .stock-table td{
-            padding:11px;
-            border-bottom:1px solid #ddd;
-        }
-
-        .low{
-            background:#e74c3c !important;
-            color:white;
-            font-weight:bold;
-        }
-
-        .normal{
-            background:#d5f5e3 !important;
-            color:#1e8449;
-            font-weight:bold;
-        }
-
-
-        /* ================================
-           MOBILE
-        ================================= */
-
-        @media(max-width:1000px){
-
-            .dashboard-cards{
-                grid-template-columns:repeat(2,1fr);
-            }
-
-        }
-
-        @media(max-width:750px){
-
-            .sidebar{
-                position:relative;
-                width:100%;
-                min-height:auto;
-            }
-
-            .dashboard{
-                margin-left:0;
-            }
-
-            .dashboard-cards{
-                grid-template-columns:1fr;
-            }
-
-            .top-header{
-                flex-direction:column;
-                gap:10px;
-            }
-
-            .graph-card{
-                grid-column:auto;
-            }
-
-        }
-
-    </style>
+</style>
+```
 
 </head>
 
-
 <body>
-
 
 <!-- =====================================
      SIDEBAR
@@ -355,45 +363,47 @@
 
 <div class="sidebar">
 
-    <h2>STORE</h2>
+```
+<h2>STORE</h2>
 
-    <button onclick="window.location.href='Dashboard.html'">
-        🏠 Dashboard
-    </button>
+<button onclick="window.location.href='Dashboard.html'">
+    🏠 Dashboard
+</button>
 
-    <button onclick="window.location.href='Master List .html'">
-        📋 Master List
-    </button>
+<button onclick="window.location.href='Master List .html'">
+    📋 Master List
+</button>
 
-    <button onclick="window.location.href='Stock In .html'">
-        📥 Stock In
-    </button>
+<button onclick="window.location.href='Stock In .html'">
+    📥 Stock In
+</button>
 
-    <button onclick="window.location.href='Stock out .html'">
-        📤 Stock Out
-    </button>
+<button onclick="window.location.href='Stock out .html'">
+    📤 Stock Out
+</button>
 
-    <button onclick="window.location.href='Cost .html'">
-        💰 Cost
-    </button>
+<button onclick="window.location.href='Cost .html'">
+    💰 Cost
+</button>
 
-    <button onclick="window.location.href='Monthly Demand .html'">
-        📊 Monthly Demand
-    </button>
+<button onclick="window.location.href='Monthly Demand .html'">
+    📊 Monthly Demand
+</button>
 
-    <button onclick="window.location.href='Graphs.html'">
-        📈 Graphs
-    </button>
+<button onclick="window.location.href='Graphs.html'">
+    📈 Graphs
+</button>
 
-    <button onclick="window.location.href='Reports.html'">
-        📑 Reports
-    </button>
+<button onclick="window.location.href='Reports.html'">
+    📑 Reports
+</button>
+
 <button onclick="window.location.href='ImportData.html'">
     📥 Import Data
 </button>
+```
+
 </div>
-
-
 
 <!-- =====================================
      MAIN DASHBOARD
@@ -401,338 +411,328 @@
 
 <div class="dashboard">
 
+```
+<!-- HEADER -->
 
-    <!-- HEADER -->
+<div class="top-header">
 
-    <div class="top-header">
+    <div>
 
-        <div>
+        <h1>
+            STORE MANAGEMENT SYSTEM
+        </h1>
 
-            <h1>
-                STORE MANAGEMENT SYSTEM
-            </h1>
-
-            <p>
-                Inventory & Store Control
-            </p>
-
-        </div>
-
-        <div class="user-box">
-            👤 Admin
-        </div>
+        <p>
+            Inventory & Store Control
+        </p>
 
     </div>
 
+    <div class="user-box">
+        👤 Admin
+    </div>
 
-    <h2 style="color:#12355b">
-        Dashboard
+</div>
+
+
+<h2 style="color:#12355b">
+    Dashboard
+</h2>
+
+
+<!-- =================================
+     ITEM SEARCH
+================================== -->
+
+<div class="search-box">
+
+    <h2>
+        🔎 Item Search
     </h2>
 
+    <div class="search-row">
+
+        <input
+            id="itemSearch"
+            type="text"
+            placeholder="Enter Item ID / Code..."
+            oninput="searchItem()"
+            autocomplete="off"
+        >
+
+        <button
+            class="clear-btn"
+            onclick="clearItemSearch()"
+        >
+            Clear
+        </button>
+
+    </div>
+
+    <div
+        id="searchInfo"
+        class="search-info"
+    >
+        Overall Dashboard — No item selected
+    </div>
+
+</div>
 
 
-    <!-- =================================
-         ITEM SEARCH
-    ================================== -->
+<!-- =================================
+     DASHBOARD CARDS
+================================== -->
 
-    <div class="search-box">
+<div class="dashboard-cards">
 
-        <h2>
-            🔎 Item Search
-        </h2>
 
-        <div class="search-row">
+    <!-- MASTER -->
 
-            <input
-                id="itemSearch"
-                type="text"
-                placeholder="Enter Item ID / Code..."
-                oninput="searchItem()"
-                autocomplete="off"
-            >
+    <div class="card blue">
 
-            <button
-                class="clear-btn"
-                onclick="clearItemSearch()"
-            >
-                Clear
+        <h3>
+            📋 Master List
+        </h3>
+
+        <div
+            class="big-number"
+            id="masterValue"
+        >
+            -
+        </div>
+
+        <div
+            id="masterInfo"
+            class="card-info"
+        ></div>
+
+        <div class="buttons">
+
+            <button onclick="openMasterView()">
+                👁 View Items
+            </button>
+
+            <button onclick="newMasterEntry()">
+                + New Entry
             </button>
 
         </div>
 
+    </div>
+
+
+    <!-- STOCK IN -->
+
+    <div class="card green">
+
+        <h3>
+            📥 Stock In
+        </h3>
+
         <div
-            id="searchInfo"
-            class="search-info"
+            class="big-number"
+            id="stockInValue"
         >
-            Overall Dashboard — No item selected
+            -
+        </div>
+
+        <div
+            id="stockInInfo"
+            class="card-info"
+        ></div>
+
+        <div class="buttons">
+
+            <button onclick="openStockInView()">
+                👁 View
+            </button>
+
+            <button onclick="newStockIn()">
+                + New Entry
+            </button>
+
         </div>
 
     </div>
 
 
+    <!-- STOCK OUT -->
 
-    <!-- =================================
-         DASHBOARD CARDS
-    ================================== -->
+    <div class="card red">
 
-    <div class="dashboard-cards">
+        <h3>
+            📤 Stock Out
+        </h3>
 
-
-        <!-- MASTER -->
-
-        <div class="card blue">
-
-            <h3>
-                📋 Master List
-            </h3>
-
-            <div
-                class="big-number"
-                id="masterValue"
-            >
-                -
-            </div>
-
-            <div
-                id="masterInfo"
-                class="card-info"
-            ></div>
-
-            <div class="buttons">
-
-                <button onclick="openMasterView()">
-                    👁 View Items
-                </button>
-
-                <button onclick="newMasterEntry()">
-                    + New Entry
-                </button>
-
-            </div>
-
+        <div
+            class="big-number"
+            id="stockOutValue"
+        >
+            -
         </div>
 
+        <div
+            id="stockOutInfo"
+            class="card-info"
+        ></div>
 
+        <div class="buttons">
 
-        <!-- STOCK IN -->
+            <button onclick="openStockOutView()">
+                👁 View
+            </button>
 
-        <div class="card green">
-
-            <h3>
-                📥 Stock In
-            </h3>
-
-            <div
-                class="big-number"
-                id="stockInValue"
-            >
-                -
-            </div>
-
-            <div
-                id="stockInInfo"
-                class="card-info"
-            ></div>
-
-            <div class="buttons">
-
-                <button onclick="openStockInView()">
-                    👁 View
-                </button>
-
-                <button onclick="newStockIn()">
-                    + New Entry
-                </button>
-
-            </div>
+            <button onclick="newStockOut()">
+                + New Entry
+            </button>
 
         </div>
-
-
-
-        <!-- STOCK OUT -->
-
-        <div class="card red">
-
-            <h3>
-                📤 Stock Out
-            </h3>
-
-            <div
-                class="big-number"
-                id="stockOutValue"
-            >
-                -
-            </div>
-
-            <div
-                id="stockOutInfo"
-                class="card-info"
-            ></div>
-
-            <div class="buttons">
-
-                <button onclick="openStockOutView()">
-                    👁 View
-                </button>
-
-                <button onclick="newStockOut()">
-                    + New Entry
-                </button>
-
-            </div>
-
-        </div>
-
-
-
-        <!-- COST -->
-
-        <div class="card orange">
-
-            <h3>
-                💰 Cost
-            </h3>
-
-            <div
-                class="big-number"
-                id="costValue"
-            >
-                Rs. 0.00
-            </div>
-
-            <div
-                id="costInfo"
-                class="card-info"
-            >
-                Overall Cost
-            </div>
-
-            <div class="buttons">
-
-                <button onclick="openCostView()">
-                    👁 View
-                </button>
-
-                <button onclick="newCostEntry()">
-                    + New Entry
-                </button>
-
-            </div>
-
-        </div>
-
-
-
-        <!-- MONTHLY DEMAND -->
-
-        <div class="card purple">
-
-            <h3>
-                📊 Monthly Demand
-            </h3>
-
-            <div
-                class="big-number"
-                id="demandValue"
-            >
-                -
-            </div>
-
-            <div
-                id="demandInfo"
-                class="card-info"
-            ></div>
-
-            <div class="buttons">
-
-                <button onclick="openDemandView()">
-                    👁 View
-                </button>
-
-                <button onclick="newDemandEntry()">
-                    + New Entry
-                </button>
-
-            </div>
-
-        </div>
-
-
-
-        <!-- PENDING -->
-
-        <div class="card darkorange">
-
-            <h3>
-                ⚠️ Pending Demand / PO
-            </h3>
-
-            <div
-                class="big-number"
-                id="pendingValue"
-            >
-                0
-            </div>
-
-            <div
-                id="pendingInfo"
-                class="card-info"
-            ></div>
-
-        </div>
-
-
-
-        <!-- =================================
-             GRAPH CARD
-        ================================== -->
-
-        <div class="card graph graph-card">
-
-            <h3>
-                📈 Item Graph
-            </h3>
-
-            <div
-                id="graphInfo"
-                class="card-info"
-            >
-                Select an Item ID to see its graph.
-            </div>
-
-            <div class="graph-container">
-
-                <canvas
-                    id="dashboardGraph"
-                ></canvas>
-
-            </div>
-
-            <div class="buttons">
-
-                <button onclick="openGraph()">
-                    📈 View Graph
-                </button>
-
-            </div>
-
-        </div>
-
 
     </div>
 
 
+    <!-- COST -->
 
-    <!-- =================================
-         CURRENT STOCK TABLE
-    ================================== -->
+    <div class="card orange">
 
-    <div class="stock-section">
+        <h3>
+            💰 Cost
+        </h3>
 
-        <h2>
-            Current Stock
-        </h2>
+        <div
+            class="big-number"
+            id="costValue"
+        >
+            Rs. 0.00
+        </div>
+
+        <div
+            id="costInfo"
+            class="card-info"
+        >
+            Overall Cost
+        </div>
+
+        <div class="buttons">
+
+            <button onclick="openCostView()">
+                👁 View
+            </button>
+
+            <button onclick="newCostEntry()">
+                + New Entry
+            </button>
+
+        </div>
+
+    </div>
+
+
+    <!-- MONTHLY DEMAND -->
+
+    <div class="card purple">
+
+        <h3>
+            📊 Monthly Demand
+        </h3>
+
+        <div
+            class="big-number"
+            id="demandValue"
+        >
+            -
+        </div>
+
+        <div
+            id="demandInfo"
+            class="card-info"
+        ></div>
+
+        <div class="buttons">
+
+            <button onclick="openDemandView()">
+                👁 View
+            </button>
+
+            <button onclick="newDemandEntry()">
+                + New Entry
+            </button>
+
+        </div>
+
+    </div>
+
+
+    <!-- PENDING -->
+
+    <div class="card darkorange">
+
+        <h3>
+            ⚠️ Pending Demand / PO
+        </h3>
+
+        <div
+            class="big-number"
+            id="pendingValue"
+        >
+            0
+        </div>
+
+        <div
+            id="pendingInfo"
+            class="card-info"
+        ></div>
+
+    </div>
+
+
+    <!-- GRAPH -->
+
+    <div class="card graph graph-card">
+
+        <h3>
+            📈 Item Graph
+        </h3>
+
+        <div
+            id="graphInfo"
+            class="card-info"
+        >
+            Select an Item ID to see its graph.
+        </div>
+
+        <div class="graph-container">
+
+            <canvas
+                id="dashboardGraph"
+            ></canvas>
+
+        </div>
+
+        <div class="buttons">
+
+            <button onclick="openGraph()">
+                📈 View Graph
+            </button>
+
+        </div>
+
+    </div>
+
+</div>
+
+
+<!-- =================================
+     CURRENT MONTH STOCK TABLE
+================================== -->
+
+<div class="stock-section">
+
+    <h2>
+        Current Month Stock
+    </h2>
+
+    <div class="table-wrapper">
 
         <table class="stock-table">
 
@@ -740,33 +740,21 @@
 
                 <tr>
 
-                    <th>
-                        Item Code
-                    </th>
+                    <th>Item Code</th>
 
-                    <th>
-                        Item Name
-                    </th>
+                    <th>Item Name</th>
 
-                    <th>
-                        Unit
-                    </th>
+                    <th>Unit</th>
 
-                    <th>
-                        Stock In
-                    </th>
+                    <th>Stock In</th>
 
-                    <th>
-                        Stock Out
-                    </th>
+                    <th>Stock Out</th>
 
-                    <th>
-                        Current Stock
-                    </th>
+                    <th>Current Stock</th>
 
-                    <th>
-                        Minimum Stock
-                    </th>
+                    <th>Latest Rate</th>
+
+                    <th>Demand Qty</th>
 
                 </tr>
 
@@ -780,10 +768,10 @@
 
     </div>
 
+</div>
+```
 
 </div>
-
-
 
 <!-- =====================================
      CHART.JS
@@ -792,7 +780,6 @@
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
 <script src="Dashboard.js"></script>
-
 
 </body>
 
