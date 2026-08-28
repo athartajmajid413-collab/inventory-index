@@ -1,170 +1,487 @@
+```html
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Import Website Data</title>
-<style>
-*{box-sizing:border-box}
-body{
-    margin:0;
-    font-family:Arial,sans-serif;
-    background:linear-gradient(135deg,#12355b,#1677ff);
-    min-height:100vh;
-    padding:30px 15px;
-}
-.container{
-    max-width:900px;
-    margin:auto;
-    background:#fff;
-    padding:25px;
-    border-radius:15px;
-    box-shadow:0 10px 30px rgba(0,0,0,.25);
-}
-h1{color:#12355b;margin-top:0}
-p{color:#555;line-height:1.5}
-textarea{
-    width:100%;
-    min-height:420px;
-    padding:15px;
-    border:1px solid #ccc;
-    border-radius:8px;
-    font-family:Consolas,monospace;
-    font-size:13px;
-    resize:vertical;
-}
-button{
-    border:0;
-    border-radius:8px;
-    padding:13px 20px;
-    margin:12px 8px 0 0;
-    font-weight:bold;
-    cursor:pointer;
-    color:white;
-    background:#12355b;
-}
-button:hover{background:#1677ff}
-.back{background:#666}
-.clear{background:#c0392b}
-#status{
-    margin-top:18px;
-    padding:12px;
-    border-radius:8px;
-    display:none;
-    white-space:pre-line;
-}
-.success{background:#e8f8ee;color:#176b36}
-.error{background:#fdecea;color:#a93226}
-.small{font-size:13px;color:#777}
-</style>
+
+    <meta charset="UTF-8">
+
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>Import Data - Store Management System</title>
+
+    <style>
+
+        *{
+            box-sizing:border-box;
+        }
+
+        body{
+            margin:0;
+            font-family:Arial,sans-serif;
+            background:#f2f5f9;
+        }
+
+        .container{
+            max-width:1000px;
+            margin:40px auto;
+            padding:20px;
+        }
+
+        .box{
+            background:white;
+            padding:25px;
+            border-radius:15px;
+            box-shadow:0 5px 20px rgba(0,0,0,.12);
+        }
+
+        h1{
+            margin-top:0;
+            color:#12355b;
+        }
+
+        p{
+            color:#555;
+            line-height:1.6;
+        }
+
+        textarea{
+            width:100%;
+            height:350px;
+            padding:15px;
+            border:1px solid #ccc;
+            border-radius:10px;
+            font-family:monospace;
+            font-size:13px;
+            resize:vertical;
+        }
+
+        textarea:focus{
+            outline:none;
+            border-color:#1677ff;
+            box-shadow:0 0 0 2px rgba(22,119,255,.15);
+        }
+
+        .buttons{
+            display:flex;
+            gap:10px;
+            flex-wrap:wrap;
+            margin-top:15px;
+        }
+
+        button{
+            padding:12px 18px;
+            border:none;
+            border-radius:8px;
+            cursor:pointer;
+            font-weight:bold;
+            font-size:14px;
+        }
+
+        .import{
+            background:#16a085;
+            color:white;
+        }
+
+        .clear{
+            background:#e74c3c;
+            color:white;
+        }
+
+        .dashboard{
+            background:#12355b;
+            color:white;
+        }
+
+        button:hover{
+            opacity:.9;
+        }
+
+        #message{
+            margin-top:20px;
+            padding:15px;
+            border-radius:8px;
+            display:none;
+            font-weight:bold;
+        }
+
+        .success{
+            background:#d5f5e3;
+            color:#1e8449;
+        }
+
+        .error{
+            background:#fadbd8;
+            color:#922b21;
+        }
+
+        .info{
+            background:#e8f1ff;
+            color:#12355b;
+        }
+
+        .help{
+            background:#fff8e1;
+            border-left:5px solid #f39c12;
+            padding:15px;
+            margin:20px 0;
+            line-height:1.6;
+        }
+
+    </style>
+
 </head>
+
+
 <body>
 
+
 <div class="container">
-    <h1>📥 Import Website Data</h1>
 
-    <p>
-        یہاں اپنی پرانی website کا LocalStorage data paste کریں۔
-        پھر <b>Import Data</b> دبائیں۔
-    </p>
+    <div class="box">
 
-    <p class="small">
-        Data JSON format میں ہونا چاہیے، مثلاً:
-        {"items":"[...]","history":"[...]","demandEdits":"{...}"}
-    </p>
+        <h1>
+            📥 Import Website Data
+        </h1>
 
-    <textarea id="dataInput" placeholder="یہاں اپنا Console / LocalStorage JSON data paste کریں..."></textarea>
+        <p>
+            یہاں اپنا copied LocalStorage data paste کریں۔
+            پھر <b>Import Data</b> button دبائیں۔
+        </p>
 
-    <br>
 
-    <button onclick="importData()">📥 Import Data</button>
-    <button class="clear" onclick="clearBox()">🗑 Clear</button>
-    <button class="back" onclick="goDashboard()">🏠 Dashboard</button>
+        <div class="help">
 
-    <div id="status"></div>
+            <b>اہم:</b><br>
+
+            جو data آپ نے پرانی website سے copy کیا ہے،
+            اسے پورا paste کریں۔ درمیان سے data نہ کاٹیں۔
+
+            <br><br>
+
+            Import کے بعد Dashboard کھولیں۔
+            Data اسی browser کی LocalStorage میں save ہو جائے گا۔
+
+        </div>
+
+
+        <textarea
+            id="dataInput"
+            placeholder="یہاں اپنا copied data paste کریں..."
+        ></textarea>
+
+
+        <div class="buttons">
+
+            <button
+                class="import"
+                onclick="importData()"
+            >
+                📥 Import Data
+            </button>
+
+
+            <button
+                class="clear"
+                onclick="clearData()"
+            >
+                🗑 Clear Box
+            </button>
+
+
+            <button
+                class="dashboard"
+                onclick="window.location.href='Dashboard.html'"
+            >
+                🏠 Dashboard
+            </button>
+
+        </div>
+
+
+        <div id="message"></div>
+
+
+    </div>
+
 </div>
 
+
+
 <script>
-function showStatus(message, type){
-    const box = document.getElementById("status");
-    box.textContent = message;
-    box.className = type;
-    box.style.display = "block";
+
+
+// =====================================
+// SHOW MESSAGE
+// =====================================
+
+function showMessage(text,type){
+
+    const message =
+        document.getElementById("message");
+
+    message.textContent =
+        text;
+
+    message.className =
+        type;
+
+    message.style.display =
+        "block";
+
 }
+
+
+// =====================================
+// IMPORT DATA
+// =====================================
 
 function importData(){
 
-    const text = document.getElementById("dataInput").value.trim();
+    const input =
+        document.getElementById("dataInput").value.trim();
 
-    if(!text){
-        showStatus("❌ پہلے data paste کریں۔", "error");
-        return;
-    }
 
-    let data;
+    if(!input){
 
-    try{
-        data = JSON.parse(text);
-    }
-    catch(error){
-        showStatus(
-            "❌ Data JSON format میں درست نہیں ہے۔\n\n" +
-            "پورا data { ... } کے ساتھ paste کریں۔\n\n" +
-            "Error: " + error.message,
+        showMessage(
+            "❌ پہلے data paste کریں۔",
             "error"
         );
+
         return;
+
     }
 
-    if(!data || typeof data !== "object" || Array.isArray(data)){
-        showStatus("❌ Data کا format درست نہیں ہے۔", "error");
-        return;
-    }
-
-    let count = 0;
 
     try{
-        Object.keys(data).forEach(function(key){
 
-            let value = data[key];
+        let data = null;
 
-            /*
-             * LocalStorage میں ہر value string کے طور پر save ہوتی ہے۔
-             * اگر value پہلے ہی string ہے تو اسی طرح save کریں گے۔
-             */
-            if(typeof value !== "string"){
-                value = JSON.stringify(value);
+
+        // =================================
+        // METHOD 1
+        // Complete JSON object
+        // =================================
+
+        try{
+
+            data =
+                JSON.parse(input);
+
+        }
+        catch(e){
+
+            data = null;
+
+        }
+
+
+        // =================================
+        // METHOD 2
+        // localStorage export format
+        // =================================
+
+        if(
+            !data &&
+            input.includes('"items"')
+        ){
+
+            try{
+
+                let cleaned =
+                    input.trim();
+
+
+                /*
+                 Remove possible
+                 localStorage wrapper
+                */
+
+                const firstBrace =
+                    cleaned.indexOf("{");
+
+                const lastBrace =
+                    cleaned.lastIndexOf("}");
+
+
+                if(
+                    firstBrace >= 0 &&
+                    lastBrace > firstBrace
+                ){
+
+                    cleaned =
+                        cleaned.substring(
+                            firstBrace,
+                            lastBrace + 1
+                        );
+
+                    data =
+                        JSON.parse(cleaned);
+
+                }
+
+            }
+            catch(e){
+
+                data = null;
+
             }
 
-            localStorage.setItem(key, value);
-            count++;
+        }
+
+
+        // =================================
+        // CHECK DATA
+        // =================================
+
+        if(
+            !data ||
+            typeof data !== "object" ||
+            Array.isArray(data)
+        ){
+
+            throw new Error(
+                "Data format صحیح نہیں ہے."
+            );
+
+        }
+
+
+        let imported = 0;
+
+
+        // =================================
+        // SAVE EVERY KEY
+        // =================================
+
+        Object.keys(data).forEach(function(key){
+
+            let value =
+                data[key];
+
+
+            /*
+             اگر value پہلے ہی string ہے
+             تو اسے JSON string کی صورت میں
+             محفوظ کریں۔
+            */
+
+            if(typeof value === "string"){
+
+                /*
+                 اگر یہ JSON ہے تو پہلے check
+                 کریں تاکہ double stringify نہ ہو۔
+                */
+
+                try{
+
+                    const parsed =
+                        JSON.parse(value);
+
+                    localStorage.setItem(
+                        key,
+                        JSON.stringify(parsed)
+                    );
+
+                }
+                catch(e){
+
+                    localStorage.setItem(
+                        key,
+                        value
+                    );
+
+                }
+
+            }
+
+            else{
+
+                localStorage.setItem(
+                    key,
+                    JSON.stringify(value)
+                );
+
+            }
+
+
+            imported++;
+
         });
 
-        showStatus(
-            "✅ Data successfully import ہو گیا!\n\n" +
-            "Total keys imported: " + count +
-            "\n\nاب Dashboard کھولیں۔",
+
+        // =================================
+        // RESULT
+        // =================================
+
+        showMessage(
+            "✅ Data successfully imported! " +
+            imported +
+            " data keys save ہو گئی ہیں۔ " +
+            "اب Dashboard کھولیں۔",
             "success"
         );
 
+
+        console.log(
+            "Imported LocalStorage data:",
+            data
+        );
+
     }
+
+
     catch(error){
-        showStatus(
-            "❌ Data save نہیں ہو سکا۔\n\n" + error.message,
+
+        console.error(error);
+
+        showMessage(
+            "❌ Data import نہیں ہو سکا۔ " +
+            "براہِ کرم check کریں کہ آپ نے مکمل data paste کیا ہے۔",
             "error"
         );
+
     }
+
 }
 
-function clearBox(){
-    document.getElementById("dataInput").value = "";
-    document.getElementById("status").style.display = "none";
+
+// =====================================
+// CLEAR TEXTAREA
+// =====================================
+
+function clearData(){
+
+    document.getElementById(
+        "dataInput"
+    ).value = "";
+
+
+    document.getElementById(
+        "message"
+    ).style.display = "none";
+
 }
 
-function goDashboard(){
-    window.location.href = "Dashboard.html";
-}
+
+// =====================================
+// SHOW CURRENT LOCALSTORAGE INFO
+// =====================================
+
+console.log(
+    "Import Data page loaded."
+);
+
+console.log(
+    "Current LocalStorage:",
+    localStorage
+);
+
 </script>
 
+
 </body>
+
 </html>
+```
