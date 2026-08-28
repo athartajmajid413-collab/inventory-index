@@ -118,19 +118,25 @@ function getStockSummary(item){
 
         else if(
 
-            type === "out" ||
+    type === "out" ||
 
-            type === "stockout" ||
+    type === "stockout" ||
 
-            type === "stock out" ||
+    type === "stock out" ||
 
-            type === "outward"
+    type === "outward" ||
 
-        ){
+    type === "stock issue" ||
 
-            stockOut += quantity;
+    type === "issue" ||
 
-        }
+    type === "stockissue"
+
+){
+
+    stockOut += quantity;
+
+}
 
     }
 
