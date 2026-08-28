@@ -57,7 +57,6 @@
             transform:translateY(-2px);
         }
 
-
         /* ================================
            DASHBOARD
         ================================= */
@@ -66,7 +65,6 @@
             margin-left:220px;
             padding:25px;
         }
-
 
         /* ================================
            HEADER
@@ -100,7 +98,6 @@
             border-radius:8px;
             font-weight:bold;
         }
-
 
         /* ================================
            SEARCH
@@ -151,7 +148,6 @@
             margin-top:12px;
             color:#555;
         }
-
 
         /* ================================
            CARDS
@@ -235,7 +231,6 @@
             min-height:400px;
         }
 
-
         /* ================================
            GRAPH
         ================================= */
@@ -254,9 +249,8 @@
             height:100% !important;
         }
 
-
         /* ================================
-           CURRENT STOCK
+           CURRENT STOCK TABLE
         ================================= */
 
         .stock-section{
@@ -265,6 +259,8 @@
             padding:25px;
             border-radius:15px;
             box-shadow:0 5px 15px rgba(0,0,0,.10);
+
+            overflow-x:auto;
         }
 
         .stock-section h2{
@@ -275,6 +271,7 @@
         .stock-table{
             width:100%;
             border-collapse:collapse;
+            min-width:900px;
         }
 
         .stock-table th{
@@ -282,25 +279,30 @@
             color:white;
             padding:11px;
             text-align:left;
+            white-space:nowrap;
         }
 
         .stock-table td{
             padding:11px;
             border-bottom:1px solid #ddd;
+            white-space:nowrap;
         }
 
-        .low{
-            background:#e74c3c !important;
-            color:white;
+        .stock-table tbody tr:hover{
+            background:#f5f8fc;
+        }
+
+        .stock-table .current-stock{
             font-weight:bold;
         }
 
-        .normal{
-            background:#d5f5e3 !important;
-            color:#1e8449;
+        .stock-table .latest-rate{
             font-weight:bold;
         }
 
+        .stock-table .demand-qty{
+            font-weight:bold;
+        }
 
         /* ================================
            MOBILE
@@ -345,9 +347,7 @@
 
 </head>
 
-
 <body>
-
 
 <!-- =====================================
      SIDEBAR
@@ -391,14 +391,11 @@
 
 </div>
 
-
-
 <!-- =====================================
      MAIN DASHBOARD
 ===================================== -->
 
 <div class="dashboard">
-
 
     <!-- HEADER -->
 
@@ -422,12 +419,9 @@
 
     </div>
 
-
     <h2 style="color:#12355b">
         Dashboard
     </h2>
-
-
 
     <!-- =================================
          ITEM SEARCH
@@ -467,14 +461,11 @@
 
     </div>
 
-
-
     <!-- =================================
          DASHBOARD CARDS
     ================================== -->
 
     <div class="dashboard-cards">
-
 
         <!-- MASTER -->
 
@@ -510,8 +501,6 @@
 
         </div>
 
-
-
         <!-- STOCK IN -->
 
         <div class="card green">
@@ -546,8 +535,6 @@
 
         </div>
 
-
-
         <!-- STOCK OUT -->
 
         <div class="card red">
@@ -581,8 +568,6 @@
             </div>
 
         </div>
-
-
 
         <!-- COST -->
 
@@ -620,8 +605,6 @@
 
         </div>
 
-
-
         <!-- MONTHLY DEMAND -->
 
         <div class="card purple">
@@ -656,8 +639,6 @@
 
         </div>
 
-
-
         <!-- PENDING -->
 
         <div class="card darkorange">
@@ -680,11 +661,7 @@
 
         </div>
 
-
-
-        <!-- =================================
-             GRAPH CARD
-        ================================== -->
+        <!-- GRAPH -->
 
         <div class="card graph graph-card">
 
@@ -717,20 +694,23 @@
 
         </div>
 
-
     </div>
 
-
-
     <!-- =================================
-         CURRENT STOCK TABLE
+         CURRENT MONTH STOCK TABLE
     ================================== -->
 
-    <div class="stock-section">
+   <!-- =================================
+     CURRENT STOCK TABLE
+================================== -->
 
-        <h2>
-            Current Stock
-        </h2>
+<div class="stock-section">
+
+    <h2>
+        Current Month Stock
+    </h2>
+
+    <div style="overflow-x:auto;">
 
         <table class="stock-table">
 
@@ -738,50 +718,33 @@
 
                 <tr>
 
-                    <th>
-                        Item Code
-                    </th>
+                    <th>Item Code</th>
 
-                    <th>
-                        Item Name
-                    </th>
+                    <th>Item Name</th>
 
-                    <th>
-                        Unit
-                    </th>
+                    <th>Unit</th>
 
-                    <th>
-                        Stock In
-                    </th>
+                    <th>Stock In<br>Current Month</th>
 
-                    <th>
-                        Stock Out
-                    </th>
+                    <th>Stock Out<br>Current Month</th>
 
-                    <th>
-                        Current Stock
-                    </th>
+                    <th>Current Stock</th>
 
-                    <th>
-                        Minimum Stock
-                    </th>
+                    <th>Latest Rate</th>
+
+                    <th>Demand Qty</th>
 
                 </tr>
 
             </thead>
 
-            <tbody
-                id="currentStockBody"
-            ></tbody>
+            <tbody id="currentStockBody"></tbody>
 
         </table>
 
     </div>
 
-
 </div>
-
-
 
 <!-- =====================================
      CHART.JS
@@ -790,7 +753,6 @@
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
 <script src="Dashboard.js"></script>
-
 
 </body>
 
