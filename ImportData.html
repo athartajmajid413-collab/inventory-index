@@ -1,4 +1,3 @@
-```html
 <!DOCTYPE html>
 <html lang="en">
 
@@ -103,6 +102,7 @@
             border-radius:8px;
             display:none;
             font-weight:bold;
+            line-height:1.7;
         }
 
         .success{
@@ -128,6 +128,18 @@
             line-height:1.6;
         }
 
+        .key-list{
+            margin-top:15px;
+            padding:15px;
+            background:#f7f9fb;
+            border-radius:8px;
+            display:none;
+        }
+
+        .key-list b{
+            color:#12355b;
+        }
+
     </style>
 
 </head>
@@ -143,6 +155,7 @@
         <h1>
             📥 Import Website Data
         </h1>
+
 
         <p>
             یہاں اپنا copied LocalStorage data paste کریں۔
@@ -202,6 +215,12 @@
         <div id="message"></div>
 
 
+        <div
+            id="keyList"
+            class="key-list"
+        ></div>
+
+
     </div>
 
 </div>
@@ -233,13 +252,108 @@ function showMessage(text,type){
 
 
 // =====================================
+// SAFE JSON PARSE
+// =====================================
+
+function parseValue(value){
+
+    if(
+        typeof value !== "string"
+    ){
+
+        return value;
+
+    }
+
+
+    let result =
+        value.trim();
+
+
+    /*
+       کئی بار LocalStorage data
+       JSON string کے اندر JSON string
+       ہوتا ہے۔
+    */
+
+    for(let i = 0; i < 3; i++){
+
+        if(
+            typeof result !== "string"
+        ){
+
+            break;
+
+        }
+
+
+        try{
+
+            result =
+                JSON.parse(result);
+
+        }
+        catch(e){
+
+            break;
+
+        }
+
+    }
+
+
+    return result;
+
+}
+
+
+// =====================================
+// SAVE LOCAL STORAGE VALUE
+// =====================================
+
+function saveKey(key,value){
+
+    const parsed =
+        parseValue(value);
+
+
+    /*
+       Dashboard کے لیے arrays/objects
+       ہمیشہ proper JSON میں save ہوں گے۔
+    */
+
+    if(
+        typeof parsed === "object"
+    ){
+
+        localStorage.setItem(
+            key,
+            JSON.stringify(parsed)
+        );
+
+    }
+    else{
+
+        localStorage.setItem(
+            key,
+            String(parsed)
+        );
+
+    }
+
+}
+
+
+// =====================================
 // IMPORT DATA
 // =====================================
 
 function importData(){
 
     const input =
-        document.getElementById("dataInput").value.trim();
+        document.getElementById(
+            "dataInput"
+        ).value.trim();
 
 
     if(!input){
@@ -261,7 +375,7 @@ function importData(){
 
         // =================================
         // METHOD 1
-        // Complete JSON object
+        // DIRECT JSON
         // =================================
 
         try{
@@ -279,52 +393,41 @@ function importData(){
 
         // =================================
         // METHOD 2
-        // localStorage export format
+        // FIND JSON OBJECT
         // =================================
 
-        if(
-            !data &&
-            input.includes('"items"')
-        ){
+        if(!data){
 
-            try{
+            const firstBrace =
+                input.indexOf("{");
 
-                let cleaned =
-                    input.trim();
+            const lastBrace =
+                input.lastIndexOf("}");
 
 
-                /*
-                 Remove possible
-                 localStorage wrapper
-                */
+            if(
+                firstBrace >= 0 &&
+                lastBrace > firstBrace
+            ){
 
-                const firstBrace =
-                    cleaned.indexOf("{");
+                const cleaned =
+                    input.substring(
+                        firstBrace,
+                        lastBrace + 1
+                    );
 
-                const lastBrace =
-                    cleaned.lastIndexOf("}");
 
-
-                if(
-                    firstBrace >= 0 &&
-                    lastBrace > firstBrace
-                ){
-
-                    cleaned =
-                        cleaned.substring(
-                            firstBrace,
-                            lastBrace + 1
-                        );
+                try{
 
                     data =
                         JSON.parse(cleaned);
 
                 }
+                catch(e){
 
-            }
-            catch(e){
+                    data = null;
 
-                data = null;
+                }
 
             }
 
@@ -348,67 +451,243 @@ function importData(){
         }
 
 
-        let imported = 0;
-
-
         // =================================
-        // SAVE EVERY KEY
+        // IMPORT ALL KEYS
         // =================================
+
+        let importedKeys = [];
+
 
         Object.keys(data).forEach(function(key){
 
-            let value =
-                data[key];
+            saveKey(
+                key,
+                data[key]
+            );
 
 
-            /*
-             اگر value پہلے ہی string ہے
-             تو اسے JSON string کی صورت میں
-             محفوظ کریں۔
-            */
+            importedKeys.push(
+                key
+            );
 
-            if(typeof value === "string"){
+        });
 
-                /*
-                 اگر یہ JSON ہے تو پہلے check
-                 کریں تاکہ double stringify نہ ہو۔
-                */
 
-                try{
+        // =================================
+        // IMPORTANT DASHBOARD KEYS
+        // =================================
 
-                    const parsed =
-                        JSON.parse(value);
+        /*
+           اگر copied data میں یہ names موجود ہوں
+           تو انہیں Dashboard کے standard names
+           پر بھی save کریں گے۔
+        */
 
-                    localStorage.setItem(
-                        key,
-                        JSON.stringify(parsed)
-                    );
 
-                }
-                catch(e){
+        // -------------------------------
+        // ITEMS
+        // -------------------------------
 
-                    localStorage.setItem(
-                        key,
-                        value
-                    );
+        if(
+            !localStorage.getItem("items")
+        ){
 
-                }
+            const possibleItems =
+                data.masterList ||
+                data.master ||
+                data.products ||
+                data.inventory ||
+                data.itemList;
 
-            }
 
-            else{
+            if(possibleItems){
 
-                localStorage.setItem(
-                    key,
-                    JSON.stringify(value)
+                saveKey(
+                    "items",
+                    possibleItems
+                );
+
+                importedKeys.push(
+                    "items"
                 );
 
             }
 
+        }
 
-            imported++;
 
-        });
+        // -------------------------------
+        // HISTORY
+        // -------------------------------
+
+        if(
+            !localStorage.getItem("history")
+        ){
+
+            const possibleHistory =
+                data.stockHistory ||
+                data.inventoryHistory ||
+                data.transactions ||
+                data.stockTransactions;
+
+
+            if(possibleHistory){
+
+                saveKey(
+                    "history",
+                    possibleHistory
+                );
+
+                importedKeys.push(
+                    "history"
+                );
+
+            }
+
+        }
+
+
+        // -------------------------------
+        // DEMANDS
+        // -------------------------------
+
+        if(
+            !localStorage.getItem("demands")
+        ){
+
+            const possibleDemands =
+                data.demand ||
+                data.monthlyDemand ||
+                data.demandData;
+
+
+            if(possibleDemands){
+
+                saveKey(
+                    "demands",
+                    possibleDemands
+                );
+
+                importedKeys.push(
+                    "demands"
+                );
+
+            }
+
+        }
+
+
+        // -------------------------------
+        // DEMAND HISTORY
+        // -------------------------------
+
+        if(
+            !localStorage.getItem("demandHistory")
+        ){
+
+            const possibleDemandHistory =
+                data.demandHistories ||
+                data.monthlyDemandHistory ||
+                data.demandHistoryData;
+
+
+            if(possibleDemandHistory){
+
+                saveKey(
+                    "demandHistory",
+                    possibleDemandHistory
+                );
+
+                importedKeys.push(
+                    "demandHistory"
+                );
+
+            }
+
+        }
+
+
+        // =================================
+        // CHECK DASHBOARD DATA
+        // =================================
+
+        const itemsData =
+            localStorage.getItem("items");
+
+        const historyData =
+            localStorage.getItem("history");
+
+        const demandsData =
+            localStorage.getItem("demands");
+
+        const demandHistoryData =
+            localStorage.getItem("demandHistory");
+
+
+        let itemCount = 0;
+        let historyCount = 0;
+        let demandCount = 0;
+        let demandHistoryCount = 0;
+
+
+        try{
+
+            itemCount =
+                itemsData
+                ? JSON.parse(itemsData).length
+                : 0;
+
+        }
+        catch(e){
+
+            itemCount = 0;
+
+        }
+
+
+        try{
+
+            historyCount =
+                historyData
+                ? JSON.parse(historyData).length
+                : 0;
+
+        }
+        catch(e){
+
+            historyCount = 0;
+
+        }
+
+
+        try{
+
+            demandCount =
+                demandsData
+                ? JSON.parse(demandsData).length
+                : 0;
+
+        }
+        catch(e){
+
+            demandCount = 0;
+
+        }
+
+
+        try{
+
+            demandHistoryCount =
+                demandHistoryData
+                ? JSON.parse(demandHistoryData).length
+                : 0;
+
+        }
+        catch(e){
+
+            demandHistoryCount = 0;
+
+        }
 
 
         // =================================
@@ -417,16 +696,84 @@ function importData(){
 
         showMessage(
             "✅ Data successfully imported! " +
-            imported +
-            " data keys save ہو گئی ہیں۔ " +
-            "اب Dashboard کھولیں۔",
+            importedKeys.length +
+            " data keys save ہو گئی ہیں۔",
             "success"
         );
 
 
+        // =================================
+        // SHOW IMPORTED KEYS
+        // =================================
+
+        const keyList =
+            document.getElementById(
+                "keyList"
+            );
+
+
+        keyList.innerHTML =
+
+            "<b>Imported Keys:</b><br>" +
+
+            importedKeys.join(
+                "<br>"
+            ) +
+
+            "<br><br>" +
+
+            "<b>Dashboard Data:</b><br>" +
+
+            "Items: " +
+            itemCount +
+
+            "<br>" +
+
+            "History: " +
+            historyCount +
+
+            "<br>" +
+
+            "Demands: " +
+            demandCount +
+
+            "<br>" +
+
+            "Demand History: " +
+            demandHistoryCount;
+
+
+        keyList.style.display =
+            "block";
+
+
+        // =================================
+        // CONSOLE
+        // =================================
+
         console.log(
-            "Imported LocalStorage data:",
+            "Imported data:",
             data
+        );
+
+        console.log(
+            "LocalStorage items:",
+            localStorage.getItem("items")
+        );
+
+        console.log(
+            "LocalStorage history:",
+            localStorage.getItem("history")
+        );
+
+        console.log(
+            "LocalStorage demands:",
+            localStorage.getItem("demands")
+        );
+
+        console.log(
+            "LocalStorage demandHistory:",
+            localStorage.getItem("demandHistory")
         );
 
     }
@@ -460,13 +807,20 @@ function clearData(){
 
     document.getElementById(
         "message"
-    ).style.display = "none";
+    ).style.display =
+        "none";
+
+
+    document.getElementById(
+        "keyList"
+    ).style.display =
+        "none";
 
 }
 
 
 // =====================================
-// SHOW CURRENT LOCALSTORAGE INFO
+// PAGE LOAD
 // =====================================
 
 console.log(
@@ -478,10 +832,10 @@ console.log(
     localStorage
 );
 
+
 </script>
 
 
 </body>
 
 </html>
-```
