@@ -1,0 +1,339 @@
+<!DOCTYPE html>
+<html>
+<head>
+
+    <meta charset="UTF-8">
+
+    <title>Import Historical Data</title>
+
+    <style>
+
+        *{
+            box-sizing:border-box;
+        }
+
+        body{
+            margin:0;
+            font-family:Arial,sans-serif;
+            background:#f2f5f9;
+        }
+
+        .sidebar{
+            width:220px;
+            min-height:100vh;
+            background:#12355b;
+            padding:20px;
+            position:fixed;
+            left:0;
+            top:0;
+        }
+
+        .sidebar h2{
+            color:white;
+            text-align:center;
+            margin:0 0 30px;
+        }
+
+        .sidebar button{
+            width:100%;
+            padding:12px;
+            margin-bottom:10px;
+            border:none;
+            border-radius:8px;
+            background:white;
+            color:#12355b;
+            font-size:15px;
+            cursor:pointer;
+            text-align:left;
+        }
+
+        .dashboard{
+            margin-left:220px;
+            padding:30px;
+        }
+
+        .header{
+            background:white;
+            padding:20px;
+            border-radius:12px;
+            margin-bottom:25px;
+            box-shadow:0 4px 12px rgba(0,0,0,.1);
+        }
+
+        .header h1{
+            margin:0;
+            color:#12355b;
+        }
+
+        .header p{
+            color:#666;
+        }
+
+        .box{
+            background:white;
+            padding:25px;
+            border-radius:15px;
+            box-shadow:0 5px 15px rgba(0,0,0,.1);
+            margin-bottom:25px;
+        }
+
+        .box h2{
+            color:#12355b;
+            margin-top:0;
+        }
+
+        .file-input{
+            width:100%;
+            padding:15px;
+            border:2px dashed #aaa;
+            border-radius:10px;
+            background:#fafafa;
+            cursor:pointer;
+        }
+
+        .buttons{
+            display:flex;
+            gap:10px;
+            flex-wrap:wrap;
+            margin-top:20px;
+        }
+
+        button.action{
+            padding:12px 18px;
+            border:none;
+            border-radius:8px;
+            cursor:pointer;
+            font-weight:bold;
+            font-size:15px;
+        }
+
+        .import{
+            background:#16a085;
+            color:white;
+        }
+
+        .clear{
+            background:#e74c3c;
+            color:white;
+        }
+
+        .template{
+            background:#1677ff;
+            color:white;
+        }
+
+        .status{
+            margin-top:20px;
+            padding:15px;
+            border-radius:8px;
+            background:#eef3f8;
+            color:#333;
+        }
+
+        .preview{
+            overflow:auto;
+            max-height:450px;
+        }
+
+        table{
+            width:100%;
+            border-collapse:collapse;
+            margin-top:15px;
+        }
+
+        th{
+            background:#12355b;
+            color:white;
+            padding:10px;
+            text-align:left;
+        }
+
+        td{
+            padding:10px;
+            border-bottom:1px solid #ddd;
+        }
+
+        .success{
+            color:#16803c;
+            font-weight:bold;
+        }
+
+        .error{
+            color:#c0392b;
+            font-weight:bold;
+        }
+
+        @media(max-width:750px){
+
+            .sidebar{
+                position:relative;
+                width:100%;
+                min-height:auto;
+            }
+
+            .dashboard{
+                margin-left:0;
+            }
+
+        }
+
+    </style>
+
+</head>
+
+<body>
+
+
+<div class="sidebar">
+
+    <h2>STORE</h2>
+
+    <button onclick="window.location.href='Dashboard.html'">
+        🏠 Dashboard
+    </button>
+
+    <button onclick="window.location.href='Master List .html'">
+        📋 Master List
+    </button>
+
+    <button onclick="window.location.href='Stock In .html'">
+        📥 Stock In
+    </button>
+
+    <button onclick="window.location.href='Stock out .html'">
+        📤 Stock Out
+    </button>
+
+    <button onclick="window.location.href='Cost .html'">
+        💰 Cost
+    </button>
+
+    <button onclick="window.location.href='Monthly Demand .html'">
+        📊 Monthly Demand
+    </button>
+
+    <button onclick="window.location.href='Graphs.html'">
+        📈 Graphs
+    </button>
+
+    <button onclick="window.location.href='Reports.html'">
+        📑 Reports
+    </button>
+
+</div>
+
+
+<div class="dashboard">
+
+
+    <div class="header">
+
+        <h1>
+            📥 Historical Data Import
+        </h1>
+
+        <p>
+            Excel سے پرانے Stock In / Stock Out کا data ایک ساتھ import کریں
+        </p>
+
+    </div>
+
+
+    <div class="box">
+
+        <h2>
+            1️⃣ Excel File Select کریں
+        </h2>
+
+        <input
+            type="file"
+            id="excelFile"
+            class="file-input"
+            accept=".xlsx,.xls,.csv"
+        >
+
+
+        <div class="buttons">
+
+            <button
+                class="action template"
+                onclick="downloadTemplate()"
+            >
+                📄 Excel Template
+            </button>
+
+            <button
+                class="action import"
+                onclick="previewExcel()"
+            >
+                🔍 Preview Data
+            </button>
+
+            <button
+                class="action clear"
+                onclick="clearImport()"
+            >
+                🗑 Clear
+            </button>
+
+        </div>
+
+
+        <div
+            id="status"
+            class="status"
+        >
+            ابھی کوئی Excel file select نہیں کی گئی۔
+        </div>
+
+    </div>
+
+
+    <div class="box">
+
+        <h2>
+            2️⃣ Data Preview
+        </h2>
+
+        <div
+            id="preview"
+            class="preview"
+        >
+            یہاں Excel data دکھائی دے گا۔
+        </div>
+
+    </div>
+
+
+    <div class="box">
+
+        <h2>
+            3️⃣ Import
+        </h2>
+
+        <p>
+            Preview check کرنے کے بعد data کو system میں save کریں۔
+        </p>
+
+        <button
+            class="action import"
+            onclick="importData()"
+        >
+            ✅ Import Data
+        </button>
+
+    </div>
+
+
+</div>
+
+
+<!-- Excel Library -->
+
+<script src="https://cdn.jsdelivr.net/npm/xlsx/dist/xlsx.full.min.js"></script>
+
+<script src="Import Data.js"></script>
+
+
+</body>
+</html>

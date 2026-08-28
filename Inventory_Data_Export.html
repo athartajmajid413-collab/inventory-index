@@ -1,0 +1,182 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>Inventory Data Export</title>
+
+    <style>
+
+        body {
+            font-family: Arial, sans-serif;
+            background: #f4f6f8;
+            margin: 0;
+            padding: 30px;
+        }
+
+        .box {
+            max-width: 650px;
+            margin: auto;
+            background: white;
+            padding: 25px;
+            border-radius: 12px;
+            box-shadow: 0 3px 15px rgba(0,0,0,0.15);
+        }
+
+        h2 {
+            margin-top: 0;
+        }
+
+        button {
+            padding: 12px 20px;
+            border: none;
+            border-radius: 7px;
+            background: #1677ff;
+            color: white;
+            font-size: 16px;
+            cursor: pointer;
+        }
+
+        button:hover {
+            background: #0d5fd0;
+        }
+
+        #status {
+            margin-top: 18px;
+            padding: 12px;
+            border-radius: 7px;
+            background: #eef5ff;
+            white-space: pre-wrap;
+        }
+
+    </style>
+
+</head>
+
+<body>
+
+<div class="box">
+
+    <h2>Inventory Data Export</h2>
+
+    <p>
+        اس button کو دبانے سے اس browser کی LocalStorage میں موجود
+        <b>تمام Inventory Data</b> ایک JSON backup file میں save ہو جائے گا۔
+    </p>
+
+    <button onclick="exportData()">
+        Export / Backup Data
+    </button>
+
+    <div id="status"></div>
+
+</div>
+
+
+<script>
+
+function exportData() {
+
+    try {
+
+        // LocalStorage کا تمام data حاصل کریں
+        const data = {};
+
+        for (let i = 0; i < localStorage.length; i++) {
+
+            const key = localStorage.key(i);
+
+            data[key] = localStorage.getItem(key);
+
+        }
+
+
+        // Backup object
+        const backup = {
+
+            exportedAt: new Date().toISOString(),
+
+            source: "Inventory Dashboard",
+
+            data: data
+
+        };
+
+
+        // JSON file بنائیں
+        const blob = new Blob(
+
+            [
+                JSON.stringify(backup, null, 2)
+            ],
+
+            {
+                type: "application/json"
+            }
+
+        );
+
+
+        const url = URL.createObjectURL(blob);
+
+
+        const a = document.createElement("a");
+
+
+        // File name
+        const d = new Date();
+
+        const fileName =
+            "inventory_backup_" +
+            d.getFullYear() + "-" +
+            String(d.getMonth() + 1).padStart(2, "0") + "-" +
+            String(d.getDate()).padStart(2, "0") +
+            "_" +
+            String(d.getHours()).padStart(2, "0") + "-" +
+            String(d.getMinutes()).padStart(2, "0") + "-" +
+            String(d.getSeconds()).padStart(2, "0") +
+            ".json";
+
+
+        a.href = url;
+
+        a.download = fileName;
+
+        document.body.appendChild(a);
+
+        a.click();
+
+        a.remove();
+
+
+        URL.revokeObjectURL(url);
+
+
+        document.getElementById("status").textContent =
+
+            "✅ Backup successfully download ہو گیا۔\n\n" +
+
+            "Total LocalStorage Keys: " +
+            Object.keys(data).length;
+
+
+    }
+
+    catch (error) {
+
+        document.getElementById("status").textContent =
+
+            "❌ Export Error: " +
+            error.message;
+
+    }
+
+}
+
+</script>
+
+</body>
+
+</html>
