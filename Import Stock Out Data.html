@@ -1,0 +1,206 @@
+<!DOCTYPE html>
+
+<html>
+
+<head>
+
+```
+<meta charset="UTF-8">
+
+<title>
+    Import Stock Out Data
+</title>
+
+<style>
+
+    body{
+
+        font-family:
+            Arial,
+            sans-serif;
+
+        background:
+            #f2f5f9;
+
+        margin:
+            0;
+
+        padding:
+            30px;
+
+    }
+
+
+    .container{
+
+        max-width:
+            700px;
+
+        margin:
+            50px auto;
+
+        background:
+            white;
+
+        padding:
+            30px;
+
+        border-radius:
+            10px;
+
+        box-shadow:
+            0 3px 15px
+            rgba(0,0,0,0.15);
+
+        text-align:
+            center;
+
+    }
+
+
+    h1{
+
+        color:
+            #12355b;
+
+        margin-bottom:
+            20px;
+
+    }
+
+
+    p{
+
+        font-size:
+            16px;
+
+        line-height:
+            1.7;
+
+    }
+
+
+    .info{
+
+        background:
+            #e8eef5;
+
+        padding:
+            15px;
+
+        border-radius:
+            8px;
+
+        margin:
+            20px 0;
+
+        text-align:
+            left;
+
+    }
+
+
+    button{
+
+        padding:
+            12px 25px;
+
+        border:
+            none;
+
+        border-radius:
+            6px;
+
+        background:
+            #12355b;
+
+        color:
+            white;
+
+        font-size:
+            16px;
+
+        cursor:
+            pointer;
+
+    }
+
+
+    button:hover{
+
+        opacity:
+            0.85;
+
+    }
+
+</style>
+```
+
+</head>
+
+<body>
+
+<div class="container">
+
+```
+<h1>
+    📥 Import Stock Out Data
+</h1>
+
+
+<p>
+    یہ page LocalStorage میں موجود
+    <b>Stock Out</b> data کو
+    Supabase میں منتقل کرے گا۔
+</p>
+
+
+<div class="info">
+
+    <b>
+        Supabase Table:
+    </b>
+
+    stock issue
+
+    <br><br>
+
+    <b>
+        Data Source:
+    </b>
+
+    LocalStorage → history
+
+    <br><br>
+
+    <b>
+        Record Type:
+    </b>
+
+    Stock Issue
+
+</div>
+
+
+<p>
+    Page کھولتے ہی import خود شروع ہو جائے گا۔
+</p>
+
+
+<button
+    type="button"
+    onclick="importStockOutData()"
+>
+    📥 Import Stock Out Data
+</button>
+```
+
+</div>
+
+<script src="supabase.js"></script>
+
+<script src="Import Stock Out Data.js"></script>
+
+</body>
+
+</html>
