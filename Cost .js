@@ -1,286 +1,229 @@
 // =====================================
-// COST MANAGEMENT JS
-// MECAS ENGINEERING PVT LIMITED SUNDAR
+// COST MANAGEMENT
 // SUPABASE VERSION
 // =====================================
 
+// =====================================
+// SUPABASE DATA
+// =====================================
+
 let items = [];
-let history = [];
-let demandHistory = [];
+
+let stockInHistory = [];
+
+let stockOutHistory = [];
+
+let costHistory = [];
 
 
 // =====================================
-// LOAD DATA FROM SUPABASE
+// LOAD ALL DATA FROM SUPABASE
 // =====================================
 
-async function loadCostData(){
+async function loadCostDataFromSupabase(){
 
-    console.log("Loading Cost Data...");
+    console.log("=====================================");
+    console.log("LOADING COST DATA FROM SUPABASE");
+    console.log("=====================================");
 
-    // -------------------------------
-    // ITEMS
-    // -------------------------------
 
-    let itemsResult =
-        await supabaseRequest(
-            "items",
-            "GET",
-            null,
-            "?select=*&order=id.asc"
-        );
+    try{
 
-    if(itemsResult.success){
+        // =================================
+        // LOAD MASTER ITEMS
+        // =================================
+
+        let itemsResult =
+            await supabaseRequest(
+                "items",
+                "GET",
+                null,
+                "?select=*"
+            );
+
+
+        if(!itemsResult.success){
+
+            console.error(
+                "Items Load Error:",
+                itemsResult.error
+            );
+
+            throw itemsResult.error;
+        }
+
 
         items =
             itemsResult.data || [];
 
-    }else{
 
-        console.error(
-            "Items Load Error:",
-            itemsResult.error
-        );
-
-        // Backup LocalStorage
-        items =
-            JSON.parse(
-                localStorage.getItem("items")
-            ) || [];
-    }
-
-
-    // -------------------------------
-    // STOCK IN
-    // -------------------------------
-
-    let stockInResult =
-        await supabaseRequest(
-            "stock_in",
-            "GET",
-            null,
-            "?select=*&order=date.asc,time.asc"
-        );
-
-    // -------------------------------
-    // STOCK OUT
-    // -------------------------------
-
-    let stockOutResult =
-        await supabaseRequest(
-            "stock_issues",
-            "GET",
-            null,
-            "?select=*&order=date.asc,time.asc"
+        console.log(
+            "Supabase Items:",
+            items
         );
 
 
-    history = [];
+        // =================================
+        // LOAD STOCK IN
+        // =================================
+
+        let stockInResult =
+            await supabaseRequest(
+                "stock_in",
+                "GET",
+                null,
+                "?select=*"
+            );
 
 
-    // -------------------------------
-    // STOCK IN HISTORY
-    // -------------------------------
+        if(!stockInResult.success){
 
-    if(stockInResult.success){
+            console.error(
+                "Stock In Load Error:",
+                stockInResult.error
+            );
 
-        let stockInData =
+            throw stockInResult.error;
+        }
+
+
+        stockInHistory =
             stockInResult.data || [];
 
 
-        for(
-            let i = 0;
-            i < stockInData.length;
-            i++
-        ){
-
-            let record =
-                stockInData[i];
+        console.log(
+            "Supabase Stock In:",
+            stockInHistory
+        );
 
 
-            history.push({
+        // =================================
+        // LOAD STOCK OUT
+        // =================================
 
-                id:
-                    record.id,
+        let stockOutResult =
+            await supabaseRequest(
+                "stock_issue",
+                "GET",
+                null,
+                "?select=*"
+            );
 
-                date:
-                    record.date,
 
-                time:
-                    record.time,
+        if(!stockOutResult.success){
 
-                itemCode:
-                    record.item_code,
+            console.error(
+                "Stock Out Load Error:",
+                stockOutResult.error
+            );
 
-                itemName:
-                    record.item_name,
-
-                unit:
-                    record.unit,
-
-                source:
-                    record.source,
-
-                supplier:
-                    record.supplier,
-
-                location:
-                    record.location,
-
-                quantity:
-                    Number(
-                        record.quantity || 0
-                    ),
-
-                unitCost:
-                    Number(
-                        record.unit_cost || 0
-                    ),
-
-                totalCost:
-                    Number(
-                        record.total_cost || 0
-                    ),
-
-                type:
-                    "Stock In"
-
-            });
-
+            throw stockOutResult.error;
         }
 
-    }
 
-
-    // -------------------------------
-    // STOCK OUT HISTORY
-    // -------------------------------
-
-    if(stockOutResult.success){
-
-        let stockOutData =
+        stockOutHistory =
             stockOutResult.data || [];
 
 
-        for(
-            let i = 0;
-            i < stockOutData.length;
-            i++
-        ){
-
-            let record =
-                stockOutData[i];
+        console.log(
+            "Supabase Stock Out:",
+            stockOutHistory
+        );
 
 
-            history.push({
+        // =================================
+        // LOAD COST HISTORY
+        // =================================
 
-                id:
-                    record.id,
+        let costResult =
+            await supabaseRequest(
+                "cost_history",
+                "GET",
+                null,
+                "?select=*"
+            );
 
-                date:
-                    record.date,
 
-                time:
-                    record.time,
+        if(!costResult.success){
 
-                itemCode:
-                    record.item_code,
+            console.error(
+                "Cost History Load Error:",
+                costResult.error
+            );
 
-                itemName:
-                    record.item_name,
-
-                unit:
-                    record.unit,
-
-                source:
-                    record.source,
-
-                supplier:
-                    record.supplier,
-
-                location:
-                    record.location,
-
-                department:
-                    record.department,
-
-                quantity:
-                    Number(
-                        record.quantity || 0
-                    ),
-
-                unitCost:
-                    Number(
-                        record.unit_cost || 0
-                    ),
-
-                totalCost:
-                    Number(
-                        record.total_cost || 0
-                    ),
-
-                type:
-                    "Stock Issue"
-
-            });
-
+            throw costResult.error;
         }
+
+
+        costHistory =
+            costResult.data || [];
+
+
+        console.log(
+            "Supabase Cost History:",
+            costHistory
+        );
+
+
+        console.log(
+            "====================================="
+        );
+
+        console.log(
+            "SUPABASE COST DATA LOADED"
+        );
+
+        console.log(
+            "Items:",
+            items.length
+        );
+
+        console.log(
+            "Stock In:",
+            stockInHistory.length
+        );
+
+        console.log(
+            "Stock Out:",
+            stockOutHistory.length
+        );
+
+        console.log(
+            "Cost History:",
+            costHistory.length
+        );
+
+        console.log(
+            "=====================================");
+
+
+        // =================================
+        // LOAD YEARS
+        // =================================
+
+        loadYears();
+
+
+        // =================================
+        // SHOW COST
+        // =================================
+
+        showAllCost();
+
+
+    }catch(error){
+
+        console.error(
+            "Cost Data Load Error:",
+            error
+        );
+
+
+        alert(
+            "Supabase سے Cost data load نہیں ہو سکا۔\n\nConsole میں error check کریں۔"
+        );
 
     }
-
-
-    // -------------------------------
-    // SORT HISTORY
-    // -------------------------------
-
-    history.sort(
-        function(a,b){
-
-            let dateA =
-                String(a.date || "") +
-                String(a.time || "");
-
-            let dateB =
-                String(b.date || "") +
-                String(b.time || "");
-
-            return dateA.localeCompare(dateB);
-
-        }
-    );
-
-
-    // -------------------------------
-    // DEMAND HISTORY
-    // -------------------------------
-
-    demandHistory =
-        JSON.parse(
-            localStorage.getItem(
-                "demandHistory"
-            )
-        ) || [];
-
-
-    console.log(
-        "Cost Data Loaded:",
-        {
-            items: items.length,
-            history: history.length,
-            demandHistory:
-                demandHistory.length
-        }
-    );
-
-}
-
-
-// =====================================
-// REFRESH DATA
-// =====================================
-
-async function refreshCostData(){
-
-    await loadCostData();
 
 }
 
@@ -296,30 +239,23 @@ function getStockIn(itemCode){
 
     for(
         let i = 0;
-        i < history.length;
+        i < stockInHistory.length;
         i++
     ){
 
         let record =
-            history[i];
+            stockInHistory[i];
+
+
+        let code =
+            String(
+                record.item_code || ""
+            ).trim();
 
 
         if(
-
-            record.type === "Stock In"
-
-            &&
-
-            String(
-                record.itemCode || ""
-            ).trim()
-
-            ===
-
-            String(
-                itemCode || ""
-            ).trim()
-
+            code ===
+            String(itemCode || "").trim()
         ){
 
             total +=
@@ -348,30 +284,23 @@ function getStockOut(itemCode){
 
     for(
         let i = 0;
-        i < history.length;
+        i < stockOutHistory.length;
         i++
     ){
 
         let record =
-            history[i];
+            stockOutHistory[i];
+
+
+        let code =
+            String(
+                record.item_code || ""
+            ).trim();
 
 
         if(
-
-            record.type === "Stock Issue"
-
-            &&
-
-            String(
-                record.itemCode || ""
-            ).trim()
-
-            ===
-
-            String(
-                itemCode || ""
-            ).trim()
-
+            code ===
+            String(itemCode || "").trim()
         ){
 
             total +=
@@ -390,7 +319,7 @@ function getStockOut(itemCode){
 
 
 // =====================================
-// CURRENT STOCK
+// GET CURRENT STOCK
 // Opening + In - Out
 // =====================================
 
@@ -405,9 +334,7 @@ function getCurrentStock(item){
 
     let openingStock =
         Number(
-            item.opening_stock ??
-            item.openingStock ??
-            0
+            item.opening_stock || 0
         );
 
 
@@ -423,13 +350,20 @@ function getCurrentStock(item){
         );
 
 
-    let availableQty =
+    let stock =
         openingStock +
         stockIn -
         stockOut;
 
 
-    return availableQty;
+    if(stock < 0){
+
+        stock = 0;
+
+    }
+
+
+    return stock;
 
 }
 
@@ -442,87 +376,87 @@ function getPurchaseRates(itemCode){
 
     let rates = [];
 
-    let latestRecord =
-        null;
+    let latestRecord = null;
 
 
     for(
         let i = 0;
-        i < history.length;
+        i < stockInHistory.length;
         i++
     ){
 
         let record =
-            history[i];
+            stockInHistory[i];
+
+
+        let code =
+            String(
+                record.item_code || ""
+            ).trim();
 
 
         if(
-
-            record.type === "Stock In"
-
-            &&
-
-            String(
-                record.itemCode || ""
-            ).trim()
-
-            ===
-
-            String(
-                itemCode || ""
-            ).trim()
-
+            code !==
+            String(itemCode || "").trim()
         ){
 
-            let rate =
-                Number(
-                    record.unitCost || 0
+            continue;
+
+        }
+
+
+        let rate =
+            Number(
+                record.unit_cost || 0
+            );
+
+
+        if(rate <= 0){
+
+            continue;
+
+        }
+
+
+        rates.push(rate);
+
+
+        // =================================
+        // FIND LATEST
+        // =================================
+
+        if(latestRecord === null){
+
+            latestRecord =
+                record;
+
+        }else{
+
+            let currentDateTime =
+                String(
+                    record.date || ""
+                ) +
+                String(
+                    record.time || ""
                 );
 
 
-            if(rate > 0){
-
-                rates.push(rate);
-
-
-                if(
-                    latestRecord === null
-                ){
-
-                    latestRecord =
-                        record;
-
-                }else{
-
-                    let currentDateTime =
-                        String(
-                            record.date || ""
-                        ) +
-                        String(
-                            record.time || ""
-                        );
+            let latestDateTime =
+                String(
+                    latestRecord.date || ""
+                ) +
+                String(
+                    latestRecord.time || ""
+                );
 
 
-                    let latestDateTime =
-                        String(
-                            latestRecord.date || ""
-                        ) +
-                        String(
-                            latestRecord.time || ""
-                        );
+            if(
+                currentDateTime >
+                latestDateTime
+            ){
 
-
-                    if(
-                        currentDateTime >
-                        latestDateTime
-                    ){
-
-                        latestRecord =
-                            record;
-
-                    }
-
-                }
+                latestRecord =
+                    record;
 
             }
 
@@ -538,7 +472,7 @@ function getPurchaseRates(itemCode){
 
         latestRate =
             Number(
-                latestRecord.unitCost || 0
+                latestRecord.unit_cost || 0
             );
 
     }
@@ -571,16 +505,7 @@ function getPurchaseRates(itemCode){
 function getOpeningRate(item){
 
     return Number(
-
-        item.opening_cost ??
-        item.openingCost ??
-        item.opening_rate ??
-        item.openingRate ??
-        item.unit_cost ??
-        item.unitCost ??
-        item.cost ??
-        0
-
+        item.opening_cost || 0
     );
 
 }
@@ -592,61 +517,16 @@ function getOpeningRate(item){
 
 function getSupplier(item){
 
-    if(item.supplier){
-
-        return item.supplier;
-
-    }
-
-
-    if(item.supplier_name){
-
-        return item.supplier_name;
-
-    }
-
-
-    if(item.supplierName){
-
-        return item.supplierName;
-
-    }
-
-
-    return "-";
-
-}
-
-
-// =====================================
-// GET DEMAND QUANTITY
-// =====================================
-
-function getDemandQuantity(
-    demandItem
-){
-
-    return Number(
-
-        demandItem.finalDemand ??
-
-        demandItem.approvedQty ??
-
-        demandItem.demandQuantity ??
-
-        demandItem.demandQty ??
-
-        demandItem.quantity ??
-
-        0
-
+    return (
+        item.supplier ||
+        "-"
     );
 
 }
 
 
 // =====================================
-// GET DEMAND FOR ITEM
+// GET DEMAND FROM COST HISTORY
 // =====================================
 
 function getDemandForItem(
@@ -660,29 +540,21 @@ function getDemandForItem(
 
     for(
         let i = 0;
-        i < demandHistory.length;
+        i < costHistory.length;
         i++
     ){
 
         let record =
-            demandHistory[i];
+            costHistory[i];
 
 
-        let demandMonth =
-            String(
-                record.demandMonth || ""
-            );
-
+        // =================================
+        // MONTH FILTER
+        // =================================
 
         if(
-
-            selectedMonth
-
-            &&
-
-            demandMonth !==
-            selectedMonth
-
+            selectedMonth &&
+            record.month !== selectedMonth
         ){
 
             continue;
@@ -690,18 +562,14 @@ function getDemandForItem(
         }
 
 
+        // =================================
+        // YEAR FILTER
+        // =================================
+
         if(
-
-            selectedYear
-
-            &&
-
-            demandMonth.substring(0,4)
-
-            !==
-
+            selectedYear &&
+            String(record.year) !==
             String(selectedYear)
-
         ){
 
             continue;
@@ -710,17 +578,31 @@ function getDemandForItem(
 
 
         let demandItems =
-            record.demandItems
-            ||
-            record.items
-            ||
-            [];
+            record.items || [];
 
 
         if(
-            !Array.isArray(
-                demandItems
-            )
+            typeof demandItems === "string"
+        ){
+
+            try{
+
+                demandItems =
+                    JSON.parse(
+                        demandItems
+                    );
+
+            }catch(error){
+
+                demandItems = [];
+
+            }
+
+        }
+
+
+        if(
+            !Array.isArray(demandItems)
         ){
 
             continue;
@@ -740,29 +622,22 @@ function getDemandForItem(
 
             let code =
                 String(
-
-                    demandItem.code
-                    ??
-                    demandItem.itemCode
-                    ??
+                    demandItem.code ||
+                    demandItem.itemCode ||
                     ""
-
                 ).trim();
 
 
             if(
-
                 code ===
-
-                String(
-                    itemCode || ""
-                ).trim()
-
+                String(itemCode || "").trim()
             ){
 
                 total +=
-                    getDemandQuantity(
-                        demandItem
+                    Number(
+                        demandItem.approvedDemandQty ||
+                        demandItem.approved_demand_qty ||
+                        0
                     );
 
             }
@@ -799,35 +674,29 @@ function loadYears(){
     let years = [];
 
 
-    // HISTORY YEARS
+    // =================================
+    // ITEM / STOCK YEARS
+    // =================================
 
     for(
         let i = 0;
-        i < history.length;
+        i < stockInHistory.length;
         i++
     ){
 
         let date =
             String(
-                history[i].date || ""
+                stockInHistory[i].date || ""
             );
 
 
         let year =
-            date.substring(
-                0,
-                4
-            );
+            date.substring(0,4);
 
 
         if(
-
-            year
-
-            &&
-
+            year &&
             !years.includes(year)
-
         ){
 
             years.push(year);
@@ -837,36 +706,53 @@ function loadYears(){
     }
 
 
-    // DEMAND YEARS
-
     for(
         let i = 0;
-        i < demandHistory.length;
+        i < stockOutHistory.length;
         i++
     ){
 
-        let month =
+        let date =
             String(
-                demandHistory[i]
-                    .demandMonth || ""
+                stockOutHistory[i].date || ""
             );
 
 
         let year =
-            month.substring(
-                0,
-                4
+            date.substring(0,4);
+
+
+        if(
+            year &&
+            !years.includes(year)
+        ){
+
+            years.push(year);
+
+        }
+
+    }
+
+
+    // =================================
+    // COST HISTORY YEARS
+    // =================================
+
+    for(
+        let i = 0;
+        i < costHistory.length;
+        i++
+    ){
+
+        let year =
+            String(
+                costHistory[i].year || ""
             );
 
 
         if(
-
-            year
-
-            &&
-
+            year &&
             !years.includes(year)
-
         ){
 
             years.push(year);
@@ -927,7 +813,7 @@ function searchCostItem(){
 // SHOW ALL
 // =====================================
 
-async function showAllCost(){
+function showAllCost(){
 
     let search =
         document.getElementById(
@@ -968,9 +854,6 @@ async function showAllCost(){
     }
 
 
-    await refreshCostData();
-
-
     showCostTable(
         "",
         ""
@@ -983,10 +866,7 @@ async function showAllCost(){
 // SHOW COST REPORT
 // =====================================
 
-async function showCostReport(){
-
-    await refreshCostData();
-
+function showCostReport(){
 
     let month =
         document.getElementById(
@@ -1072,7 +952,7 @@ function showCostTable(
 
 
     // =================================
-    // LOOP ITEMS
+    // LOOP MASTER ITEMS
     // =================================
 
     for(
@@ -1092,9 +972,9 @@ function showCostTable(
 
 
         let itemName =
-            item.item_name ??
-            item.itemName ??
-            "";
+            String(
+                item.item_name || ""
+            );
 
 
         let category =
@@ -1106,7 +986,9 @@ function showCostTable(
             getSupplier(item);
 
 
+        // =================================
         // SEARCH
+        // =================================
 
         if(searchText){
 
@@ -1136,35 +1018,31 @@ function showCostTable(
         }
 
 
-        // AVAILABLE
+        // =================================
+        // CURRENT STOCK
+        // =================================
 
         let availableQty =
-            getCurrentStock(
-                item
-            );
+            getCurrentStock(item);
 
 
+        // =================================
         // RATES
+        // =================================
 
         let rates =
-            getPurchaseRates(
-                code
-            );
+            getPurchaseRates(code);
 
 
         let openingRate =
-            getOpeningRate(
-                item
-            );
+            getOpeningRate(item);
 
 
         let latestRate =
             rates.latestRate;
 
 
-        if(
-            latestRate <= 0
-        ){
+        if(latestRate <= 0){
 
             latestRate =
                 openingRate;
@@ -1172,7 +1050,9 @@ function showCostTable(
         }
 
 
+        // =================================
         // DEMAND
+        // =================================
 
         let approvedDemand =
             getDemandForItem(
@@ -1186,7 +1066,9 @@ function showCostTable(
             );
 
 
+        // =================================
         // COST
+        // =================================
 
         let availableCost =
             availableQty *
@@ -1198,7 +1080,9 @@ function showCostTable(
             latestRate;
 
 
+        // =================================
         // TOTALS
+        // =================================
 
         totalItems++;
 
@@ -1215,14 +1099,15 @@ function showCostTable(
             approvedDemandCost;
 
 
+        // =================================
         // CATEGORY
+        // =================================
 
         if(
             !categoryTotals[category]
         ){
 
-            categoryTotals[category] =
-                0;
+            categoryTotals[category] = 0;
 
         }
 
@@ -1231,14 +1116,15 @@ function showCostTable(
             availableCost;
 
 
+        // =================================
         // SUPPLIER
+        // =================================
 
         if(
             !supplierTotals[supplier]
         ){
 
-            supplierTotals[supplier] =
-                0;
+            supplierTotals[supplier] = 0;
 
         }
 
@@ -1247,7 +1133,9 @@ function showCostTable(
             availableCost;
 
 
+        // =================================
         // ROW
+        // =================================
 
         let row =
             document.createElement(
@@ -1328,7 +1216,9 @@ function showCostTable(
     }
 
 
+    // =================================
     // SUMMARY
+    // =================================
 
     setCostText(
         "totalItems",
@@ -1350,19 +1240,9 @@ function showCostTable(
     );
 
 
+    // =================================
     // FOOTER
-
-    setCostText(
-        "footerAvailableQty",
-        totalAvailableQty.toFixed(2)
-    );
-
-
-    setCostText(
-        "footerDemandQty",
-        totalDemandQty.toFixed(2)
-    );
-
+    // =================================
 
     setCostText(
         "footerStockCost",
@@ -1377,6 +1257,10 @@ function showCostTable(
         totalDemandCost.toFixed(2)
     );
 
+
+    // =================================
+    // SUMMARY TABLES
+    // =================================
 
     buildCategorySummary(
         categoryTotals,
@@ -1402,7 +1286,9 @@ function setCostText(
 ){
 
     let element =
-        document.getElementById(id);
+        document.getElementById(
+            id
+        );
 
 
     if(element){
@@ -1790,7 +1676,9 @@ function printCostReport(){
 
 <head>
 
-<title>${title}</title>
+<title>
+${title}
+</title>
 
 <style>
 
@@ -1834,8 +1722,8 @@ tfoot td{
     @page{
 
         size:A4 landscape;
-        margin:8mm;
 
+        margin:8mm;
     }
 
 }
@@ -1908,7 +1796,7 @@ ${
 
 
 // =====================================
-// COST HISTORY
+// OPEN COST HISTORY
 // =====================================
 
 function openCostHistory(){
@@ -1923,15 +1811,11 @@ function openCostHistory(){
 // PAGE START
 // =====================================
 
-(async function(){
+window.addEventListener(
+    "load",
+    function(){
 
-    await loadCostData();
+        loadCostDataFromSupabase();
 
-    loadYears();
-
-    showCostTable(
-        "",
-        ""
-    );
-
-})();
+    }
+);
