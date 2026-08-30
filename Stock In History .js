@@ -1,9 +1,9 @@
 // =====================================
-// STOCK IN HISTORY
+// STOCK IN HISTORY - SUPABASE VERSION
+// MECAS ENGINEERING PVT LIMITED SUNDAR
 // =====================================
 
-let history =
-    JSON.parse(localStorage.getItem("history")) || [];
+let history = [];
 
 
 // =====================================
@@ -17,17 +17,49 @@ let selectedItem =
 
 
 // =====================================
-// LOAD PAGE
+// LOAD HISTORY FROM SUPABASE
 // =====================================
 
-loadHistory();
+async function loadHistory(){
+
+    console.log(
+        "Loading Stock In History from Supabase..."
+    );
 
 
-// =====================================
-// LOAD HISTORY
-// =====================================
+    let result =
+        await supabaseRequest(
+            "stock_in",
+            "GET",
+            null,
+            "?select=*&order=date.desc,time.desc"
+        );
 
-function loadHistory(){
+
+    if(!result.success){
+
+        console.error(
+            "Stock In History Load Error:",
+            result.error
+        );
+
+        alert(
+            "Stock In History load nahi ho saki!"
+        );
+
+        return;
+    }
+
+
+    history =
+        result.data || [];
+
+
+    console.log(
+        "Stock In History:",
+        history
+    );
+
 
     createYearOptions();
 
@@ -48,6 +80,16 @@ function createYearOptions(){
         );
 
 
+    if(!yearFilter){
+
+        return;
+    }
+
+
+    yearFilter.innerHTML =
+        '<option value="">Select Year</option>';
+
+
     let years = [];
 
 
@@ -61,31 +103,23 @@ function createYearOptions(){
             history[i];
 
 
-        if(
-            record.type !=
-            "Stock In"
-        ){
-
-            continue;
-
-        }
-
-
         if(!record.date){
 
             continue;
-
         }
 
 
         let year =
-            record.date.substring(
+            String(
+                record.date
+            ).substring(
                 0,
                 4
             );
 
 
         if(
+            year &&
             !years.includes(year)
         ){
 
@@ -99,7 +133,7 @@ function createYearOptions(){
     years.sort(
         function(a,b){
 
-            return b-a;
+            return b - a;
 
         }
     );
@@ -140,47 +174,78 @@ function createYearOptions(){
 
 function filterHistory(){
 
-    let search =
+    let searchElement =
         document.getElementById(
             "searchInput"
-        )
-        .value
-        .trim()
-        .toLowerCase();
+        );
+
+
+    let monthElement =
+        document.getElementById(
+            "monthFilter"
+        );
+
+
+    let yearElement =
+        document.getElementById(
+            "yearFilter"
+        );
+
+
+    let fromDateElement =
+        document.getElementById(
+            "fromDate"
+        );
+
+
+    let toDateElement =
+        document.getElementById(
+            "toDate"
+        );
+
+
+    let search =
+        searchElement
+        ? searchElement.value
+            .trim()
+            .toLowerCase()
+        : "";
 
 
     let month =
-        document.getElementById(
-            "monthFilter"
-        )
-        .value;
+        monthElement
+        ? monthElement.value
+        : "";
 
 
     let year =
-        document.getElementById(
-            "yearFilter"
-        )
-        .value;
+        yearElement
+        ? yearElement.value
+        : "";
 
 
     let fromDate =
-        document.getElementById(
-            "fromDate"
-        )
-        .value;
+        fromDateElement
+        ? fromDateElement.value
+        : "";
 
 
     let toDate =
-        document.getElementById(
-            "toDate"
-        )
-        .value;
+        toDateElement
+        ? toDateElement.value
+        : "";
 
 
     let body =
         document.getElementById(
             "historyBody"
         );
+
+
+    if(!body){
+
+        return;
+    }
 
 
     body.innerHTML = "";
@@ -196,26 +261,18 @@ function filterHistory(){
             history[i];
 
 
-        // Only Stock In
-
-        if(
-            record.type !=
-            "Stock In"
-        ){
-
-            continue;
-
-        }
-
-
         // =================================
         // DASHBOARD SELECTED ITEM
         // =================================
 
         if(
             selectedItem &&
-            String(record.itemCode).trim() !=
-            String(selectedItem).trim()
+            String(
+                record.item_code || ""
+            ).trim() !=
+            String(
+                selectedItem
+            ).trim()
         ){
 
             continue;
@@ -231,14 +288,14 @@ function filterHistory(){
 
             let itemCode =
                 String(
-                    record.itemCode || ""
+                    record.item_code || ""
                 )
                 .toLowerCase();
 
 
             let itemName =
                 String(
-                    record.itemName || ""
+                    record.item_name || ""
                 )
                 .toLowerCase();
 
@@ -263,7 +320,9 @@ function filterHistory(){
 
             let recordMonth =
                 record.date
-                ? record.date.substring(
+                ? String(
+                    record.date
+                ).substring(
                     5,
                     7
                 )
@@ -289,7 +348,9 @@ function filterHistory(){
 
             let recordYear =
                 record.date
-                ? record.date.substring(
+                ? String(
+                    record.date
+                ).substring(
                     0,
                     4
                 )
@@ -360,181 +421,219 @@ function addHistoryRow(record){
         );
 
 
-    row.innerHTML =
-
-        "<td>" +
-        (record.date || "-") +
-        "</td>" +
-
-        "<td>" +
-        (record.time || "-") +
-        "</td>" +
-
-        "<td>" +
-        (record.itemCode || "-") +
-        "</td>" +
-
-        "<td>" +
-        (record.itemName || "-") +
-        "</td>" +
-
-        "<td>" +
-        (record.unit || "-") +
-        "</td>" +
-
-        "<td>" +
-        (record.source || "-") +
-        "</td>" +
-
-        "<td>" +
-        (record.supplier || "-") +
-        "</td>" +
-
-        "<td>" +
-        (record.location || "-") +
-        "</td>" +
-
-        "<td>" +
-        (record.quantity || 0) +
-        "</td>" +
-
-        "<td>" +
-        (record.unitCost || 0) +
-        "</td>" +
-
-        "<td>" +
-        (record.totalCost || 0) +
-        "</td>" +
-
-        "<td>" +
-
-        "<button " +
-        "class='edit-btn' " +
-        "onclick='editEntry(" +
-        JSON.stringify(record) +
-        ")'>" +
-
-        "Edit" +
-
-        "</button>" +
-
-        "<button " +
-        "class='delete-btn' " +
-        "onclick='deleteEntry(" +
-        JSON.stringify(record) +
-        ")'>" +
-
-        "Delete" +
-
-        "</button>" +
-
-        "</td>";
-
-
-    document.getElementById(
-        "historyBody"
-    )
-    .appendChild(
-        row
-    );
-
-}
-
-
-// =====================================
-// EDIT ENTRY
-// =====================================
-
-function editEntry(record){
-
-    localStorage.setItem(
-        "editStockInRecord",
-        JSON.stringify(record)
-    );
-
-
-    window.location.href =
-        "Stock In .html";
-
-}
-
-
-// =====================================
-// DELETE ENTRY
-// =====================================
-
-function deleteEntry(record){
-
-    let confirmDelete =
-        confirm(
-            "Are you sure you want to delete this Stock In entry?"
+    let unitCost =
+        Number(
+            record.unit_cost || 0
         );
 
 
-    if(
-        confirmDelete == false
+    let totalCost =
+        Number(
+            record.total_cost ||
+            (
+                Number(
+                    record.quantity || 0
+                ) *
+                unitCost
+            )
+        );
+
+
+    let values = [
+
+        record.date || "-",
+
+        record.time || "-",
+
+        record.item_code || "-",
+
+        record.item_name || "-",
+
+        record.unit || "-",
+
+        record.source || "-",
+
+        record.supplier || "-",
+
+        record.location || "-",
+
+        Number(
+            record.quantity || 0
+        ),
+
+        unitCost.toFixed(2),
+
+        totalCost.toFixed(2)
+
+    ];
+
+
+    for(
+        let i = 0;
+        i < values.length;
+        i++
     ){
 
-        return;
-
-    }
-
-
-    let index =
-        history.indexOf(record);
-
-
-    if(index == -1){
-
-        // Find matching record
-
-        index =
-            history.findIndex(
-                function(item){
-
-                    return (
-                        item.type ==
-                        record.type &&
-
-                        item.date ==
-                        record.date &&
-
-                        item.time ==
-                        record.time &&
-
-                        item.itemCode ==
-                        record.itemCode &&
-
-                        item.quantity ==
-                        record.quantity
-                    );
-
-                }
+        let cell =
+            document.createElement(
+                "td"
             );
 
+
+        cell.textContent =
+            values[i];
+
+
+        row.appendChild(
+            cell
+        );
+
     }
 
 
-    if(index != -1){
+    // =====================================
+    // ACTION
+    // =====================================
 
-        history.splice(
-            index,
-            1
+    let actionCell =
+        document.createElement(
+            "td"
         );
 
 
-        localStorage.setItem(
-            "history",
-            JSON.stringify(history)
+    // =====================================
+    // EDIT BUTTON
+    // =====================================
+
+    let editButton =
+        document.createElement(
+            "button"
         );
 
 
-        alert(
-            "Stock In Entry Deleted Successfully!"
+    editButton.textContent =
+        "Edit";
+
+
+    editButton.className =
+        "edit-btn";
+
+
+    editButton.onclick =
+        function(){
+
+            localStorage.setItem(
+                "editStockInRecord",
+                JSON.stringify(record)
+            );
+
+
+            window.location.href =
+                "Stock In .html";
+
+        };
+
+
+    // =====================================
+    // DELETE BUTTON
+    // =====================================
+
+    let deleteButton =
+        document.createElement(
+            "button"
         );
 
 
-        filterHistory();
+    deleteButton.textContent =
+        "Delete";
+
+
+    deleteButton.className =
+        "delete-btn";
+
+
+    deleteButton.onclick =
+        async function(){
+
+            let confirmDelete =
+                confirm(
+                    "Are you sure you want to delete this Stock In entry?"
+                );
+
+
+            if(
+                !confirmDelete
+            ){
+
+                return;
+
+            }
+
+
+            let result =
+                await supabaseRequest(
+                    "stock_in",
+                    "DELETE",
+                    null,
+                    "?id=eq." +
+                    record.id
+                );
+
+
+            if(!result.success){
+
+                console.error(
+                    "Stock In Delete Error:",
+                    result.error
+                );
+
+
+                alert(
+                    "Stock In Entry delete nahi hui!"
+                );
+
+
+                return;
+
+            }
+
+
+            alert(
+                "Stock In Entry Deleted Successfully!"
+            );
+
+
+            await loadHistory();
+
+        };
+
+
+    actionCell.appendChild(
+        editButton
+    );
+
+
+    actionCell.appendChild(
+        deleteButton
+    );
+
+
+    row.appendChild(
+        actionCell
+    );
+
+
+    let body =
+        document.getElementById(
+            "historyBody"
+        );
+
+
+    if(body){
+
+        body.appendChild(
+            row
+        );
 
     }
 
@@ -547,31 +646,83 @@ function deleteEntry(record){
 
 function clearFilters(){
 
-    document.getElementById(
-        "searchInput"
-    ).value = "";
+    let search =
+        document.getElementById(
+            "searchInput"
+        );
 
 
-    document.getElementById(
-        "monthFilter"
-    ).value = "";
+    let month =
+        document.getElementById(
+            "monthFilter"
+        );
 
 
-    document.getElementById(
-        "yearFilter"
-    ).value = "";
+    let year =
+        document.getElementById(
+            "yearFilter"
+        );
 
 
-    document.getElementById(
-        "fromDate"
-    ).value = "";
+    let fromDate =
+        document.getElementById(
+            "fromDate"
+        );
 
 
-    document.getElementById(
-        "toDate"
-    ).value = "";
+    let toDate =
+        document.getElementById(
+            "toDate"
+        );
+
+
+    if(search){
+
+        search.value = "";
+
+    }
+
+
+    if(month){
+
+        month.value = "";
+
+    }
+
+
+    if(year){
+
+        year.value = "";
+
+    }
+
+
+    if(fromDate){
+
+        fromDate.value = "";
+
+    }
+
+
+    if(toDate){
+
+        toDate.value = "";
+
+    }
 
 
     filterHistory();
 
 }
+
+
+// =====================================
+// INITIAL LOAD
+// =====================================
+
+(async function(){
+
+    await loadHistory();
+
+})();
+
