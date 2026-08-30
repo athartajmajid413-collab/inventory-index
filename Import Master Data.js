@@ -38,11 +38,7 @@ async function importMasterData() {
 
 
     let inserted = 0;
-
-    let updated = 0;
-
     let skipped = 0;
-
     let errors = 0;
 
 
@@ -161,27 +157,16 @@ async function importMasterData() {
                 item.unit ||
                 "",
 
-            opening_stock:
+            packing_qty:
                 Number(
-                    item.openingStock ??
-                    item.opening_stock ??
+                    item.packingQty ??
+                    item.packing_qty ??
                     0
                 ),
 
-            minimum_stock:
-                Number(
-                    item.minimumStock ??
-                    item.minimum_stock ??
-                    0
-                ),
-
-            storage_location:
-                item.storageLocation ??
-                item.storage_location ??
-                "",
-
-            department:
-                item.department ||
+            packed_unit:
+                item.packedUnit ??
+                item.packed_unit ??
                 "",
 
             source:
@@ -192,13 +177,25 @@ async function importMasterData() {
                 item.supplier ||
                 "",
 
+            opening_stock:
+                Number(
+                    item.openingStock ??
+                    item.opening_stock ??
+                    0
+                ),
+
             opening_cost:
                 Number(
                     item.openingCost ??
                     item.opening_cost ??
                     item.cost ??
                     0
-                )
+                ),
+
+            storage_location:
+                item.storageLocation ??
+                item.storage_location ??
+                ""
 
         };
 
