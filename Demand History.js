@@ -1,17 +1,15 @@
-
 // =====================================
-// LOAD DEMAND HISTORY
+// DEMAND HISTORY
+// SUPABASE VERSION
+// TABLE: demand_history
 // =====================================
-
-let demandHistory =
-    JSON.parse(
-        localStorage.getItem("demandHistory")
-    ) || [];
 
 
 // =====================================
-// EDIT INDEX
+// GLOBAL DATA
 // =====================================
+
+let demandHistory = [];
 
 let editDemandIndex = -1;
 
@@ -23,12 +21,17 @@ let editDemandIndex = -1;
 function getValue(item, fields, defaultValue = "-"){
 
     if(!item){
+
         return defaultValue;
+
     }
+
 
     for(let i = 0; i < fields.length; i++){
 
-        let value = item[fields[i]];
+        let value =
+            item[fields[i]];
+
 
         if(
             value !== undefined &&
@@ -42,7 +45,68 @@ function getValue(item, fields, defaultValue = "-"){
 
     }
 
+
     return defaultValue;
+
+}
+
+
+// =====================================
+// LOAD DEMAND HISTORY FROM SUPABASE
+// =====================================
+
+async function loadDemandHistory(){
+
+    console.log("=====================================");
+    console.log("LOADING DEMAND HISTORY FROM SUPABASE");
+    console.log("=====================================");
+
+
+    let result =
+        await supabaseRequest(
+            "demand_history",
+            "GET",
+            null,
+            "?select=*&order=id.desc"
+        );
+
+
+    if(!result.success){
+
+        console.error(
+            "❌ Demand History Load Error:",
+            result.error
+        );
+
+
+        alert(
+            "Demand History load نہیں ہو سکی۔\n\n" +
+            JSON.stringify(result.error)
+        );
+
+
+        return;
+
+    }
+
+
+    demandHistory =
+        result.data || [];
+
+
+    console.log(
+        "✅ Demand History Loaded:",
+        demandHistory.length
+    );
+
+
+    console.log(
+        "Demand History Data:",
+        demandHistory
+    );
+
+
+    showDemandHistory();
 
 }
 
@@ -58,9 +122,13 @@ function showDemandHistory(){
             "demandHistoryBody"
         );
 
+
     if(!historyBody){
+
         return;
+
     }
+
 
     historyBody.innerHTML = "";
 
@@ -86,13 +154,19 @@ function showDemandHistory(){
         let cell0 =
             document.createElement("td");
 
+
         cell0.innerHTML =
             getValue(
                 record,
-                ["demandNo", "demandNumber"],
+                [
+                    "demand_no",
+                    "demandNo",
+                    "demandNumber"
+                ],
                 "DEM-" +
                 String(i + 1).padStart(3, "0")
             );
+
 
         row.appendChild(cell0);
 
@@ -104,12 +178,18 @@ function showDemandHistory(){
         let cell1 =
             document.createElement("td");
 
+
         cell1.innerHTML =
             getValue(
                 record,
-                ["demandMonth", "month"],
+                [
+                    "demand_month",
+                    "demandMonth",
+                    "month"
+                ],
                 "-"
             );
+
 
         row.appendChild(cell1);
 
@@ -123,9 +203,7 @@ function showDemandHistory(){
 
 
         let list =
-            record.demandItems ||
-            record.items ||
-            [];
+            getDemandItems(record);
 
 
         if(Array.isArray(list)){
@@ -139,7 +217,9 @@ function showDemandHistory(){
             cell2.innerHTML =
                 getValue(
                     record,
-                    ["items"],
+                    [
+                        "items"
+                    ],
                     "-"
                 );
 
@@ -156,16 +236,19 @@ function showDemandHistory(){
         let cell3 =
             document.createElement("td");
 
+
         cell3.innerHTML =
             getValue(
                 record,
                 [
+                    "generate_date",
                     "generateDate",
                     "generatedDate",
                     "date"
                 ],
                 "-"
             );
+
 
         row.appendChild(cell3);
 
@@ -177,12 +260,16 @@ function showDemandHistory(){
         let cell4 =
             document.createElement("td");
 
+
         cell4.innerHTML =
             getValue(
                 record,
-                ["status"],
+                [
+                    "status"
+                ],
                 "Generated"
             );
+
 
         row.appendChild(cell4);
 
@@ -199,11 +286,14 @@ function showDemandHistory(){
         let previewButton =
             document.createElement("button");
 
+
         previewButton.innerHTML =
             "Print Preview";
 
+
         previewButton.type =
             "button";
+
 
         previewButton.onclick =
             function(){
@@ -214,6 +304,7 @@ function showDemandHistory(){
 
             };
 
+
         cell5.appendChild(
             previewButton
         );
@@ -223,11 +314,14 @@ function showDemandHistory(){
         let editButton =
             document.createElement("button");
 
+
         editButton.innerHTML =
             "Edit";
 
+
         editButton.type =
             "button";
+
 
         editButton.onclick =
             function(){
@@ -235,6 +329,7 @@ function showDemandHistory(){
                 editDemand(i);
 
             };
+
 
         cell5.appendChild(
             editButton
@@ -245,11 +340,14 @@ function showDemandHistory(){
         let deleteButton =
             document.createElement("button");
 
+
         deleteButton.innerHTML =
             "Delete";
 
+
         deleteButton.type =
             "button";
+
 
         deleteButton.onclick =
             function(){
@@ -257,6 +355,7 @@ function showDemandHistory(){
                 deleteDemand(i);
 
             };
+
 
         cell5.appendChild(
             deleteButton
@@ -269,6 +368,54 @@ function showDemandHistory(){
         historyBody.appendChild(row);
 
     }
+
+}
+
+
+// =====================================
+// GET DEMAND ITEMS
+// =====================================
+
+function getDemandItems(record){
+
+    let list =
+        record.demand_items ||
+        record.demandItems ||
+        record.items ||
+        [];
+
+
+    // اگر JSON string ہے
+    if(typeof list === "string"){
+
+        try{
+
+            list =
+                JSON.parse(list);
+
+        }
+        catch(error){
+
+            console.warn(
+                "Demand Items JSON Parse Error:",
+                error
+            );
+
+            list = [];
+
+        }
+
+    }
+
+
+    if(!Array.isArray(list)){
+
+        return [];
+
+    }
+
+
+    return list;
 
 }
 
@@ -287,20 +434,40 @@ function editDemand(index){
         demandHistory[index];
 
 
+    if(!record){
+
+        return;
+
+    }
+
+
     let editArea =
         document.getElementById(
             "editArea"
         );
+
 
     let editInfo =
         document.getElementById(
             "editInfo"
         );
 
+
     let editItems =
         document.getElementById(
             "editItems"
         );
+
+
+    if(!editArea || !editInfo || !editItems){
+
+        alert(
+            "Edit area HTML میں نہیں ملا۔"
+        );
+
+        return;
+
+    }
 
 
     editArea.style.display =
@@ -310,19 +477,37 @@ function editDemand(index){
     editInfo.innerHTML = `
 
         <strong>Demand No:</strong>
-        ${getValue(record, ["demandNo"], "-")}
+        ${getValue(
+            record,
+            [
+                "demand_no",
+                "demandNo"
+            ],
+            "-"
+        )}
 
         &nbsp;&nbsp;&nbsp;
 
         <strong>Demand Month:</strong>
-        ${getValue(record, ["demandMonth"], "-")}
+        ${getValue(
+            record,
+            [
+                "demand_month",
+                "demandMonth"
+            ],
+            "-"
+        )}
 
         &nbsp;&nbsp;&nbsp;
 
         <strong>Generate Date:</strong>
         ${getValue(
             record,
-            ["generateDate", "generatedDate", "date"],
+            [
+                "generate_date",
+                "generateDate",
+                "date"
+            ],
             "-"
         )}
 
@@ -333,9 +518,7 @@ function editDemand(index){
 
 
     let list =
-        record.demandItems ||
-        record.items ||
-        [];
+        getDemandItems(record);
 
 
     if(
@@ -353,6 +536,7 @@ function editDemand(index){
 
     let table =
         document.createElement("table");
+
 
     table.className =
         "edit-table";
@@ -388,73 +572,109 @@ function editDemand(index){
             document.createElement("tr");
 
 
+        // =====================================
         // ITEM CODE
+        // =====================================
+
         let cell1 =
             document.createElement("td");
+
 
         cell1.innerHTML =
             getValue(
                 item,
-                ["itemCode", "code"],
+                [
+                    "itemCode",
+                    "item_code",
+                    "code"
+                ],
                 "-"
             );
+
 
         row.appendChild(cell1);
 
 
+        // =====================================
         // ITEM NAME
+        // =====================================
+
         let cell2 =
             document.createElement("td");
+
 
         cell2.innerHTML =
             getValue(
                 item,
-                ["itemName", "name"],
+                [
+                    "itemName",
+                    "item_name",
+                    "name"
+                ],
                 "-"
             );
+
 
         row.appendChild(cell2);
 
 
+        // =====================================
         // STOCK LEVEL
+        // =====================================
+
         let cell3 =
             document.createElement("td");
+
 
         let stockInput =
             document.createElement("input");
 
+
         stockInput.type =
             "number";
+
 
         stockInput.value =
             getValue(
                 item,
-                ["stockLevel"],
+                [
+                    "stockLevel"
+                ],
                 ""
             );
+
 
         stockInput.dataset.field =
             "stockLevel";
 
+
         stockInput.dataset.index =
             i;
+
 
         cell3.appendChild(
             stockInput
         );
 
+
         row.appendChild(cell3);
 
 
+        // =====================================
         // DEMAND QUANTITY
+        // =====================================
+
         let cell4 =
             document.createElement("td");
+
 
         let demandInput =
             document.createElement("input");
 
+
         demandInput.type =
             "number";
+
 
         demandInput.value =
             getValue(
@@ -467,84 +687,113 @@ function editDemand(index){
                 ""
             );
 
+
         demandInput.dataset.field =
             "demandQuantity";
 
+
         demandInput.dataset.index =
             i;
+
 
         cell4.appendChild(
             demandInput
         );
 
+
         row.appendChild(cell4);
 
 
+        // =====================================
         // FINAL DEMAND
+        // =====================================
+
         let cell5 =
             document.createElement("td");
+
 
         let finalInput =
             document.createElement("input");
 
+
         finalInput.type =
             "number";
+
 
         finalInput.value =
             getValue(
                 item,
                 [
                     "finalDemand",
+                    "final_demand",
                     "approvedQty",
                     "approvedQuantity"
                 ],
                 ""
             );
 
+
         finalInput.dataset.field =
             "finalDemand";
 
+
         finalInput.dataset.index =
             i;
+
 
         cell5.appendChild(
             finalInput
         );
 
+
         row.appendChild(cell5);
 
 
+        // =====================================
         // REMARKS
+        // =====================================
+
         let cell6 =
             document.createElement("td");
+
 
         let remarksInput =
             document.createElement("input");
 
+
         remarksInput.type =
             "text";
+
 
         let remarks =
             getValue(
                 item,
-                ["remarks", "remark"],
+                [
+                    "remarks",
+                    "remark"
+                ],
                 ""
             );
+
 
         remarksInput.value =
             remarks === "-" ?
             "" :
             remarks;
 
+
         remarksInput.dataset.field =
             "remarks";
+
 
         remarksInput.dataset.index =
             i;
 
+
         cell6.appendChild(
             remarksInput
         );
+
 
         row.appendChild(cell6);
 
@@ -568,13 +817,12 @@ function editDemand(index){
 
 // =====================================
 // UPDATE DEMAND
+// SUPABASE
 // =====================================
 
-function updateDemand(){
+async function updateDemand(){
 
-    if(
-        editDemandIndex === -1
-    ){
+    if(editDemandIndex === -1){
 
         return;
 
@@ -587,10 +835,26 @@ function updateDemand(){
         ];
 
 
+    if(!record){
+
+        return;
+
+    }
+
+
+    if(!record.id){
+
+        alert(
+            "اس Demand record کی Supabase ID موجود نہیں ہے۔"
+        );
+
+        return;
+
+    }
+
+
     let list =
-        record.demandItems ||
-        record.items ||
-        [];
+        getDemandItems(record);
 
 
     let inputs =
@@ -621,15 +885,98 @@ function updateDemand(){
 
         if(list[index]){
 
-            list[index][field] =
-                input.value;
+            if(field === "stockLevel"){
+
+                list[index][field] =
+                    Number(input.value || 0);
+
+            }
+            else if(field === "demandQuantity"){
+
+                list[index][field] =
+                    Number(input.value || 0);
+
+            }
+            else if(field === "finalDemand"){
+
+                list[index][field] =
+                    Number(input.value || 0);
+
+            }
+            else{
+
+                list[index][field] =
+                    input.value;
+
+            }
 
         }
 
     }
 
 
-    record.demandItems =
+    // =====================================
+    // SUPABASE UPDATE DATA
+    // =====================================
+
+    let updateData = {
+
+        demand_items:
+            list,
+
+        items:
+            list,
+
+        status:
+            "Updated"
+
+    };
+
+
+    console.log(
+        "Updating Demand:",
+        record.id,
+        updateData
+    );
+
+
+    let result =
+        await supabaseRequest(
+            "demand_history/" +
+            record.id,
+            "PATCH",
+            updateData
+        );
+
+
+    if(!result.success){
+
+        console.error(
+            "❌ Demand Update Error:",
+            result.error
+        );
+
+
+        alert(
+            "Demand update نہیں ہوئی۔\n\n" +
+            JSON.stringify(result.error)
+        );
+
+
+        return;
+
+    }
+
+
+    // =====================================
+    // UPDATE LOCAL ARRAY
+    // =====================================
+
+    record.demand_items =
+        list;
+
+
+    record.items =
         list;
 
 
@@ -643,14 +990,6 @@ function updateDemand(){
         record;
 
 
-    localStorage.setItem(
-        "demandHistory",
-        JSON.stringify(
-            demandHistory
-        )
-    );
-
-
     alert(
         "Demand Updated Successfully!"
     );
@@ -660,10 +999,18 @@ function updateDemand(){
         -1;
 
 
-    document.getElementById(
-        "editArea"
-    ).style.display =
-        "none";
+    if(
+        document.getElementById(
+            "editArea"
+        )
+    ){
+
+        document.getElementById(
+            "editArea"
+        ).style.display =
+            "none";
+
+    }
 
 
     showDemandHistory();
@@ -681,19 +1028,39 @@ function cancelEdit(){
         -1;
 
 
-    document.getElementById(
-        "editArea"
-    ).style.display =
-        "none";
+    let editArea =
+        document.getElementById(
+            "editArea"
+        );
+
+
+    if(editArea){
+
+        editArea.style.display =
+            "none";
+
+    }
 
 }
 
 
 // =====================================
 // DELETE DEMAND
+// SUPABASE
 // =====================================
 
-function deleteDemand(index){
+async function deleteDemand(index){
+
+    let record =
+        demandHistory[index];
+
+
+    if(!record){
+
+        return;
+
+    }
+
 
     let confirmDelete =
         confirm(
@@ -708,23 +1075,62 @@ function deleteDemand(index){
     }
 
 
+    if(!record.id){
+
+        alert(
+            "اس Demand record کی Supabase ID موجود نہیں ہے۔"
+        );
+
+        return;
+
+    }
+
+
+    console.log(
+        "Deleting Demand:",
+        record.id
+    );
+
+
+    let result =
+        await supabaseRequest(
+            "demand_history/" +
+            record.id,
+            "DELETE",
+            null
+        );
+
+
+    if(!result.success){
+
+        console.error(
+            "❌ Demand Delete Error:",
+            result.error
+        );
+
+
+        alert(
+            "Demand delete نہیں ہوئی۔\n\n" +
+            JSON.stringify(result.error)
+        );
+
+
+        return;
+
+    }
+
+
+    // =====================================
+    // REMOVE FROM LOCAL ARRAY
+    // =====================================
+
     demandHistory.splice(
         index,
         1
     );
 
 
-    localStorage.setItem(
-        "demandHistory",
-        JSON.stringify(
-            demandHistory
-        )
-    );
-
-
-    if(
-        editDemandIndex === index
-    ){
+    if(editDemandIndex === index){
 
         cancelEdit();
 
@@ -748,9 +1154,7 @@ function deleteDemand(index){
 function printDemandPreview(record){
 
     let list =
-        record.demandItems ||
-        record.items ||
-        [];
+        getDemandItems(record);
 
 
     if(
@@ -800,6 +1204,7 @@ function printDemandPreview(record){
         getValue(
             record,
             [
+                "demand_no",
                 "demandNo",
                 "demandNumber"
             ],
@@ -811,6 +1216,7 @@ function printDemandPreview(record){
         getValue(
             record,
             [
+                "demand_month",
                 "demandMonth",
                 "month"
             ],
@@ -1115,7 +1521,7 @@ MONTHLY DEMAND
 
 
     // =====================================
-    // PRINT EACH ITEM
+    // PRINT ITEMS
     // =====================================
 
     for(
@@ -1141,6 +1547,7 @@ MONTHLY DEMAND
                 item,
                 [
                     "itemCode",
+                    "item_code",
                     "code"
                 ],
                 "-"
@@ -1152,6 +1559,7 @@ MONTHLY DEMAND
                 item,
                 [
                     "itemName",
+                    "item_name",
                     "name"
                 ],
                 "-"
@@ -1193,10 +1601,6 @@ MONTHLY DEMAND
             );
 
 
-        // =====================================
-        // LATEST RATE
-        // =====================================
-
         let latestRate =
             getValue(
                 item,
@@ -1212,10 +1616,6 @@ MONTHLY DEMAND
             );
 
 
-        // =====================================
-        // UNIT
-        // =====================================
-
         let unit =
             getValue(
                 item,
@@ -1226,10 +1626,6 @@ MONTHLY DEMAND
                 "-"
             );
 
-
-        // =====================================
-        // PACKING
-        // =====================================
 
         let packingQty =
             getValue(
@@ -1254,10 +1650,6 @@ MONTHLY DEMAND
             );
 
 
-        // =====================================
-        // AVERAGE
-        // =====================================
-
         let average =
             getValue(
                 item,
@@ -1271,10 +1663,6 @@ MONTHLY DEMAND
             );
 
 
-        // =====================================
-        // STOCK LEVEL
-        // =====================================
-
         let stockLevel =
             getValue(
                 item,
@@ -1285,10 +1673,6 @@ MONTHLY DEMAND
                 "-"
             );
 
-
-        // =====================================
-        // REQUIRED STOCK
-        // =====================================
 
         let requiredStock =
             getValue(
@@ -1301,10 +1685,6 @@ MONTHLY DEMAND
             );
 
 
-        // =====================================
-        // CURRENT STOCK
-        // =====================================
-
         let currentStock =
             getValue(
                 item,
@@ -1316,10 +1696,6 @@ MONTHLY DEMAND
                 "-"
             );
 
-
-        // =====================================
-        // DEMAND QUANTITY
-        // =====================================
 
         let demandQuantity =
             getValue(
@@ -1334,15 +1710,12 @@ MONTHLY DEMAND
             );
 
 
-        // =====================================
-        // FINAL DEMAND
-        // =====================================
-
         let finalDemand =
             getValue(
                 item,
                 [
                     "finalDemand",
+                    "final_demand",
                     "approvedQty",
                     "approvedQuantity",
                     "finalQty"
@@ -1350,10 +1723,6 @@ MONTHLY DEMAND
                 "-"
             );
 
-
-        // =====================================
-        // REMARKS
-        // =====================================
 
         let remarks =
             getValue(
@@ -1451,10 +1820,6 @@ MONTHLY DEMAND
     printWindow.document.close();
 
 
-    // =====================================
-    // WAIT FOR PRINT WINDOW
-    // =====================================
-
     setTimeout(
         function(){
 
@@ -1470,7 +1835,14 @@ MONTHLY DEMAND
 
 
 // =====================================
-// LOAD HISTORY
+// PAGE START
 // =====================================
 
-showDemandHistory();
+window.addEventListener(
+    "load",
+    function(){
+
+        loadDemandHistory();
+
+    }
+);
