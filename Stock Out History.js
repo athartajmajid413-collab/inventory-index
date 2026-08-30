@@ -1,11 +1,9 @@
 // =====================================
-// LOAD DATA
+// STOCK OUT HISTORY - SUPABASE VERSION
+// MECAS ENGINEERING PVT LIMITED SUNDAR
 // =====================================
 
-let history =
-    JSON.parse(
-        localStorage.getItem("history")
-    ) || [];
+let history = [];
 
 
 // =====================================
@@ -19,6 +17,60 @@ let selectedItemCode =
 
 
 // =====================================
+// LOAD STOCK OUT HISTORY FROM SUPABASE
+// =====================================
+
+async function loadHistory(){
+
+    console.log(
+        "Loading Stock Out History from Supabase..."
+    );
+
+
+    let result =
+        await supabaseRequest(
+            "stock_issue",
+            "GET",
+            null,
+            "?select=*&order=date.desc,time.desc"
+        );
+
+
+    if(!result.success){
+
+        console.error(
+            "Stock Out History Load Error:",
+            result.error
+        );
+
+        alert(
+            "Stock Out History load nahi ho saki!\n\n" +
+            JSON.stringify(result.error)
+        );
+
+        return;
+    }
+
+
+    history =
+        result.data || [];
+
+
+    console.log(
+        "Stock Out History Loaded:",
+        history.length,
+        history
+    );
+
+
+    loadYears();
+
+    showHistory();
+
+}
+
+
+// =====================================
 // SHOW HISTORY
 // =====================================
 
@@ -29,40 +81,80 @@ function showHistory(){
             "historyBody"
         );
 
+
+    if(!body){
+
+        console.error(
+            "historyBody not found!"
+        );
+
+        return;
+    }
+
+
     body.innerHTML = "";
 
 
-    let search =
+    let searchElement =
         document.getElementById(
             "itemSearch"
-        )
-        .value
-        .trim()
-        .toLowerCase();
+        );
+
+
+    let monthElement =
+        document.getElementById(
+            "monthFilter"
+        );
+
+
+    let yearElement =
+        document.getElementById(
+            "yearFilter"
+        );
+
+
+    let fromDateElement =
+        document.getElementById(
+            "fromDate"
+        );
+
+
+    let toDateElement =
+        document.getElementById(
+            "toDate"
+        );
+
+
+    let search =
+        searchElement
+        ? searchElement.value
+            .trim()
+            .toLowerCase()
+        : "";
 
 
     let month =
-        document.getElementById(
-            "monthFilter"
-        ).value;
+        monthElement
+        ? monthElement.value
+        : "";
 
 
     let year =
-        document.getElementById(
-            "yearFilter"
-        ).value;
+        yearElement
+        ? yearElement.value
+        : "";
 
 
     let fromDate =
-        document.getElementById(
-            "fromDate"
-        ).value;
+        fromDateElement
+        ? fromDateElement.value
+        : "";
 
 
     let toDate =
-        document.getElementById(
-            "toDate"
-        ).value;
+        toDateElement
+        ? toDateElement.value
+        : "";
 
 
     let count = 0;
@@ -79,12 +171,12 @@ function showHistory(){
 
 
         // =================================
-        // ONLY STOCK OUT
+        // ONLY STOCK ISSUE
         // =================================
 
         if(
-            record.type !=
-            "Stock Issue"
+            record.type &&
+            record.type != "Stock Issue"
         ){
 
             continue;
@@ -99,7 +191,7 @@ function showHistory(){
         if(
             selectedItemCode &&
             String(
-                record.itemCode
+                record.item_code || ""
             ).trim() !=
             String(
                 selectedItemCode
@@ -112,18 +204,18 @@ function showHistory(){
 
 
         // =================================
-        // ITEM SEARCH
+        // SEARCH
         // =================================
 
         let itemName =
             String(
-                record.itemName || ""
+                record.item_name || ""
             ).toLowerCase();
 
 
         let itemCode =
             String(
-                record.itemCode || ""
+                record.item_code || ""
             ).toLowerCase();
 
 
@@ -221,8 +313,7 @@ function showHistory(){
         // =================================
 
         addHistoryRow(
-            record,
-            i
+            record
         );
 
 
@@ -231,18 +322,25 @@ function showHistory(){
     }
 
 
-    document.getElementById(
-        "selectedItemInfo"
-    ).innerHTML =
-
-        "Showing " +
-        count +
-        " Stock Out entr" +
-        (
-            count == 1
-            ? "y"
-            : "ies"
+    let selectedInfo =
+        document.getElementById(
+            "selectedItemInfo"
         );
+
+
+    if(selectedInfo){
+
+        selectedInfo.innerHTML =
+            "Showing " +
+            count +
+            " Stock Out entr" +
+            (
+                count == 1
+                ? "y"
+                : "ies"
+            );
+
+    }
 
 }
 
@@ -251,10 +349,7 @@ function showHistory(){
 // ADD HISTORY ROW
 // =====================================
 
-function addHistoryRow(
-    record,
-    historyIndex
-){
+function addHistoryRow(record){
 
     let row =
         document.createElement(
@@ -262,47 +357,52 @@ function addHistoryRow(
         );
 
 
-    row.innerHTML =
+    let values = [
 
-        "<td>" +
-        (record.date || "-") +
-        "</td>" +
+        record.date || "-",
 
-        "<td>" +
-        (record.time || "-") +
-        "</td>" +
+        record.time || "-",
 
-        "<td>" +
-        (record.itemCode || "-") +
-        "</td>" +
+        record.item_code || "-",
 
-        "<td>" +
-        (record.itemName || "-") +
-        "</td>" +
+        record.item_name || "-",
 
-        "<td>" +
-        (record.unit || "-") +
-        "</td>" +
+        record.unit || "-",
 
-        "<td>" +
-        (record.source || "-") +
-        "</td>" +
+        record.source || "-",
 
-        "<td>" +
-        (record.supplier || "-") +
-        "</td>" +
+        record.supplier || "-",
 
-        "<td>" +
-        (record.location || "-") +
-        "</td>" +
+        record.location || "-",
 
-        "<td>" +
-        (record.department || "-") +
-        "</td>" +
+        record.department || "-",
 
-        "<td>" +
-        (record.quantity || 0) +
-        "</td>";
+        record.quantity || 0
+
+    ];
+
+
+    for(
+        let i = 0;
+        i < values.length;
+        i++
+    ){
+
+        let cell =
+            document.createElement(
+                "td"
+            );
+
+
+        cell.textContent =
+            values[i];
+
+
+        row.appendChild(
+            cell
+        );
+
+    }
 
 
     // =================================
@@ -316,7 +416,7 @@ function addHistoryRow(
 
 
     // =================================
-    // EDIT BUTTON
+    // EDIT
     // =================================
 
     let editButton =
@@ -325,7 +425,7 @@ function addHistoryRow(
         );
 
 
-    editButton.innerHTML =
+    editButton.textContent =
         "Edit";
 
 
@@ -333,14 +433,14 @@ function addHistoryRow(
         function(){
 
             editHistory(
-                historyIndex
+                record
             );
 
         };
 
 
     // =================================
-    // DELETE BUTTON
+    // DELETE
     // =================================
 
     let deleteButton =
@@ -349,7 +449,7 @@ function addHistoryRow(
         );
 
 
-    deleteButton.innerHTML =
+    deleteButton.textContent =
         "Delete";
 
 
@@ -357,7 +457,7 @@ function addHistoryRow(
         function(){
 
             deleteHistory(
-                historyIndex
+                record
             );
 
         };
@@ -378,11 +478,19 @@ function addHistoryRow(
     );
 
 
-    document.getElementById(
-        "historyBody"
-    ).appendChild(
-        row
-    );
+    let body =
+        document.getElementById(
+            "historyBody"
+        );
+
+
+    if(body){
+
+        body.appendChild(
+            row
+        );
+
+    }
 
 }
 
@@ -391,11 +499,7 @@ function addHistoryRow(
 // EDIT HISTORY
 // =====================================
 
-function editHistory(index){
-
-    let record =
-        history[index];
-
+function editHistory(record){
 
     if(!record){
 
@@ -404,14 +508,14 @@ function editHistory(index){
     }
 
 
-    // Save selected record
+    // Save Supabase record ID
     localStorage.setItem(
-        "editStockOutIndex",
-        index
+        "editStockOutId",
+        record.id
     );
 
 
-    // Open Stock Out entry page
+    // Open Stock Out page
     window.location.href =
         "Stock out .html";
 
@@ -422,11 +526,7 @@ function editHistory(index){
 // DELETE HISTORY
 // =====================================
 
-function deleteHistory(index){
-
-    let record =
-        history[index];
-
+async function deleteHistory(record){
 
     if(!record){
 
@@ -438,7 +538,7 @@ function deleteHistory(index){
     let confirmDelete =
         confirm(
             "Are you sure you want to delete this Stock Out entry?\n\n" +
-            record.itemName +
+            record.item_name +
             " - " +
             record.quantity
         );
@@ -453,16 +553,33 @@ function deleteHistory(index){
     }
 
 
-    history.splice(
-        index,
-        1
-    );
+    let result =
+        await supabaseRequest(
+            "stock_issue",
+            "DELETE",
+            null,
+            "?id=eq." +
+            record.id
+        );
 
 
-    localStorage.setItem(
-        "history",
-        JSON.stringify(history)
-    );
+    if(!result.success){
+
+        console.error(
+            "Stock Out Delete Error:",
+            result.error
+        );
+
+
+        alert(
+            "Stock Out Entry delete nahi hui!\n\n" +
+            JSON.stringify(result.error)
+        );
+
+
+        return;
+
+    }
 
 
     alert(
@@ -470,7 +587,7 @@ function deleteHistory(index){
     );
 
 
-    showHistory();
+    await loadHistory();
 
 }
 
@@ -492,38 +609,80 @@ function filterHistory(){
 
 function clearFilters(){
 
-    document.getElementById(
-        "itemSearch"
-    ).value = "";
+    let search =
+        document.getElementById(
+            "itemSearch"
+        );
 
 
-    document.getElementById(
-        "monthFilter"
-    ).value = "";
+    let month =
+        document.getElementById(
+            "monthFilter"
+        );
 
 
-    document.getElementById(
-        "yearFilter"
-    ).value = "";
+    let year =
+        document.getElementById(
+            "yearFilter"
+        );
 
 
-    document.getElementById(
-        "fromDate"
-    ).value = "";
+    let fromDate =
+        document.getElementById(
+            "fromDate"
+        );
 
 
-    document.getElementById(
-        "toDate"
-    ).value = "";
+    let toDate =
+        document.getElementById(
+            "toDate"
+        );
 
 
-    // Dashboard selection بھی ختم
+    if(search){
+
+        search.value = "";
+
+    }
+
+
+    if(month){
+
+        month.value = "";
+
+    }
+
+
+    if(year){
+
+        year.value = "";
+
+    }
+
+
+    if(fromDate){
+
+        fromDate.value = "";
+
+    }
+
+
+    if(toDate){
+
+        toDate.value = "";
+
+    }
+
+
+    // Dashboard selection clear
+
     localStorage.removeItem(
         "dashboardSelectedItem"
     );
 
 
-    selectedItemCode = null;
+    selectedItemCode =
+        null;
 
 
     showHistory();
@@ -543,6 +702,13 @@ function loadYears(){
         );
 
 
+    if(!yearSelect){
+
+        return;
+
+    }
+
+
     let years = [];
 
 
@@ -557,8 +723,8 @@ function loadYears(){
 
 
         if(
-            record.type !=
-            "Stock Issue"
+            record.type &&
+            record.type != "Stock Issue"
         ){
 
             continue;
@@ -587,7 +753,17 @@ function loadYears(){
     }
 
 
-    years.sort();
+    years.sort(
+        function(a,b){
+
+            return b - a;
+
+        }
+    );
+
+
+    yearSelect.innerHTML =
+        '<option value="">Select Year</option>';
 
 
     for(
@@ -623,6 +799,8 @@ function loadYears(){
 // PAGE START
 // =====================================
 
-loadYears();
+(async function(){
 
-showHistory();
+    await loadHistory();
+
+})();
