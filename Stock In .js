@@ -15,13 +15,12 @@ let editHistoryId = null;
 
 async function loadItems(){
 
-    let result =
-        await supabaseRequest(
-            "items",
-            "GET",
-            null,
-            "?select=*"
-        );
+    let result = await supabaseRequest(
+        "items",
+        "GET",
+        null,
+        "?select=*"
+    );
 
     if(!result.success){
 
@@ -32,11 +31,17 @@ async function loadItems(){
 
         alert("Items load nahi ho sake!");
 
-        return;
+        return false;
     }
 
     items = result.data || [];
 
+    console.log(
+        "Items loaded:",
+        items
+    );
+
+    return true;
 }
 
 
@@ -46,13 +51,12 @@ async function loadItems(){
 
 async function loadStockInHistory(){
 
-    let result =
-        await supabaseRequest(
-            "stock_in",
-            "GET",
-            null,
-            "?select=*&order=date.desc,time.desc"
-        );
+    let result = await supabaseRequest(
+        "stock_in",
+        "GET",
+        null,
+        "?select=*&order=date.desc,time.desc"
+    );
 
     if(!result.success){
 
@@ -61,13 +65,14 @@ async function loadStockInHistory(){
             result.error
         );
 
-        return;
+        return false;
     }
 
     history = result.data || [];
 
     refreshHistoryTable();
 
+    return true;
 }
 
 
@@ -79,52 +84,37 @@ async function stockIn(){
 
     await loadItems();
 
+
     let itemCode =
-        document.getElementById(
-            "itemCode"
-        ).value.trim();
+        document.getElementById("itemCode").value.trim();
 
     let quantity =
-        document.getElementById(
-            "quantity"
-        ).value;
+        document.getElementById("quantity").value;
 
     let unitCost =
-        document.getElementById(
-            "unitCost"
-        ).value;
+        document.getElementById("unitCost").value;
 
     let transactionDate =
-        document.getElementById(
-            "transactionDate"
-        ).value;
+        document.getElementById("transactionDate").value;
 
     let transactionTime =
-        document.getElementById(
-            "transactionTime"
-        ).value;
+        document.getElementById("transactionTime").value;
 
     let source =
-        document.getElementById(
-            "source"
-        ).value;
+        document.getElementById("source").value;
 
     let supplier =
-        document.getElementById(
-            "supplier"
-        ).value;
+        document.getElementById("supplier").value;
 
     let location =
-        document.getElementById(
-            "location"
-        ).value;
+        document.getElementById("location").value;
 
 
     // =====================================
     // VALIDATION
     // =====================================
 
-    if(itemCode == ""){
+    if(itemCode === ""){
 
         alert("Please Enter Item Code!");
 
@@ -132,7 +122,7 @@ async function stockIn(){
     }
 
 
-    if(quantity == ""){
+    if(quantity === ""){
 
         alert("Please Enter Quantity!");
 
@@ -150,7 +140,7 @@ async function stockIn(){
     }
 
 
-    if(unitCost == ""){
+    if(unitCost === ""){
 
         alert("Please Enter Unit Cost!");
 
@@ -168,7 +158,7 @@ async function stockIn(){
     }
 
 
-    if(transactionDate == ""){
+    if(transactionDate === ""){
 
         alert("Please Select Date!");
 
@@ -176,7 +166,7 @@ async function stockIn(){
     }
 
 
-    if(transactionTime == ""){
+    if(transactionTime === ""){
 
         alert("Please Select Time!");
 
@@ -192,10 +182,8 @@ async function stockIn(){
         items.find(function(item){
 
             return String(
-                item.code ||
-                item.item_code ||
-                ""
-            ).trim() ==
+                item.code || ""
+            ).trim() ===
             String(itemCode).trim();
 
         });
@@ -203,7 +191,9 @@ async function stockIn(){
 
     if(!item){
 
-        alert("Item Not Found!");
+        alert(
+            "Item Not Found in Master List!"
+        );
 
         return;
     }
@@ -239,9 +229,7 @@ async function stockIn(){
             itemCode,
 
         item_name:
-            item.itemName ||
-            item.item_name ||
-            "",
+            item.item_name || "",
 
         unit:
             item.unit || "",
@@ -270,8 +258,14 @@ async function stockIn(){
     };
 
 
+    console.log(
+        "Stock In Data:",
+        data
+    );
+
+
     // =====================================
-    // INSERT
+    // NEW STOCK IN
     // =====================================
 
     if(editHistoryId === null){
@@ -307,7 +301,7 @@ async function stockIn(){
 
 
     // =====================================
-    // UPDATE
+    // UPDATE STOCK IN
     // =====================================
 
     else{
@@ -345,7 +339,7 @@ async function stockIn(){
 
 
     // =====================================
-    // RESET
+    // RESET EDIT MODE
     // =====================================
 
     editHistoryId = null;
@@ -366,21 +360,21 @@ async function stockIn(){
 
 
     // =====================================
-    // REFRESH
+    // REFRESH HISTORY
     // =====================================
 
     await loadStockInHistory();
 
 
     // =====================================
-    // CURRENT STOCK
+    // UPDATE CURRENT STOCK
     // =====================================
 
     await showCurrentStock();
 
 
     // =====================================
-    // CLEAR ENTRY
+    // CLEAR ENTRY FIELDS
     // =====================================
 
     clearTransactionForm();
@@ -410,7 +404,11 @@ async function showCurrentStock(){
         itemCodeInput.value.trim();
 
 
-    if(itemCode == ""){
+    // =====================================
+    // EMPTY CODE
+    // =====================================
+
+    if(itemCode === ""){
 
         document.getElementById(
             "itemName"
@@ -440,18 +438,24 @@ async function showCurrentStock(){
     }
 
 
+    // =====================================
+    // LOAD ITEMS
+    // =====================================
+
     await loadItems();
 
+
+    // =====================================
+    // FIND ITEM
+    // =====================================
 
     let item =
         items.find(function(item){
 
             return String(
-                item.code ||
-                item.item_code ||
-                ""
-            ).trim() ==
-            itemCode;
+                item.code || ""
+            ).trim() ===
+            String(itemCode).trim();
 
         });
 
@@ -486,12 +490,14 @@ async function showCurrentStock(){
     }
 
 
+    // =====================================
+    // SHOW ITEM DATA
+    // =====================================
+
     document.getElementById(
         "itemName"
     ).value =
-        item.itemName ||
-        item.item_name ||
-        "";
+        item.item_name || "";
 
 
     document.getElementById(
@@ -515,10 +521,12 @@ async function showCurrentStock(){
     document.getElementById(
         "location"
     ).value =
-        item.storageLocation ||
-        item.location ||
-        "";
+        item.storage_location || "";
 
+
+    // =====================================
+    // CURRENT STOCK
+    // =====================================
 
     let balance =
         await calculateCurrentStock(
@@ -547,10 +555,8 @@ async function calculateCurrentStock(itemCode){
         items.find(function(item){
 
             return String(
-                item.code ||
-                item.item_code ||
-                ""
-            ).trim() ==
+                item.code || ""
+            ).trim() ===
             String(itemCode).trim();
 
         });
@@ -562,11 +568,13 @@ async function calculateCurrentStock(itemCode){
     }
 
 
+    // =====================================
+    // OPENING STOCK
+    // =====================================
+
     let currentStock =
         Number(
-            item.openingStock ||
-            item.opening_stock ||
-            0
+            item.opening_stock || 0
         );
 
 
@@ -595,8 +603,7 @@ async function calculateCurrentStock(itemCode){
 
             currentStock +=
                 Number(
-                    stockInResult.data[i].quantity ||
-                    0
+                    stockInResult.data[i].quantity || 0
                 );
 
         }
@@ -605,7 +612,7 @@ async function calculateCurrentStock(itemCode){
 
 
     // =====================================
-    // STOCK OUT / ISSUE
+    // STOCK ISSUE
     // =====================================
 
     let stockOutResult =
@@ -629,8 +636,7 @@ async function calculateCurrentStock(itemCode){
 
             currentStock -=
                 Number(
-                    stockOutResult.data[i].quantity ||
-                    0
+                    stockOutResult.data[i].quantity || 0
                 );
 
         }
@@ -707,7 +713,9 @@ function addHistoryRow(record){
 
         record.location || "-",
 
-        record.quantity || 0,
+        Number(
+            record.quantity || 0
+        ),
 
         Number(
             record.unit_cost || 0
@@ -723,6 +731,10 @@ function addHistoryRow(record){
 
     ];
 
+
+    // =====================================
+    // CREATE CELLS
+    // =====================================
 
     for(
         let i = 0;
@@ -742,12 +754,16 @@ function addHistoryRow(record){
 
 
     // =====================================
-    // ACTION
+    // ACTION CELL
     // =====================================
 
     let actionCell =
         document.createElement("td");
 
+
+    // =====================================
+    // EDIT BUTTON
+    // =====================================
 
     let editButton =
         document.createElement("button");
@@ -812,6 +828,14 @@ function addHistoryRow(record){
 
 
             document.getElementById(
+                "totalCost"
+            ).value =
+                Number(
+                    record.total_cost || 0
+                ).toFixed(2);
+
+
+            document.getElementById(
                 "transactionDate"
             ).value =
                 record.date || "";
@@ -821,9 +845,6 @@ function addHistoryRow(record){
                 "transactionTime"
             ).value =
                 record.time || "";
-
-
-            calculateTotalCost();
 
 
             document.getElementById(
@@ -838,7 +859,7 @@ function addHistoryRow(record){
 
 
     // =====================================
-    // DELETE
+    // DELETE BUTTON
     // =====================================
 
     let deleteButton =
@@ -901,6 +922,10 @@ function addHistoryRow(record){
         };
 
 
+    // =====================================
+    // ADD BUTTONS
+    // =====================================
+
     actionCell.appendChild(
         editButton
     );
@@ -915,6 +940,10 @@ function addHistoryRow(record){
         actionCell
     );
 
+
+    // =====================================
+    // ADD ROW
+    // =====================================
 
     let historyBody =
         document.getElementById(
@@ -996,41 +1025,51 @@ function clearTransactionForm(){
         "itemCode"
     ).value = "";
 
+
     document.getElementById(
         "itemName"
     ).value = "";
+
 
     document.getElementById(
         "unit"
     ).value = "";
 
+
     document.getElementById(
         "source"
     ).value = "";
+
 
     document.getElementById(
         "supplier"
     ).value = "";
 
+
     document.getElementById(
         "location"
     ).value = "";
+
 
     document.getElementById(
         "quantity"
     ).value = "";
 
+
     document.getElementById(
         "unitCost"
     ).value = "";
+
 
     document.getElementById(
         "totalCost"
     ).value = "";
 
+
     document.getElementById(
         "transactionDate"
     ).value = "";
+
 
     document.getElementById(
         "transactionTime"
@@ -1131,7 +1170,11 @@ async function filterHistory(){
             history[i];
 
 
-        if(search != ""){
+        // =====================================
+        // SEARCH
+        // =====================================
+
+        if(search !== ""){
 
             let name =
                 String(
@@ -1155,7 +1198,11 @@ async function filterHistory(){
         }
 
 
-        if(month != ""){
+        // =====================================
+        // MONTH
+        // =====================================
+
+        if(month !== ""){
 
             let recordMonth =
                 String(
@@ -1163,7 +1210,7 @@ async function filterHistory(){
                 ).substring(5,7);
 
 
-            if(recordMonth != month){
+            if(recordMonth !== month){
 
                 continue;
             }
@@ -1171,7 +1218,11 @@ async function filterHistory(){
         }
 
 
-        if(year != ""){
+        // =====================================
+        // YEAR
+        // =====================================
+
+        if(year !== ""){
 
             let recordYear =
                 String(
@@ -1179,7 +1230,7 @@ async function filterHistory(){
                 ).substring(0,4);
 
 
-            if(recordYear != year){
+            if(recordYear !== year){
 
                 continue;
             }
@@ -1187,8 +1238,12 @@ async function filterHistory(){
         }
 
 
+        // =====================================
+        // FROM DATE
+        // =====================================
+
         if(
-            fromDate != "" &&
+            fromDate !== "" &&
             record.date < fromDate
         ){
 
@@ -1196,8 +1251,12 @@ async function filterHistory(){
         }
 
 
+        // =====================================
+        // TO DATE
+        // =====================================
+
         if(
-            toDate != "" &&
+            toDate !== "" &&
             record.date > toDate
         ){
 
@@ -1205,7 +1264,9 @@ async function filterHistory(){
         }
 
 
-        addHistoryRow(record);
+        addHistoryRow(
+            record
+        );
 
     }
 
@@ -1278,11 +1339,14 @@ async function loadYears(){
                 "option"
             );
 
+
         option.value =
             years[i];
 
+
         option.textContent =
             years[i];
+
 
         yearFilter.appendChild(
             option
@@ -1297,35 +1361,42 @@ async function loadYears(){
 // INPUT EVENTS
 // =====================================
 
-let quantityInput =
-    document.getElementById(
-        "quantity"
-    );
+document.addEventListener(
+    "DOMContentLoaded",
+    function(){
 
-let unitCostInput =
-    document.getElementById(
-        "unitCost"
-    );
+        let quantityInput =
+            document.getElementById(
+                "quantity"
+            );
 
-
-if(quantityInput){
-
-    quantityInput.addEventListener(
-        "input",
-        calculateTotalCost
-    );
-
-}
+        let unitCostInput =
+            document.getElementById(
+                "unitCost"
+            );
 
 
-if(unitCostInput){
+        if(quantityInput){
 
-    unitCostInput.addEventListener(
-        "input",
-        calculateTotalCost
-    );
+            quantityInput.addEventListener(
+                "input",
+                calculateTotalCost
+            );
 
-}
+        }
+
+
+        if(unitCostInput){
+
+            unitCostInput.addEventListener(
+                "input",
+                calculateTotalCost
+            );
+
+        }
+
+    }
+);
 
 
 // =====================================
@@ -1341,4 +1412,3 @@ if(unitCostInput){
     await loadYears();
 
 })();
-
