@@ -1,85 +1,374 @@
-let items =
-    JSON.parse(localStorage.getItem("items")) || [];
+// =====================================
+// STOCK OUT / STOCK ISSUE
+// SUPABASE VERSION
+// MECAS ENGINEERING PVT LIMITED SUNDAR
+// =====================================
 
-let history =
-    JSON.parse(localStorage.getItem("history")) || [];
 
-let editHistoryIndex = -1;
+// =====================================
+// GLOBAL VARIABLES
+// =====================================
+
+let items = [];
+
+let history = [];
+
+let editHistoryId = null;
+
+
+// =====================================
+// LOAD ITEMS FROM SUPABASE
+// =====================================
+
+async function loadItems(){
+
+    let result =
+        await supabaseRequest(
+            "items",
+            "GET",
+            null,
+            "?select=*"
+        );
+
+
+    if(!result.success){
+
+        console.error(
+            "Items Load Error:",
+            result.error
+        );
+
+        alert(
+            "Items load نہیں ہو سکے!"
+        );
+
+        return;
+
+    }
+
+
+    items =
+        result.data || [];
+
+}
+
+
+// =====================================
+// LOAD STOCK ISSUE HISTORY
+// =====================================
+
+async function loadStockIssues(){
+
+    let result =
+        await supabaseRequest(
+            "stock_issues",
+            "GET",
+            null,
+            "?select=*&order=id.asc"
+        );
+
+
+    if(!result.success){
+
+        console.error(
+            "Stock Issue Load Error:",
+            result.error
+        );
+
+        alert(
+            "Stock Issue History load نہیں ہو سکی!"
+        );
+
+        return;
+
+    }
+
+
+    history =
+        result.data || [];
+
+
+    refreshHistoryTable();
+
+}
+
+
+// =====================================
+// LOAD ALL DATA
+// =====================================
+
+async function loadAllData(){
+
+    await loadItems();
+
+    await loadStockIssues();
+
+}
+
+
+// =====================================
+// FIND ITEM
+// =====================================
+
+function findItem(itemCode){
+
+    return items.find(function(item){
+
+        return String(
+            item.code || ""
+        ).trim().toLowerCase()
+        ===
+        String(
+            itemCode || ""
+        ).trim().toLowerCase();
+
+    });
+
+}
 
 
 // =====================================
 // SHOW ITEM INFORMATION
 // =====================================
 
-function showItemInfo(){
+async function showItemInfo(){
 
     let itemCode =
-        document.getElementById("itemCode")
-        .value
-        .trim();
+        document.getElementById(
+            "itemCode"
+        ).value.trim();
 
 
     if(itemCode == ""){
 
-        document.getElementById("itemName").value = "";
-        document.getElementById("unit").value = "";
-        document.getElementById("source").value = "";
-        document.getElementById("supplier").value = "";
-        document.getElementById("location").value = "";
-        document.getElementById("currentStock").value = "";
+        document.getElementById(
+            "itemName"
+        ).value = "";
+
+        document.getElementById(
+            "unit"
+        ).value = "";
+
+        document.getElementById(
+            "source"
+        ).value = "";
+
+        document.getElementById(
+            "supplier"
+        ).value = "";
+
+        document.getElementById(
+            "location"
+        ).value = "";
+
+        document.getElementById(
+            "currentStock"
+        ).value = "";
 
         return;
+
     }
 
 
-    // دوبارہ latest data load کریں
-    items =
-        JSON.parse(localStorage.getItem("items")) || [];
+    // اگر items ابھی load نہیں ہوئے
+    if(items.length == 0){
 
-    history =
-        JSON.parse(localStorage.getItem("history")) || [];
+        await loadItems();
+
+    }
 
 
     let item =
-        items.find(function(item){
-
-            return String(item.code).trim() ==
-                   itemCode;
-
-        });
+        findItem(itemCode);
 
 
-    if(item){
+    if(!item){
 
-        document.getElementById("itemName").value =
-            item.itemName || "";
+        document.getElementById(
+            "itemName"
+        ).value = "";
 
-        document.getElementById("unit").value =
-            item.unit || "";
+        document.getElementById(
+            "unit"
+        ).value = "";
 
-        document.getElementById("source").value =
-            item.source || "";
+        document.getElementById(
+            "source"
+        ).value = "";
 
-        document.getElementById("supplier").value =
-            item.supplier || "";
+        document.getElementById(
+            "supplier"
+        ).value = "";
 
-        document.getElementById("location").value =
-            item.storageLocation || "";
+        document.getElementById(
+            "location"
+        ).value = "";
 
-        document.getElementById("currentStock").value =
-            calculateCurrentStock(item.code);
+        document.getElementById(
+            "currentStock"
+        ).value = "";
 
-    }
-    else{
-
-        document.getElementById("itemName").value = "";
-        document.getElementById("unit").value = "";
-        document.getElementById("source").value = "";
-        document.getElementById("supplier").value = "";
-        document.getElementById("location").value = "";
-        document.getElementById("currentStock").value = "";
+        return;
 
     }
+
+
+    document.getElementById(
+        "itemName"
+    ).value =
+        item.item_name || "";
+
+
+    document.getElementById(
+        "unit"
+    ).value =
+        item.unit || "";
+
+
+    document.getElementById(
+        "source"
+    ).value =
+        item.source || "";
+
+
+    document.getElementById(
+        "supplier"
+    ).value =
+        item.supplier || "";
+
+
+    document.getElementById(
+        "location"
+    ).value =
+        item.storage_location || "";
+
+
+    let currentStock =
+        await calculateCurrentStock(
+            item.code
+        );
+
+
+    document.getElementById(
+        "currentStock"
+    ).value =
+        currentStock;
+
+}
+
+
+// =====================================
+// GET STOCK IN QUANTITY
+// =====================================
+
+async function getStockInQuantity(itemCode){
+
+    let result =
+        await supabaseRequest(
+            "stock_in",
+            "GET",
+            null,
+            "?select=quantity&item_code=eq." +
+            encodeURIComponent(itemCode)
+        );
+
+
+    if(!result.success){
+
+        console.error(
+            "Stock In Error:",
+            result.error
+        );
+
+        return 0;
+
+    }
+
+
+    let total = 0;
+
+
+    for(
+        let i = 0;
+        i < result.data.length;
+        i++
+    ){
+
+        total +=
+            Number(
+                result.data[i].quantity || 0
+            );
+
+    }
+
+
+    return total;
+
+}
+
+
+// =====================================
+// GET STOCK ISSUE QUANTITY
+// =====================================
+
+async function getStockIssueQuantity(itemCode){
+
+    let result =
+        await supabaseRequest(
+            "stock_issues",
+            "GET",
+            null,
+            "?select=id,quantity,item_code" +
+            "&item_code=eq." +
+            encodeURIComponent(itemCode)
+        );
+
+
+    if(!result.success){
+
+        console.error(
+            "Stock Issue Error:",
+            result.error
+        );
+
+        return 0;
+
+    }
+
+
+    let total = 0;
+
+
+    for(
+        let i = 0;
+        i < result.data.length;
+        i++
+    ){
+
+        // Edit کے وقت current record کو
+        // دوبارہ minus نہیں کرنا
+
+        if(
+            editHistoryId !== null &&
+            Number(result.data[i].id)
+            ===
+            Number(editHistoryId)
+        ){
+
+            continue;
+
+        }
+
+
+        total +=
+            Number(
+                result.data[i].quantity || 0
+            );
+
+    }
+
+
+    return total;
 
 }
 
@@ -88,15 +377,10 @@ function showItemInfo(){
 // CALCULATE CURRENT STOCK
 // =====================================
 
-function calculateCurrentStock(itemCode){
+async function calculateCurrentStock(itemCode){
 
     let item =
-        items.find(function(item){
-
-            return String(item.code).trim() ==
-                   String(itemCode).trim();
-
-        });
+        findItem(itemCode);
 
 
     if(!item){
@@ -106,61 +390,29 @@ function calculateCurrentStock(itemCode){
     }
 
 
-    let currentStock =
-        Number(item.openingStock) || 0;
+    let openingStock =
+        Number(
+            item.opening_stock || 0
+        );
 
 
-    for(
-        let i = 0;
-        i < history.length;
-        i++
-    ){
-
-        let record =
-            history[i];
+    let stockIn =
+        await getStockInQuantity(
+            itemCode
+        );
 
 
-        if(
-            String(record.itemCode).trim() !=
-            String(itemCode).trim()
-        ){
-
-            continue;
-
-        }
+    let stockOut =
+        await getStockIssueQuantity(
+            itemCode
+        );
 
 
-        let quantity =
-            Number(record.quantity) || 0;
-
-
-        // STOCK IN
-
-        if(
-            record.type ==
-            "Stock In"
-        ){
-
-            currentStock += quantity;
-
-        }
-
-
-        // STOCK OUT
-
-        if(
-            record.type ==
-            "Stock Issue"
-        ){
-
-            currentStock -= quantity;
-
-        }
-
-    }
-
-
-    return currentStock;
+    return (
+        openingStock +
+        stockIn -
+        stockOut
+    );
 
 }
 
@@ -169,32 +421,36 @@ function calculateCurrentStock(itemCode){
 // STOCK ISSUE
 // =====================================
 
-function stockIssue(){
+async function stockIssue(){
 
     let itemCode =
-        document.getElementById("itemCode")
-        .value
-        .trim();
+        document.getElementById(
+            "itemCode"
+        ).value.trim();
 
 
     let department =
-        document.getElementById("department")
-        .value;
+        document.getElementById(
+            "department"
+        ).value;
 
 
     let quantity =
-        document.getElementById("quantity")
-        .value;
+        document.getElementById(
+            "quantity"
+        ).value;
 
 
     let transactionDate =
-        document.getElementById("transactionDate")
-        .value;
+        document.getElementById(
+            "transactionDate"
+        ).value;
 
 
     let transactionTime =
-        document.getElementById("transactionTime")
-        .value;
+        document.getElementById(
+            "transactionTime"
+        ).value;
 
 
     // =====================================
@@ -203,7 +459,9 @@ function stockIssue(){
 
     if(itemCode == ""){
 
-        alert("Please Enter Item Code!");
+        alert(
+            "Please Enter Item Code!"
+        );
 
         return;
 
@@ -212,7 +470,9 @@ function stockIssue(){
 
     if(department == ""){
 
-        alert("Please Select Department!");
+        alert(
+            "Please Select Department!"
+        );
 
         return;
 
@@ -221,7 +481,9 @@ function stockIssue(){
 
     if(quantity == ""){
 
-        alert("Please Enter Quantity!");
+        alert(
+            "Please Enter Quantity!"
+        );
 
         return;
 
@@ -241,7 +503,9 @@ function stockIssue(){
 
     if(transactionDate == ""){
 
-        alert("Please Select Date!");
+        alert(
+            "Please Select Date!"
+        );
 
         return;
 
@@ -250,63 +514,8 @@ function stockIssue(){
 
     if(transactionTime == ""){
 
-        alert("Please Select Time!");
-
-        return;
-
-    }
-
-
-    // =====================================
-    // LOAD LATEST DATA
-    // =====================================
-
-    items =
-        JSON.parse(localStorage.getItem("items")) || [];
-
-    history =
-        JSON.parse(localStorage.getItem("history")) || [];
-
-
-    // =====================================
-    // FIND ITEM
-    // =====================================
-
-    let item =
-        items.find(function(item){
-
-            return String(item.code).trim() ==
-                   itemCode;
-
-        });
-
-
-    if(!item){
-
-        alert("Item Not Found!");
-
-        return;
-
-    }
-
-
-    // =====================================
-    // CURRENT STOCK BEFORE ISSUE
-    // =====================================
-
-    let currentStock =
-        calculateCurrentStock(item.code);
-
-
-    // =====================================
-    // STOCK CHECK
-    // =====================================
-
-    if(Number(quantity) > currentStock){
-
         alert(
-            "Insufficient Stock! Current Stock is " +
-            currentStock
+            "Please Select Time!"
         );
 
         return;
@@ -315,10 +524,62 @@ function stockIssue(){
 
 
     // =====================================
-    // CREATE RECORD
+    // FIND ITEM
     // =====================================
 
-    let record = {
+    let item =
+        findItem(itemCode);
+
+
+    if(!item){
+
+        alert(
+            "Item Not Found!"
+        );
+
+        return;
+
+    }
+
+
+    // =====================================
+    // STOCK CHECK
+    // =====================================
+
+    let currentStock =
+        await calculateCurrentStock(
+            item.code
+        );
+
+
+    let requestedQuantity =
+        Number(quantity);
+
+
+    if(
+        requestedQuantity >
+        currentStock
+    ){
+
+        alert(
+            "Insufficient Stock!\n\n" +
+            "Current Stock: " +
+            currentStock +
+            "\n" +
+            "Requested Quantity: " +
+            requestedQuantity
+        );
+
+        return;
+
+    }
+
+
+    // =====================================
+    // CREATE DATA
+    // =====================================
+
+    let data = {
 
         date:
             transactionDate,
@@ -326,11 +587,11 @@ function stockIssue(){
         time:
             transactionTime,
 
-        itemCode:
-            itemCode,
+        item_code:
+            item.code,
 
-        itemName:
-            item.itemName,
+        item_name:
+            item.item_name || "",
 
         unit:
             item.unit || "",
@@ -342,7 +603,7 @@ function stockIssue(){
             item.supplier || "",
 
         location:
-            item.storageLocation || "",
+            item.storage_location || "",
 
         department:
             department,
@@ -351,28 +612,42 @@ function stockIssue(){
             "Stock Issue",
 
         quantity:
-            Number(quantity)
+            requestedQuantity
 
     };
 
 
     // =====================================
-    // SAVE NEW ENTRY
+    // UPDATE EXISTING
     // =====================================
 
-    if(editHistoryIndex == -1){
+    if(editHistoryId !== null){
 
-        history.push(record);
+        let result =
+            await supabaseRequest(
+                "stock_issues",
+                "PATCH",
+                data,
+                "?id=eq." +
+                editHistoryId
+            );
 
-        alert(
-            "Stock Issue Successfully!"
-        );
 
-    }
-    else{
+        if(!result.success){
 
-        history[editHistoryIndex] =
-            record;
+            console.error(
+                "Update Error:",
+                result.error
+            );
+
+            alert(
+                "Stock Issue Update نہیں ہوئی!"
+            );
+
+            return;
+
+        }
+
 
         alert(
             "Stock Issue Updated Successfully!"
@@ -382,36 +657,110 @@ function stockIssue(){
 
 
     // =====================================
-    // SAVE HISTORY
+    // INSERT NEW
     // =====================================
 
-    localStorage.setItem(
-        "history",
-        JSON.stringify(history)
-    );
+    else{
+
+        let result =
+            await supabaseRequest(
+                "stock_issues",
+                "POST",
+                data
+            );
+
+
+        if(!result.success){
+
+            console.error(
+                "Insert Error:",
+                result.error
+            );
+
+            alert(
+                "Stock Issue Save نہیں ہوئی!"
+            );
+
+            return;
+
+        }
+
+
+        alert(
+            "Stock Issue Successfully!"
+        );
+
+    }
 
 
     // =====================================
-    // CALCULATE NEW CURRENT STOCK
+    // RESET
     // =====================================
 
-    let newCurrentStock =
-        calculateCurrentStock(item.code);
+    editHistoryId = null;
+
+
+    let button =
+        document.getElementById(
+            "stockIssueButton"
+        );
+
+
+    if(button){
+
+        button.innerHTML =
+            "Stock Issue";
+
+    }
 
 
     // =====================================
-    // UPDATE CURRENT STOCK
+    // RELOAD HISTORY
     // =====================================
+
+    await loadStockIssues();
+
+
+    // =====================================
+    // SHOW NEW STOCK
+    // =====================================
+
+    let newStock =
+        await calculateCurrentStock(
+            item.code
+        );
+
 
     document.getElementById(
         "currentStock"
     ).value =
-        newCurrentStock;
+        newStock;
 
 
     // =====================================
-    // REFRESH HISTORY TABLE
+    // CLEAR ENTRY FIELDS
     // =====================================
+
+    document.getElementById(
+        "quantity"
+    ).value = "";
+
+    document.getElementById(
+        "transactionDate"
+    ).value = "";
+
+    document.getElementById(
+        "transactionTime"
+    ).value = "";
+
+}
+
+
+// =====================================
+// REFRESH HISTORY TABLE
+// =====================================
+
+function refreshHistoryTable(){
 
     let historyBody =
         document.getElementById(
@@ -419,89 +768,34 @@ function stockIssue(){
         );
 
 
-    if(historyBody){
+    if(!historyBody){
 
-        historyBody.innerHTML = "";
+        return;
+
+    }
 
 
-        for(
-            let i = 0;
-            i < history.length;
-            i++
+    historyBody.innerHTML = "";
+
+
+    for(
+        let i = 0;
+        i < history.length;
+        i++
+    ){
+
+        if(
+            history[i].type ==
+            "Stock Issue"
         ){
 
-            if(
-                history[i].type ==
-                "Stock Issue"
-            ){
-
-                addHistoryRow(
-                    history[i]
-                );
-
-            }
+            addHistoryRow(
+                history[i]
+            );
 
         }
 
     }
-
-
-    // =====================================
-    // RESET EDIT MODE
-    // =====================================
-
-    editHistoryIndex = -1;
-
-
-    let issueButton =
-        document.getElementById(
-            "stockIssueButton"
-        );
-
-
-    if(issueButton){
-
-        issueButton.innerHTML =
-            "Stock Issue";
-
-    }
-
-
-    // =====================================
-    // CLEAR ONLY:
-    // QUANTITY
-    // DATE
-    // TIME
-    // =====================================
-
-    document.getElementById(
-        "quantity"
-    ).value = "";
-
-
-    document.getElementById(
-        "transactionDate"
-    ).value = "";
-
-
-    document.getElementById(
-        "transactionTime"
-    ).value = "";
-
-
-    // =====================================
-    // IMPORTANT
-    // =====================================
-    // Item Code
-    // Item Name
-    // Unit
-    // Source
-    // Supplier
-    // Location
-    // Department
-    // Current Stock
-    //
-    // سب اپنی جگہ رہیں گے۔
 
 }
 
@@ -521,8 +815,8 @@ function addHistoryRow(record){
     let cell1 =
         document.createElement("td");
 
-    cell1.innerHTML =
-        record.date;
+    cell1.textContent =
+        record.date || "-";
 
     row.appendChild(cell1);
 
@@ -532,8 +826,8 @@ function addHistoryRow(record){
     let cell2 =
         document.createElement("td");
 
-    cell2.innerHTML =
-        record.time;
+    cell2.textContent =
+        record.time || "-";
 
     row.appendChild(cell2);
 
@@ -543,8 +837,8 @@ function addHistoryRow(record){
     let cell3 =
         document.createElement("td");
 
-    cell3.innerHTML =
-        record.itemCode;
+    cell3.textContent =
+        record.item_code || "-";
 
     row.appendChild(cell3);
 
@@ -554,8 +848,8 @@ function addHistoryRow(record){
     let cell4 =
         document.createElement("td");
 
-    cell4.innerHTML =
-        record.itemName;
+    cell4.textContent =
+        record.item_name || "-";
 
     row.appendChild(cell4);
 
@@ -565,7 +859,7 @@ function addHistoryRow(record){
     let cell5 =
         document.createElement("td");
 
-    cell5.innerHTML =
+    cell5.textContent =
         record.unit || "-";
 
     row.appendChild(cell5);
@@ -576,7 +870,7 @@ function addHistoryRow(record){
     let cell6 =
         document.createElement("td");
 
-    cell6.innerHTML =
+    cell6.textContent =
         record.source || "-";
 
     row.appendChild(cell6);
@@ -587,7 +881,7 @@ function addHistoryRow(record){
     let cell7 =
         document.createElement("td");
 
-    cell7.innerHTML =
+    cell7.textContent =
         record.supplier || "-";
 
     row.appendChild(cell7);
@@ -598,7 +892,7 @@ function addHistoryRow(record){
     let cell8 =
         document.createElement("td");
 
-    cell8.innerHTML =
+    cell8.textContent =
         record.location || "-";
 
     row.appendChild(cell8);
@@ -609,8 +903,8 @@ function addHistoryRow(record){
     let cell9 =
         document.createElement("td");
 
-    cell9.innerHTML =
-        record.department;
+    cell9.textContent =
+        record.department || "-";
 
     row.appendChild(cell9);
 
@@ -620,8 +914,10 @@ function addHistoryRow(record){
     let cell10 =
         document.createElement("td");
 
-    cell10.innerHTML =
-        record.quantity;
+    cell10.textContent =
+        Number(
+            record.quantity || 0
+        );
 
     row.appendChild(cell10);
 
@@ -632,41 +928,32 @@ function addHistoryRow(record){
         document.createElement("td");
 
 
+    // EDIT
+
     let editButton =
         document.createElement("button");
 
-    editButton.innerHTML =
+    editButton.textContent =
         "Edit";
 
-
-    let deleteButton =
-        document.createElement("button");
-
-    deleteButton.innerHTML =
-        "Delete";
-
-
-    // =====================================
-    // EDIT
-    // =====================================
 
     editButton.onclick =
         function(){
 
-            editHistoryIndex =
-                history.indexOf(record);
+            editHistoryId =
+                record.id;
 
 
             document.getElementById(
                 "itemCode"
             ).value =
-                record.itemCode;
+                record.item_code || "";
 
 
             document.getElementById(
                 "itemName"
             ).value =
-                record.itemName;
+                record.item_name || "";
 
 
             document.getElementById(
@@ -694,51 +981,72 @@ function addHistoryRow(record){
 
 
             document.getElementById(
-                "currentStock"
-            ).value =
-                calculateCurrentStock(
-                    record.itemCode
-                );
-
-
-            document.getElementById(
                 "department"
             ).value =
-                record.department;
+                record.department || "";
 
 
             document.getElementById(
                 "quantity"
             ).value =
-                record.quantity;
+                record.quantity || "";
 
 
             document.getElementById(
                 "transactionDate"
             ).value =
-                record.date;
+                record.date || "";
 
 
             document.getElementById(
                 "transactionTime"
             ).value =
-                record.time;
+                record.time || "";
 
 
-            document.getElementById(
-                "stockIssueButton"
-            ).innerHTML =
-                "Update";
+            // Edit کے وقت current stock
+            // میں پرانی issue quantity شامل ہوگی
+
+            calculateCurrentStock(
+                record.item_code
+            )
+            .then(function(stock){
+
+                document.getElementById(
+                    "currentStock"
+                ).value =
+                    stock;
+
+            });
+
+
+            let button =
+                document.getElementById(
+                    "stockIssueButton"
+                );
+
+
+            if(button){
+
+                button.innerHTML =
+                    "Update";
+
+            }
 
         };
 
 
-    // =====================================
     // DELETE
-    // =====================================
+
+    let deleteButton =
+        document.createElement("button");
+
+    deleteButton.textContent =
+        "Delete";
+
 
     deleteButton.onclick =
-        function(){
+        async function(){
 
             let confirmDelete =
                 confirm(
@@ -753,49 +1061,28 @@ function addHistoryRow(record){
             }
 
 
-            let index =
-                history.indexOf(record);
-
-
-            if(index != -1){
-
-                history.splice(
-                    index,
-                    1
+            let result =
+                await supabaseRequest(
+                    "stock_issues",
+                    "DELETE",
+                    null,
+                    "?id=eq." +
+                    record.id
                 );
 
 
-                localStorage.setItem(
-                    "history",
-                    JSON.stringify(history)
+            if(!result.success){
+
+                console.error(
+                    "Delete Error:",
+                    result.error
                 );
 
-            }
+                alert(
+                    "Stock Issue Delete نہیں ہوئی!"
+                );
 
-
-            row.remove();
-
-
-            // اگر یہی item screen پر ہے
-            // تو Current Stock بھی update کریں
-
-            let currentItemCode =
-                document.getElementById(
-                    "itemCode"
-                ).value.trim();
-
-
-            if(
-                currentItemCode ==
-                String(record.itemCode).trim()
-            ){
-
-                document.getElementById(
-                    "currentStock"
-                ).value =
-                    calculateCurrentStock(
-                        currentItemCode
-                    );
+                return;
 
             }
 
@@ -803,6 +1090,43 @@ function addHistoryRow(record){
             alert(
                 "Stock Issue Entry Deleted Successfully!"
             );
+
+
+            if(
+                Number(editHistoryId)
+                ===
+                Number(record.id)
+            ){
+
+                editHistoryId = null;
+
+            }
+
+
+            await loadStockIssues();
+
+
+            // اگر screen پر یہی item ہے
+            let currentCode =
+                document.getElementById(
+                    "itemCode"
+                ).value.trim();
+
+
+            if(currentCode != ""){
+
+                let newStock =
+                    await calculateCurrentStock(
+                        currentCode
+                    );
+
+
+                document.getElementById(
+                    "currentStock"
+                ).value =
+                    newStock;
+
+            }
 
         };
 
@@ -830,32 +1154,17 @@ function addHistoryRow(record){
 
     if(historyBody){
 
-        historyBody.appendChild(row);
-
-    }
-
-}
-
-
-// =====================================
-// LOAD EXISTING HISTORY
-// =====================================
-
-for(
-    let i = 0;
-    i < history.length;
-    i++
-){
-
-    if(
-        history[i].type ==
-        "Stock Issue"
-    ){
-
-        addHistoryRow(
-            history[i]
+        historyBody.appendChild(
+            row
         );
 
     }
 
 }
+
+
+// =====================================
+// INITIAL LOAD
+// =====================================
+
+loadAllData();
