@@ -1,14 +1,50 @@
 // =====================================
-// MASTER LIST
+// MASTER LIST - SUPABASE VERSION
+// MECAS ENGINEERING PVT LIMITED SUNDAR
 // =====================================
 
-let items =
-    JSON.parse(localStorage.getItem("items")) || [];
+let items = [];
 
-let history =
-    JSON.parse(localStorage.getItem("history")) || [];
+let editItemId = null;
 
-let editIndex = -1;
+
+// =====================================
+// LOAD ITEMS FROM SUPABASE
+// =====================================
+
+async function loadItems(){
+
+    let result =
+        await supabaseRequest(
+            "items",
+            "GET",
+            null,
+            "?select=*&order=id.asc"
+        );
+
+
+    if(!result.success){
+
+        console.error(
+            "Items Load Error:",
+            result.error
+        );
+
+        alert(
+            "Items load nahi ho sake!"
+        );
+
+        return;
+    }
+
+
+    items =
+        result.data || [];
+
+
+    renderItems();
+
+}
 
 
 // =====================================
@@ -22,8 +58,11 @@ function toNumber(value){
         value === undefined ||
         value === ""
     ){
+
         return 0;
+
     }
+
 
     let number =
         Number(
@@ -32,142 +71,10 @@ function toNumber(value){
                 .trim()
         );
 
+
     return isNaN(number)
         ? 0
         : number;
-}
-
-
-// =====================================
-// GET STOCK SUMMARY
-// =====================================
-
-function getStockSummary(item){
-
-    let code =
-        String(item.code || "")
-            .trim()
-            .toLowerCase();
-
-    let stockIn = 0;
-    let stockOut = 0;
-
-    for(
-        let i = 0;
-        i < history.length;
-        i++
-    ){
-
-        let record =
-            history[i];
-
-        let historyCode =
-            String(
-                record.itemCode ||
-                record.code ||
-                ""
-            )
-            .trim()
-            .toLowerCase();
-
-        if(
-            historyCode !== code
-        ){
-            continue;
-        }
-
-        let quantity =
-            toNumber(
-                record.quantity
-            );
-
-        let type =
-            String(
-                record.type ||
-                record.transactionType ||
-                ""
-            )
-            .trim()
-            .toLowerCase();
-
-
-        // =================================
-        // STOCK IN
-        // =================================
-
-        if(
-
-            type === "in" ||
-
-            type === "stockin" ||
-
-            type === "stock in" ||
-
-            type === "inward"
-
-        ){
-
-            stockIn += quantity;
-
-        }
-
-
-        // =================================
-        // STOCK OUT
-        // =================================
-
-        else if(
-
-    type === "out" ||
-
-    type === "stockout" ||
-
-    type === "stock out" ||
-
-    type === "outward" ||
-
-    type === "stock issue" ||
-
-    type === "issue" ||
-
-    type === "stockissue"
-
-){
-
-    stockOut += quantity;
-
-}
-
-    }
-
-
-    let openingStock =
-        toNumber(
-            item.openingStock
-        );
-
-
-    let currentBalance =
-        openingStock +
-        stockIn -
-        stockOut;
-
-
-    return {
-
-        openingStock:
-            openingStock,
-
-        stockIn:
-            stockIn,
-
-        stockOut:
-            stockOut,
-
-        currentBalance:
-            currentBalance
-
-    };
 
 }
 
@@ -176,52 +83,90 @@ function getStockSummary(item){
 // SAVE ITEM
 // =====================================
 
-function saveItem(){
+async function saveItem(){
 
-    let idNumber =
-        document.getElementById("code").value.trim();
+    let code =
+        document.getElementById(
+            "code"
+        ).value.trim();
+
 
     let itemName =
-        document.getElementById("itemName").value.trim();
+        document.getElementById(
+            "itemName"
+        ).value.trim();
+
 
     let specification =
-        document.getElementById("specification").value.trim();
+        document.getElementById(
+            "specification"
+        ).value.trim();
+
 
     let category =
-        document.getElementById("category").value.trim();
+        document.getElementById(
+            "category"
+        ).value.trim();
+
 
     let unit =
-        document.getElementById("unit").value.trim();
+        document.getElementById(
+            "unit"
+        ).value.trim();
+
 
     let packingQty =
-        document.getElementById("packingQty").value;
+        document.getElementById(
+            "packingQty"
+        ).value;
+
 
     let packedUnit =
-        document.getElementById("packedUnit").value.trim();
+        document.getElementById(
+            "packedUnit"
+        ).value.trim();
+
 
     let source =
-        document.getElementById("source").value.trim();
+        document.getElementById(
+            "source"
+        ).value.trim();
+
 
     let supplier =
-        document.getElementById("supplier").value.trim();
+        document.getElementById(
+            "supplier"
+        ).value.trim();
+
 
     let openingStock =
-        document.getElementById("openStock").value;
+        document.getElementById(
+            "openStock"
+        ).value;
+
 
     let openingCost =
-        document.getElementById("openingCost").value;
+        document.getElementById(
+            "openingCost"
+        ).value;
+
 
     let storageLocation =
-        document.getElementById("location").value.trim();
+        document.getElementById(
+            "location"
+        ).value.trim();
 
 
     // =====================================
     // VALIDATION
     // =====================================
 
-    if(idNumber == ""){
+    if(code == ""){
 
-        alert("Please Enter ID Number!");
+        alert(
+            "Please Enter ID Number!"
+        );
+
         return;
 
     }
@@ -229,7 +174,10 @@ function saveItem(){
 
     if(itemName == ""){
 
-        alert("Please Enter Item Name!");
+        alert(
+            "Please Enter Item Name!"
+        );
+
         return;
 
     }
@@ -237,7 +185,10 @@ function saveItem(){
 
     if(specification == ""){
 
-        alert("Please Enter Specification!");
+        alert(
+            "Please Enter Specification!"
+        );
+
         return;
 
     }
@@ -245,7 +196,10 @@ function saveItem(){
 
     if(category == ""){
 
-        alert("Please Enter Category!");
+        alert(
+            "Please Enter Category!"
+        );
+
         return;
 
     }
@@ -253,7 +207,10 @@ function saveItem(){
 
     if(unit == ""){
 
-        alert("Please Enter Unit!");
+        alert(
+            "Please Enter Unit!"
+        );
+
         return;
 
     }
@@ -261,7 +218,10 @@ function saveItem(){
 
     if(openingStock == ""){
 
-        alert("Please Enter Opening Stock!");
+        alert(
+            "Please Enter Opening Stock!"
+        );
+
         return;
 
     }
@@ -279,15 +239,44 @@ function saveItem(){
 
 
     // =====================================
-    // ITEM OBJECT
+    // DUPLICATE CODE CHECK
     // =====================================
 
-    let item = {
+    let duplicate =
+        items.find(function(item){
+
+            return String(
+                item.code || ""
+            ).trim().toLowerCase() ===
+            code.toLowerCase()
+            &&
+            String(item.id) !==
+            String(editItemId);
+
+        });
+
+
+    if(duplicate){
+
+        alert(
+            "This Item Code already exists!"
+        );
+
+        return;
+
+    }
+
+
+    // =====================================
+    // SUPABASE DATA
+    // =====================================
+
+    let data = {
 
         code:
-            idNumber,
+            code,
 
-        itemName:
+        item_name:
             itemName,
 
         specification:
@@ -299,10 +288,12 @@ function saveItem(){
         unit:
             unit,
 
-        packingQty:
-            packingQty,
+        packing_qty:
+            packingQty === ""
+            ? null
+            : toNumber(packingQty),
 
-        packedUnit:
+        packed_unit:
             packedUnit,
 
         source:
@@ -311,49 +302,112 @@ function saveItem(){
         supplier:
             supplier,
 
-        openingStock:
-            openingStock,
+        opening_stock:
+            toNumber(openingStock),
 
-        openingCost:
-            openingCost,
+        opening_cost:
+            toNumber(openingCost),
 
-        storageLocation:
+        storage_location:
             storageLocation
 
     };
 
 
     // =====================================
-    // SAVE / EDIT
+    // NEW ITEM
     // =====================================
 
-    if(editIndex == -1){
+    if(editItemId === null){
 
-        items.push(item);
+        let result =
+            await supabaseRequest(
+                "items",
+                "POST",
+                data
+            );
+
+
+        if(!result.success){
+
+            console.error(
+                "Supabase Insert Error:",
+                result.error
+            );
+
+
+            alert(
+                "Item save nahi hua!\n\n" +
+                JSON.stringify(
+                    result.error
+                )
+            );
+
+            return;
+
+        }
+
+
+        alert(
+            "Item Saved Successfully!"
+        );
 
     }
+
+
+    // =====================================
+    // EDIT ITEM
+    // =====================================
+
     else{
 
-        items[editIndex] = item;
+        let result =
+            await supabaseRequest(
+                "items",
+                "PATCH",
+                data,
+                "?id=eq." +
+                encodeURIComponent(
+                    editItemId
+                )
+            );
+
+
+        if(!result.success){
+
+            console.error(
+                "Supabase Update Error:",
+                result.error
+            );
+
+
+            alert(
+                "Item update nahi hua!\n\n" +
+                JSON.stringify(
+                    result.error
+                )
+            );
+
+            return;
+
+        }
+
+
+        alert(
+            "Item Updated Successfully!"
+        );
 
     }
 
 
-    localStorage.setItem(
-        "items",
-        JSON.stringify(items)
-    );
+    // =====================================
+    // RESET
+    // =====================================
+
+    editItemId = null;
 
 
-    alert(
-        "Item Saved Successfully!"
-    );
-
-
-    editIndex = -1;
-
-
-    renderItems();
+    await loadItems();
 
 
     clearForm();
@@ -368,26 +422,22 @@ function saveItem(){
 function addRow(item){
 
     let row =
-        document.createElement("tr");
+        document.createElement(
+            "tr"
+        );
 
 
     // =====================================
-    // STOCK CALCULATION
-    // =====================================
-
-    let stock =
-        getStockSummary(item);
-
-
-    // =====================================
-    // CODE
+    // ID / CODE
     // =====================================
 
     let cell1 =
-        document.createElement("td");
+        document.createElement(
+            "td"
+        );
 
-    cell1.innerHTML =
-        item.code;
+    cell1.textContent =
+        item.code || "-";
 
     row.appendChild(cell1);
 
@@ -397,10 +447,12 @@ function addRow(item){
     // =====================================
 
     let cell2 =
-        document.createElement("td");
+        document.createElement(
+            "td"
+        );
 
-    cell2.innerHTML =
-        item.itemName;
+    cell2.textContent =
+        item.item_name || "-";
 
     row.appendChild(cell2);
 
@@ -410,9 +462,11 @@ function addRow(item){
     // =====================================
 
     let cell3 =
-        document.createElement("td");
+        document.createElement(
+            "td"
+        );
 
-    cell3.innerHTML =
+    cell3.textContent =
         item.specification || "-";
 
     row.appendChild(cell3);
@@ -423,9 +477,11 @@ function addRow(item){
     // =====================================
 
     let cell4 =
-        document.createElement("td");
+        document.createElement(
+            "td"
+        );
 
-    cell4.innerHTML =
+    cell4.textContent =
         item.category || "-";
 
     row.appendChild(cell4);
@@ -436,9 +492,11 @@ function addRow(item){
     // =====================================
 
     let cell5 =
-        document.createElement("td");
+        document.createElement(
+            "td"
+        );
 
-    cell5.innerHTML =
+    cell5.textContent =
         item.unit || "-";
 
     row.appendChild(cell5);
@@ -449,10 +507,12 @@ function addRow(item){
     // =====================================
 
     let cell6 =
-        document.createElement("td");
+        document.createElement(
+            "td"
+        );
 
-    cell6.innerHTML =
-        item.packingQty || "-";
+    cell6.textContent =
+        item.packing_qty ?? "-";
 
     row.appendChild(cell6);
 
@@ -462,10 +522,12 @@ function addRow(item){
     // =====================================
 
     let cell7 =
-        document.createElement("td");
+        document.createElement(
+            "td"
+        );
 
-    cell7.innerHTML =
-        item.packedUnit || "-";
+    cell7.textContent =
+        item.packed_unit || "-";
 
     row.appendChild(cell7);
 
@@ -475,9 +537,11 @@ function addRow(item){
     // =====================================
 
     let cell8 =
-        document.createElement("td");
+        document.createElement(
+            "td"
+        );
 
-    cell8.innerHTML =
+    cell8.textContent =
         item.source || "-";
 
     row.appendChild(cell8);
@@ -488,9 +552,11 @@ function addRow(item){
     // =====================================
 
     let cell9 =
-        document.createElement("td");
+        document.createElement(
+            "td"
+        );
 
-    cell9.innerHTML =
+    cell9.textContent =
         item.supplier || "-";
 
     row.appendChild(cell9);
@@ -501,10 +567,14 @@ function addRow(item){
     // =====================================
 
     let cell10 =
-        document.createElement("td");
+        document.createElement(
+            "td"
+        );
 
-    cell10.innerHTML =
-        stock.openingStock;
+    cell10.textContent =
+        toNumber(
+            item.opening_stock
+        );
 
     row.appendChild(cell10);
 
@@ -514,11 +584,15 @@ function addRow(item){
     // =====================================
 
     let cell11 =
-        document.createElement("td");
+        document.createElement(
+            "td"
+        );
 
-    cell11.innerHTML =
+    cell11.textContent =
         "Rs. " +
-        toNumber(item.openingCost).toFixed(2);
+        toNumber(
+            item.opening_cost
+        ).toFixed(2);
 
     row.appendChild(cell11);
 
@@ -528,10 +602,12 @@ function addRow(item){
     // =====================================
 
     let cell12 =
-        document.createElement("td");
+        document.createElement(
+            "td"
+        );
 
-    cell12.innerHTML =
-        stock.stockIn;
+    cell12.textContent =
+        "0";
 
     row.appendChild(cell12);
 
@@ -541,10 +617,12 @@ function addRow(item){
     // =====================================
 
     let cell13 =
-        document.createElement("td");
+        document.createElement(
+            "td"
+        );
 
-    cell13.innerHTML =
-        stock.stockOut;
+    cell13.textContent =
+        "0";
 
     row.appendChild(cell13);
 
@@ -554,10 +632,14 @@ function addRow(item){
     // =====================================
 
     let cell14 =
-        document.createElement("td");
+        document.createElement(
+            "td"
+        );
 
-    cell14.innerHTML =
-        stock.currentBalance;
+    cell14.textContent =
+        toNumber(
+            item.opening_stock
+        );
 
     row.appendChild(cell14);
 
@@ -567,10 +649,12 @@ function addRow(item){
     // =====================================
 
     let cell15 =
-        document.createElement("td");
+        document.createElement(
+            "td"
+        );
 
-    cell15.innerHTML =
-        item.storageLocation || "-";
+    cell15.textContent =
+        item.storage_location || "-";
 
     row.appendChild(cell15);
 
@@ -580,20 +664,26 @@ function addRow(item){
     // =====================================
 
     let cell16 =
-        document.createElement("td");
+        document.createElement(
+            "td"
+        );
 
 
-    if(
-        stock.currentBalance <= 0
-    ){
+    let balance =
+        toNumber(
+            item.opening_stock
+        );
 
-        cell16.innerHTML =
+
+    if(balance <= 0){
+
+        cell16.textContent =
             "Out of Stock ❌";
 
     }
     else{
 
-        cell16.innerHTML =
+        cell16.textContent =
             "Available ✅";
 
     }
@@ -607,133 +697,136 @@ function addRow(item){
     // =====================================
 
     let cell17 =
-        document.createElement("td");
+        document.createElement(
+            "td"
+        );
 
 
     // =====================================
-    // EDIT BUTTON
+    // EDIT
     // =====================================
 
     let editButton =
-        document.createElement("button");
+        document.createElement(
+            "button"
+        );
 
 
-    editButton.innerHTML =
+    editButton.textContent =
         "Edit";
 
 
     editButton.onclick =
-    function(){
+        function(){
 
-        editIndex =
-            items.indexOf(item);
-
-
-        document.getElementById(
-            "code"
-        ).value =
-            item.code;
+            editItemId =
+                item.id;
 
 
-        document.getElementById(
-            "itemName"
-        ).value =
-            item.itemName;
+            document.getElementById(
+                "code"
+            ).value =
+                item.code || "";
 
 
-        document.getElementById(
-            "specification"
-        ).value =
-            item.specification || "";
+            document.getElementById(
+                "itemName"
+            ).value =
+                item.item_name || "";
 
 
-        document.getElementById(
-            "category"
-        ).value =
-            item.category || "";
+            document.getElementById(
+                "specification"
+            ).value =
+                item.specification || "";
 
 
-        document.getElementById(
-            "unit"
-        ).value =
-            item.unit || "";
+            document.getElementById(
+                "category"
+            ).value =
+                item.category || "";
 
 
-        document.getElementById(
-            "packingQty"
-        ).value =
-            item.packingQty || "";
+            document.getElementById(
+                "unit"
+            ).value =
+                item.unit || "";
 
 
-        document.getElementById(
-            "packedUnit"
-        ).value =
-            item.packedUnit || "";
+            document.getElementById(
+                "packingQty"
+            ).value =
+                item.packing_qty ?? "";
 
 
-        document.getElementById(
-            "source"
-        ).value =
-            item.source || "";
+            document.getElementById(
+                "packedUnit"
+            ).value =
+                item.packed_unit || "";
 
 
-        document.getElementById(
-            "supplier"
-        ).value =
-            item.supplier || "";
+            document.getElementById(
+                "source"
+            ).value =
+                item.source || "";
 
 
-        // ==============================
-        // OPENING STOCK
-        // ==============================
-
-        document.getElementById(
-            "openStock"
-        ).value =
-            item.openingStock || "";
+            document.getElementById(
+                "supplier"
+            ).value =
+                item.supplier || "";
 
 
-        document.getElementById(
-            "openStock"
-        ).readOnly = false;
+            document.getElementById(
+                "openStock"
+            ).value =
+                item.opening_stock ?? "";
 
 
-        // ==============================
-        // OPENING COST
-        // ==============================
-
-        document.getElementById(
-            "openingCost"
-        ).value =
-            item.openingCost || "";
+            document.getElementById(
+                "openingCost"
+            ).value =
+                item.opening_cost ?? "";
 
 
-        // ==============================
-        // LOCATION
-        // ==============================
+            document.getElementById(
+                "location"
+            ).value =
+                item.storage_location || "";
 
-        document.getElementById(
-            "location"
-        ).value =
-            item.storageLocation || "";
 
-    };
+            let saveButton =
+                document.getElementById(
+                    "saveButton"
+                );
+
+
+            if(saveButton){
+
+                saveButton.textContent =
+                    "Update Item";
+
+            }
+
+        };
 
 
     // =====================================
-    // DELETE BUTTON
+    // DELETE
     // =====================================
 
     let deleteButton =
-        document.createElement("button");
+        document.createElement(
+            "button"
+        );
 
 
-    deleteButton.innerHTML =
+    deleteButton.textContent =
         "Delete";
 
 
     deleteButton.onclick =
-        function(){
+        async function(){
 
             let confirmDelete =
                 confirm(
@@ -741,32 +834,54 @@ function addRow(item){
                 );
 
 
-            if(
-                confirmDelete == false
-            ){
+            if(!confirmDelete){
 
                 return;
 
             }
 
 
-            let deleteIndex =
-                items.indexOf(item);
+            let result =
+                await supabaseRequest(
+                    "items",
+                    "DELETE",
+                    null,
+                    "?id=eq." +
+                    encodeURIComponent(
+                        item.id
+                    )
+                );
 
 
-            items.splice(
-                deleteIndex,
-                1
+            if(!result.success){
+
+                console.error(
+                    "Supabase Delete Error:",
+                    result.error
+                );
+
+
+                alert(
+                    "Item delete nahi hua!\n\n" +
+                    JSON.stringify(
+                        result.error
+                    )
+                );
+
+                return;
+
+            }
+
+
+            alert(
+                "Item Deleted Successfully!"
             );
 
 
-            localStorage.setItem(
-                "items",
-                JSON.stringify(items)
-            );
+            editItemId = null;
 
 
-            renderItems();
+            await loadItems();
 
         };
 
@@ -794,28 +909,10 @@ function addRow(item){
 
 
 // =====================================
-// RENDER ALL ITEMS
+// RENDER ITEMS
 // =====================================
 
 function renderItems(){
-
-    /*
-       History ko dobara read kar rahe hain
-       taake Stock In/Out ki latest values
-       Master List mein show hon.
-    */
-
-    items =
-        JSON.parse(
-            localStorage.getItem("items")
-        ) || [];
-
-
-    history =
-        JSON.parse(
-            localStorage.getItem("history")
-        ) || [];
-
 
     let tableBody =
         document.getElementById(
@@ -823,7 +920,15 @@ function renderItems(){
         );
 
 
-    tableBody.innerHTML = "";
+    if(!tableBody){
+
+        return;
+
+    }
+
+
+    tableBody.innerHTML =
+        "";
 
 
     for(
@@ -842,88 +947,66 @@ function renderItems(){
 
 
 // =====================================
-// LOAD EXISTING ITEMS
-// =====================================
-
-renderItems();
-
-
-// =====================================
 // CLEAR FORM
 // =====================================
 
 function clearForm(){
 
-    document.getElementById(
-        "code"
-    ).value = "";
+    let ids = [
 
-
-    document.getElementById(
-        "itemName"
-    ).value = "";
-
-
-    document.getElementById(
-        "specification"
-    ).value = "";
-
-
-    document.getElementById(
-        "category"
-    ).value = "";
-
-
-    document.getElementById(
-        "unit"
-    ).value = "";
-
-
-    document.getElementById(
-        "packingQty"
-    ).value = "";
-
-
-    document.getElementById(
-        "packedUnit"
-    ).value = "";
-
-
-    document.getElementById(
-        "source"
-    ).value = "";
-
-
-    document.getElementById(
-        "supplier"
-    ).value = "";
-
-
-    document.getElementById(
-        "openStock"
-    ).value = "";
-
-
-    // =================================
-    // OPENING COST
-    // =================================
-
-    document.getElementById(
-        "openingCost"
-    ).value = "";
-
-
-    document.getElementById(
+        "code",
+        "itemName",
+        "specification",
+        "category",
+        "unit",
+        "packingQty",
+        "packedUnit",
+        "source",
+        "supplier",
+        "openStock",
+        "openingCost",
         "location"
-    ).value = "";
+
+    ];
 
 
-    document.getElementById(
-        "openStock"
-    ).readOnly = false;
+    for(
+        let i = 0;
+        i < ids.length;
+        i++
+    ){
+
+        let element =
+            document.getElementById(
+                ids[i]
+            );
 
 
-    editIndex = -1;
+        if(element){
+
+            element.value =
+                "";
+
+        }
+
+    }
+
+
+    editItemId = null;
+
+
+    let saveButton =
+        document.getElementById(
+            "saveButton"
+        );
+
+
+    if(saveButton){
+
+        saveButton.textContent =
+            "Save Item";
+
+    }
 
 }
 
@@ -934,10 +1017,22 @@ function clearForm(){
 
 function searchItem(){
 
+    let searchInput =
+        document.getElementById(
+            "search"
+        );
+
+
+    if(!searchInput){
+
+        return;
+
+    }
+
+
     let searchValue =
-        document
-            .getElementById("search")
-            .value
+        searchInput.value
+            .trim()
             .toLowerCase();
 
 
@@ -947,18 +1042,8 @@ function searchItem(){
         );
 
 
-    tableBody.innerHTML = "";
-
-
-    /*
-       History ko refresh kar rahe hain
-       taake current values fresh hon.
-    */
-
-    history =
-        JSON.parse(
-            localStorage.getItem("history")
-        ) || [];
+    tableBody.innerHTML =
+        "";
 
 
     for(
@@ -975,22 +1060,13 @@ function searchItem(){
 
         let name =
             String(
-                items[i].itemName || ""
+                items[i].item_name || ""
             ).toLowerCase();
 
 
         if(
-
-            code.includes(
-                searchValue
-            )
-
-            ||
-
-            name.includes(
-                searchValue
-            )
-
+            code.includes(searchValue) ||
+            name.includes(searchValue)
         ){
 
             addRow(
@@ -1002,3 +1078,14 @@ function searchItem(){
     }
 
 }
+
+
+// =====================================
+// INITIAL LOAD
+// =====================================
+
+(async function(){
+
+    await loadItems();
+
+})();
