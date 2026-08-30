@@ -15,11 +15,13 @@ let editHistoryId = null;
 
 async function loadItems(){
 
+    console.log("Loading Items from Supabase...");
+
     let result = await supabaseRequest(
         "items",
         "GET",
         null,
-        "?select=*"
+        "?select=*&order=id.asc"
     );
 
     if(!result.success){
@@ -29,14 +31,44 @@ async function loadItems(){
             result.error
         );
 
-        alert("Items load nahi ho sake!");
+        alert(
+            "Items load nahi ho sake!\nConsole check karein."
+        );
 
         return false;
     }
 
     items = result.data || [];
 
+    console.log(
+        "Items loaded:",
+        items.length,
+        items
+    );
+
     return true;
+}
+
+
+// =====================================
+// FIND ITEM BY CODE
+// =====================================
+
+function findItemByCode(itemCode){
+
+    let searchCode =
+        String(itemCode || "")
+        .trim()
+        .toLowerCase();
+
+    return items.find(function(item){
+
+        return String(item.code || "")
+            .trim()
+            .toLowerCase() === searchCode;
+
+    });
+
 }
 
 
@@ -72,227 +104,20 @@ async function loadStockInHistory(){
 
 
 // =====================================
-// SHOW CURRENT STOCK
-// IMPORTANT
-// HTML oninput="showCurrentStock()"
+// STOCK IN
 // =====================================
 
-async function showCurrentStock(){
+async function stockIn(){
 
-    let itemCodeElement =
-        document.getElementById("itemCode");
-
-    if(!itemCodeElement){
-        return;
-    }
-
-    let itemCode =
-        itemCodeElement.value.trim();
-
-
-    // EMPTY CODE
-    if(itemCode === ""){
-
-        document.getElementById("itemName").value = "";
-        document.getElementById("unit").value = "";
-        document.getElementById("source").value = "";
-        document.getElementById("supplier").value = "";
-        document.getElementById("location").value = "";
-        document.getElementById("currentStock").value = "";
-
-        return;
-    }
-
-
-    // LOAD ITEMS
+    // Load latest items
     let loaded =
         await loadItems();
 
     if(!loaded){
-        return;
-    }
-
-
-    // FIND ITEM
-    let item =
-        items.find(function(item){
-
-            return String(
-                item.item_code || ""
-            ).trim() === itemCode;
-
-        });
-
-
-    if(!item){
-
-        document.getElementById("itemName").value = "";
-        document.getElementById("unit").value = "";
-        document.getElementById("source").value = "";
-        document.getElementById("supplier").value = "";
-        document.getElementById("location").value = "";
-        document.getElementById("currentStock").value = "";
 
         return;
     }
 
-
-    // =====================================
-    // SHOW ITEM INFORMATION
-    // =====================================
-
-    document.getElementById("itemName").value =
-        item.item_name || "";
-
-    document.getElementById("unit").value =
-        item.unit || "";
-
-    document.getElementById("source").value =
-        item.source || "";
-
-    document.getElementById("supplier").value =
-        item.supplier || "";
-
-    document.getElementById("location").value =
-        item.storage_location || "";
-
-
-    // =====================================
-    // CURRENT STOCK
-    // =====================================
-
-    let balance =
-        await calculateCurrentStock(itemCode);
-
-
-    document.getElementById("currentStock").value =
-        balance;
-
-}
-
-
-// =====================================
-// CALCULATE CURRENT STOCK
-// =====================================
-
-async function calculateCurrentStock(itemCode){
-
-    // =====================================
-    // LOAD ITEM
-    // =====================================
-
-    let item =
-        items.find(function(item){
-
-            return String(
-                item.item_code || ""
-            ).trim() ===
-            String(itemCode).trim();
-
-        });
-
-
-    if(!item){
-
-        return 0;
-    }
-
-
-    // =====================================
-    // OPENING STOCK
-    // =====================================
-
-    let currentStock =
-        Number(
-            item.opening_stock || 0
-        );
-
-
-    // =====================================
-    // STOCK IN
-    // =====================================
-
-    let stockInResult =
-        await supabaseRequest(
-            "stock_in",
-            "GET",
-            null,
-            "?item_code=eq." +
-            encodeURIComponent(itemCode) +
-            "&select=quantity"
-        );
-
-
-    if(stockInResult.success){
-
-        let stockInData =
-            stockInResult.data || [];
-
-
-        for(
-            let i = 0;
-            i < stockInData.length;
-            i++
-        ){
-
-            currentStock +=
-                Number(
-                    stockInData[i].quantity || 0
-                );
-
-        }
-
-    }
-
-
-    // =====================================
-    // STOCK ISSUE
-    // =====================================
-
-    let stockOutResult =
-        await supabaseRequest(
-            "stock_issue",
-            "GET",
-            null,
-            "?item_code=eq." +
-            encodeURIComponent(itemCode) +
-            "&select=quantity"
-        );
-
-
-    if(stockOutResult.success){
-
-        let stockOutData =
-            stockOutResult.data || [];
-
-
-        for(
-            let i = 0;
-            i < stockOutData.length;
-            i++
-        ){
-
-            currentStock -=
-                Number(
-                    stockOutData[i].quantity || 0
-                );
-
-        }
-
-    }
-
-
-    return currentStock;
-
-}
-
-
-// =====================================
-// STOCK IN
-// HTML onclick="stockIn()"
-// =====================================
-
-async function stockIn(){
 
     let itemCode =
         document.getElementById(
@@ -346,17 +171,21 @@ async function stockIn(){
     // VALIDATION
     // =====================================
 
-    if(itemCode === ""){
+    if(itemCode == ""){
 
-        alert("Please Enter Item Code!");
+        alert(
+            "Please Enter Item Code!"
+        );
 
         return;
     }
 
 
-    if(quantity === ""){
+    if(quantity == ""){
 
-        alert("Please Enter Quantity!");
+        alert(
+            "Please Enter Quantity!"
+        );
 
         return;
     }
@@ -372,9 +201,11 @@ async function stockIn(){
     }
 
 
-    if(unitCost === ""){
+    if(unitCost == ""){
 
-        alert("Please Enter Unit Cost!");
+        alert(
+            "Please Enter Unit Cost!"
+        );
 
         return;
     }
@@ -390,30 +221,22 @@ async function stockIn(){
     }
 
 
-    if(transactionDate === ""){
+    if(transactionDate == ""){
 
-        alert("Please Select Date!");
-
-        return;
-    }
-
-
-    if(transactionTime === ""){
-
-        alert("Please Select Time!");
+        alert(
+            "Please Select Date!"
+        );
 
         return;
     }
 
 
-    // =====================================
-    // LOAD ITEMS
-    // =====================================
+    if(transactionTime == ""){
 
-    let loaded =
-        await loadItems();
+        alert(
+            "Please Select Time!"
+        );
 
-    if(!loaded){
         return;
     }
 
@@ -423,19 +246,19 @@ async function stockIn(){
     // =====================================
 
     let item =
-        items.find(function(item){
-
-            return String(
-                item.item_code || ""
-            ).trim() ===
-            String(itemCode).trim();
-
-        });
+        findItemByCode(
+            itemCode
+        );
 
 
     if(!item){
 
-        alert("Item Not Found!");
+        alert(
+            "Item Not Found!\n\n" +
+            "Supabase items table mein " +
+            "ye Code mojood nahi hai:\n" +
+            itemCode
+        );
 
         return;
     }
@@ -470,7 +293,7 @@ async function stockIn(){
             transactionTime,
 
         item_code:
-            itemCode,
+            item.code,
 
         item_name:
             item.item_name || "",
@@ -479,13 +302,15 @@ async function stockIn(){
             item.unit || "",
 
         source:
-            source || "",
+            source || item.source || "",
 
         supplier:
-            supplier || "",
+            supplier || item.supplier || "",
 
         location:
-            location || "",
+            location ||
+            item.storage_location ||
+            "",
 
         quantity:
             qty,
@@ -503,7 +328,7 @@ async function stockIn(){
 
 
     console.log(
-        "Stock In Data:",
+        "Saving Stock In:",
         data
     );
 
@@ -530,7 +355,10 @@ async function stockIn(){
             );
 
             alert(
-                "Stock In Save nahi hua!"
+                "Stock In Save nahi hua!\n\n" +
+                JSON.stringify(
+                    result.error
+                )
             );
 
             return;
@@ -568,7 +396,10 @@ async function stockIn(){
             );
 
             alert(
-                "Stock In Update nahi hua!"
+                "Stock In Update nahi hua!\n\n" +
+                JSON.stringify(
+                    result.error
+                )
             );
 
             return;
@@ -611,51 +442,316 @@ async function stockIn(){
 
 
     // =====================================
-    // UPDATE CURRENT STOCK
+    // SHOW CURRENT STOCK
     // =====================================
 
-    let newBalance =
-        await calculateCurrentStock(
+    await showCurrentStock();
+
+
+    // =====================================
+    // CLEAR ENTRY FIELDS
+    // =====================================
+
+    clearTransactionForm();
+
+}
+
+
+// =====================================
+// SHOW ITEM INFORMATION
+// =====================================
+
+async function showCurrentStock(){
+
+    let itemCodeInput =
+        document.getElementById(
+            "itemCode"
+        );
+
+
+    if(!itemCodeInput){
+
+        return;
+    }
+
+
+    let itemCode =
+        itemCodeInput.value.trim();
+
+
+    // =====================================
+    // EMPTY CODE
+    // =====================================
+
+    if(itemCode == ""){
+
+        document.getElementById(
+            "itemName"
+        ).value = "";
+
+        document.getElementById(
+            "unit"
+        ).value = "";
+
+        document.getElementById(
+            "source"
+        ).value = "";
+
+        document.getElementById(
+            "supplier"
+        ).value = "";
+
+        document.getElementById(
+            "location"
+        ).value = "";
+
+        document.getElementById(
+            "currentStock"
+        ).value = "";
+
+        return;
+    }
+
+
+    // =====================================
+    // LOAD LATEST ITEMS
+    // =====================================
+
+    let loaded =
+        await loadItems();
+
+
+    if(!loaded){
+
+        return;
+    }
+
+
+    // =====================================
+    // FIND ITEM
+    // =====================================
+
+    let item =
+        findItemByCode(
             itemCode
+        );
+
+
+    if(!item){
+
+        document.getElementById(
+            "itemName"
+        ).value = "";
+
+        document.getElementById(
+            "unit"
+        ).value = "";
+
+        document.getElementById(
+            "source"
+        ).value = "";
+
+        document.getElementById(
+            "supplier"
+        ).value = "";
+
+        document.getElementById(
+            "location"
+        ).value = "";
+
+        document.getElementById(
+            "currentStock"
+        ).value = "";
+
+        return;
+    }
+
+
+    // =====================================
+    // SHOW ITEM NAME
+    // =====================================
+
+    document.getElementById(
+        "itemName"
+    ).value =
+        item.item_name || "";
+
+
+    // =====================================
+    // SHOW UNIT
+    // =====================================
+
+    document.getElementById(
+        "unit"
+    ).value =
+        item.unit || "";
+
+
+    // =====================================
+    // SHOW SOURCE
+    // =====================================
+
+    document.getElementById(
+        "source"
+    ).value =
+        item.source || "";
+
+
+    // =====================================
+    // SHOW SUPPLIER
+    // =====================================
+
+    document.getElementById(
+        "supplier"
+    ).value =
+        item.supplier || "";
+
+
+    // =====================================
+    // SHOW LOCATION
+    // =====================================
+
+    document.getElementById(
+        "location"
+    ).value =
+        item.storage_location || "";
+
+
+    // =====================================
+    // CURRENT STOCK
+    // =====================================
+
+    let balance =
+        await calculateCurrentStock(
+            item.code
         );
 
 
     document.getElementById(
         "currentStock"
     ).value =
-        newBalance;
+        balance;
+
+}
+
+
+// =====================================
+// CALCULATE CURRENT STOCK
+// =====================================
+
+async function calculateCurrentStock(
+    itemCode
+){
+
+    // =====================================
+    // LOAD ITEMS
+    // =====================================
+
+    let loaded =
+        await loadItems();
+
+
+    if(!loaded){
+
+        return 0;
+    }
+
+
+    let item =
+        findItemByCode(
+            itemCode
+        );
+
+
+    if(!item){
+
+        return 0;
+    }
 
 
     // =====================================
-    // CLEAR TRANSACTION FIELDS
+    // OPENING STOCK
     // =====================================
 
-    document.getElementById(
-        "quantity"
-    ).value = "";
+    let currentStock =
+        Number(
+            item.opening_stock || 0
+        );
 
 
-    document.getElementById(
-        "unitCost"
-    ).value = "";
+    // =====================================
+    // STOCK IN
+    // =====================================
+
+    let stockInResult =
+        await supabaseRequest(
+            "stock_in",
+            "GET",
+            null,
+            "?item_code=eq." +
+            encodeURIComponent(
+                itemCode
+            ) +
+            "&select=quantity"
+        );
 
 
-    document.getElementById(
-        "totalCost"
-    ).value = "";
+    if(stockInResult.success){
+
+        for(
+            let i = 0;
+            i < stockInResult.data.length;
+            i++
+        ){
+
+            currentStock +=
+                Number(
+                    stockInResult.data[i]
+                    .quantity || 0
+                );
+
+        }
+
+    }
 
 
-    document.getElementById(
-        "transactionDate"
-    ).value = "";
+    // =====================================
+    // STOCK ISSUE
+    // =====================================
+
+    let stockOutResult =
+        await supabaseRequest(
+            "stock_issue",
+            "GET",
+            null,
+            "?item_code=eq." +
+            encodeURIComponent(
+                itemCode
+            ) +
+            "&select=quantity"
+        );
 
 
-    document.getElementById(
-        "transactionTime"
-    ).value = "";
+    if(stockOutResult.success){
+
+        for(
+            let i = 0;
+            i < stockOutResult.data.length;
+            i++
+        ){
+
+            currentStock -=
+                Number(
+                    stockOutResult.data[i]
+                    .quantity || 0
+                );
+
+        }
+
+    }
 
 
-    // ITEM INFORMATION CLEAR NAHI HOGI
+    return currentStock;
 
 }
 
@@ -673,6 +769,7 @@ function refreshHistoryTable(){
 
 
     if(!historyBody){
+
         return;
     }
 
@@ -702,7 +799,9 @@ function refreshHistoryTable(){
 function addHistoryRow(record){
 
     let row =
-        document.createElement("tr");
+        document.createElement(
+            "tr"
+        );
 
 
     let values = [
@@ -723,9 +822,7 @@ function addHistoryRow(record){
 
         record.location || "-",
 
-        Number(
-            record.quantity || 0
-        ),
+        record.quantity || 0,
 
         Number(
             record.unit_cost || 0
@@ -734,17 +831,17 @@ function addHistoryRow(record){
         Number(
             record.total_cost ||
             (
-                Number(record.quantity || 0) *
-                Number(record.unit_cost || 0)
+                Number(
+                    record.quantity || 0
+                ) *
+                Number(
+                    record.unit_cost || 0
+                )
             )
         ).toFixed(2)
 
     ];
 
-
-    // =====================================
-    // CELLS
-    // =====================================
 
     for(
         let i = 0;
@@ -753,24 +850,30 @@ function addHistoryRow(record){
     ){
 
         let cell =
-            document.createElement("td");
+            document.createElement(
+                "td"
+            );
 
 
         cell.textContent =
             values[i];
 
 
-        row.appendChild(cell);
+        row.appendChild(
+            cell
+        );
 
     }
 
 
     // =====================================
-    // ACTION CELL
+    // ACTION
     // =====================================
 
     let actionCell =
-        document.createElement("td");
+        document.createElement(
+            "td"
+        );
 
 
     // =====================================
@@ -778,7 +881,9 @@ function addHistoryRow(record){
     // =====================================
 
     let editButton =
-        document.createElement("button");
+        document.createElement(
+            "button"
+        );
 
 
     editButton.textContent =
@@ -841,6 +946,22 @@ function addHistoryRow(record){
 
 
             document.getElementById(
+                "totalCost"
+            ).value =
+                Number(
+                    record.total_cost ||
+                    (
+                        Number(
+                            record.quantity || 0
+                        ) *
+                        Number(
+                            record.unit_cost || 0
+                        )
+                    )
+                ).toFixed(2);
+
+
+            document.getElementById(
                 "transactionDate"
             ).value =
                 record.date || "";
@@ -852,21 +973,10 @@ function addHistoryRow(record){
                 record.time || "";
 
 
-            calculateTotalCost();
-
-
-            let button =
-                document.getElementById(
-                    "stockInButton"
-                );
-
-
-            if(button){
-
-                button.innerHTML =
-                    "Update Stock In";
-
-            }
+            document.getElementById(
+                "stockInButton"
+            ).innerHTML =
+                "Update Stock In";
 
 
             await showCurrentStock();
@@ -879,7 +989,9 @@ function addHistoryRow(record){
     // =====================================
 
     let deleteButton =
-        document.createElement("button");
+        document.createElement(
+            "button"
+        );
 
 
     deleteButton.textContent =
@@ -919,7 +1031,10 @@ function addHistoryRow(record){
                 );
 
                 alert(
-                    "Entry delete nahi hui!"
+                    "Entry delete nahi hui!\n\n" +
+                    JSON.stringify(
+                        result.error
+                    )
                 );
 
                 return;
@@ -931,13 +1046,25 @@ function addHistoryRow(record){
             );
 
 
-            editHistoryId = null;
-
-
             await loadStockInHistory();
 
 
-            await showCurrentStock();
+            let currentCode =
+                document.getElementById(
+                    "itemCode"
+                ).value.trim();
+
+
+            if(currentCode != ""){
+
+                document.getElementById(
+                    "currentStock"
+                ).value =
+                    await calculateCurrentStock(
+                        currentCode
+                    );
+
+            }
 
         };
 
@@ -1030,76 +1157,136 @@ function calculateTotalCost(){
 
 
 // =====================================
+// CLEAR FORM
+// =====================================
+
+function clearTransactionForm(){
+
+    document.getElementById(
+        "itemCode"
+    ).value = "";
+
+
+    document.getElementById(
+        "itemName"
+    ).value = "";
+
+
+    document.getElementById(
+        "unit"
+    ).value = "";
+
+
+    document.getElementById(
+        "source"
+    ).value = "";
+
+
+    document.getElementById(
+        "supplier"
+    ).value = "";
+
+
+    document.getElementById(
+        "location"
+    ).value = "";
+
+
+    document.getElementById(
+        "quantity"
+    ).value = "";
+
+
+    document.getElementById(
+        "unitCost"
+    ).value = "";
+
+
+    document.getElementById(
+        "totalCost"
+    ).value = "";
+
+
+    document.getElementById(
+        "transactionDate"
+    ).value = "";
+
+
+    document.getElementById(
+        "transactionTime"
+    ).value = "";
+
+}
+
+
+// =====================================
 // FILTER HISTORY
 // =====================================
 
 async function filterHistory(){
 
-    let loaded =
-        await loadStockInHistory();
-
-    if(!loaded){
-        return;
-    }
+    await loadStockInHistory();
 
 
-    let search =
+    let searchElement =
         document.getElementById(
             "searchItem"
         );
 
 
-    let month =
+    let monthElement =
         document.getElementById(
             "monthFilter"
         );
 
 
-    let year =
+    let yearElement =
         document.getElementById(
             "yearFilter"
         );
 
 
-    let fromDate =
+    let fromDateElement =
         document.getElementById(
             "historyFromDate"
         );
 
 
-    let toDate =
+    let toDateElement =
         document.getElementById(
             "historyToDate"
         );
 
 
-    let searchValue =
-        search
-        ? search.value.trim().toLowerCase()
+    let search =
+        searchElement
+        ? searchElement.value
+            .trim()
+            .toLowerCase()
         : "";
 
 
-    let monthValue =
-        month
-        ? month.value
+    let month =
+        monthElement
+        ? monthElement.value
         : "";
 
 
-    let yearValue =
-        year
-        ? year.value
+    let year =
+        yearElement
+        ? yearElement.value
         : "";
 
 
-    let fromValue =
-        fromDate
-        ? fromDate.value
+    let fromDate =
+        fromDateElement
+        ? fromDateElement.value
         : "";
 
 
-    let toValue =
-        toDate
-        ? toDate.value
+    let toDate =
+        toDateElement
+        ? toDateElement.value
         : "";
 
 
@@ -1110,6 +1297,7 @@ async function filterHistory(){
 
 
     if(!historyBody){
+
         return;
     }
 
@@ -1129,7 +1317,7 @@ async function filterHistory(){
 
         // SEARCH
 
-        if(searchValue !== ""){
+        if(search != ""){
 
             let name =
                 String(
@@ -1144,8 +1332,8 @@ async function filterHistory(){
 
 
             if(
-                !name.includes(searchValue) &&
-                !code.includes(searchValue)
+                !name.includes(search) &&
+                !code.includes(search)
             ){
 
                 continue;
@@ -1156,15 +1344,18 @@ async function filterHistory(){
 
         // MONTH
 
-        if(monthValue !== ""){
+        if(month != ""){
 
             let recordMonth =
                 String(
                     record.date || ""
-                ).substring(5,7);
+                ).substring(
+                    5,
+                    7
+                );
 
 
-            if(recordMonth !== monthValue){
+            if(recordMonth != month){
 
                 continue;
             }
@@ -1174,15 +1365,18 @@ async function filterHistory(){
 
         // YEAR
 
-        if(yearValue !== ""){
+        if(year != ""){
 
             let recordYear =
                 String(
                     record.date || ""
-                ).substring(0,4);
+                ).substring(
+                    0,
+                    4
+                );
 
 
-            if(recordYear !== yearValue){
+            if(recordYear != year){
 
                 continue;
             }
@@ -1193,8 +1387,8 @@ async function filterHistory(){
         // FROM DATE
 
         if(
-            fromValue !== "" &&
-            record.date < fromValue
+            fromDate != "" &&
+            record.date < fromDate
         ){
 
             continue;
@@ -1204,15 +1398,17 @@ async function filterHistory(){
         // TO DATE
 
         if(
-            toValue !== "" &&
-            record.date > toValue
+            toDate != "" &&
+            record.date > toDate
         ){
 
             continue;
         }
 
 
-        addHistoryRow(record);
+        addHistoryRow(
+            record
+        );
 
     }
 
@@ -1225,12 +1421,7 @@ async function filterHistory(){
 
 async function loadYears(){
 
-    let loaded =
-        await loadStockInHistory();
-
-    if(!loaded){
-        return;
-    }
+    await loadStockInHistory();
 
 
     let yearFilter =
@@ -1240,6 +1431,7 @@ async function loadYears(){
 
 
     if(!yearFilter){
+
         return;
     }
 
@@ -1256,7 +1448,10 @@ async function loadYears(){
         let year =
             String(
                 history[i].date || ""
-            ).substring(0,4);
+            ).substring(
+                0,
+                4
+            );
 
 
         if(
@@ -1311,36 +1506,43 @@ async function loadYears(){
 // INPUT EVENTS
 // =====================================
 
-let quantityInput =
-    document.getElementById(
-        "quantity"
-    );
+document.addEventListener(
+    "DOMContentLoaded",
+    function(){
+
+        let quantityInput =
+            document.getElementById(
+                "quantity"
+            );
 
 
-let unitCostInput =
-    document.getElementById(
-        "unitCost"
-    );
+        let unitCostInput =
+            document.getElementById(
+                "unitCost"
+            );
 
 
-if(quantityInput){
+        if(quantityInput){
 
-    quantityInput.addEventListener(
-        "input",
-        calculateTotalCost
-    );
+            quantityInput.addEventListener(
+                "input",
+                calculateTotalCost
+            );
 
-}
+        }
 
 
-if(unitCostInput){
+        if(unitCostInput){
 
-    unitCostInput.addEventListener(
-        "input",
-        calculateTotalCost
-    );
+            unitCostInput.addEventListener(
+                "input",
+                calculateTotalCost
+            );
 
-}
+        }
+
+    }
+);
 
 
 // =====================================
