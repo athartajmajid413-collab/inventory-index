@@ -1,18 +1,17 @@
 // =====================================
-// LOAD DATA
+// GRAPHS - SUPABASE VERSION
+// MECAS ENGINEERING PVT LIMITED SUNDAR
 // =====================================
 
-let items =
-    JSON.parse(localStorage.getItem("items")) || [];
 
-let history =
-    JSON.parse(localStorage.getItem("history")) || [];
+// =====================================
+// GLOBAL DATA
+// =====================================
 
-let demands =
-    JSON.parse(localStorage.getItem("demands")) || [];
-
-let demandHistory =
-    JSON.parse(localStorage.getItem("demandHistory")) || [];
+let items = [];
+let stockInData = [];
+let stockOutData = [];
+let demandHistory = [];
 
 
 // =====================================
@@ -26,45 +25,281 @@ let periodChart = null;
 
 
 // =====================================
-// LOAD ITEMS
+// LOAD ITEMS FROM SUPABASE
 // =====================================
 
-function loadItems(){
+async function loadItems(){
 
-    let select =
-        document.getElementById("itemSelect");
-
-    select.innerHTML = "";
-
-    let allOption =
-        document.createElement("option");
-
-    allOption.value = "all";
-    allOption.textContent = "📊 All Items";
-
-    select.appendChild(allOption);
+    let result = await supabaseRequest(
+        "items",
+        "GET",
+        null,
+        "?select=*"
+    );
 
 
-    for(let i = 0; i < items.length; i++){
+    if(!result.success){
 
-        let item = items[i];
+        console.error(
+            "Items Load Error:",
+            result.error
+        );
 
-        let option =
-            document.createElement("option");
-
-        option.value = item.code;
-
-        option.textContent =
-            item.code +
-            " - " +
-            (item.itemName || "");
-
-        select.appendChild(option);
+        return;
 
     }
 
 
-    // Dashboard selected item
+    items = result.data || [];
+
+
+    console.log(
+        "Graph Items:",
+        items
+    );
+
+}
+
+
+// =====================================
+// LOAD STOCK IN
+// =====================================
+
+async function loadStockIn(){
+
+    let result = await supabaseRequest(
+        "stock_in",
+        "GET",
+        null,
+        "?select=*&order=id.asc"
+    );
+
+
+    if(!result.success){
+
+        console.error(
+            "Stock In Load Error:",
+            result.error
+        );
+
+        return;
+
+    }
+
+
+    stockInData =
+        result.data || [];
+
+
+    console.log(
+        "Graph Stock In:",
+        stockInData
+    );
+
+}
+
+
+// =====================================
+// LOAD STOCK OUT
+// =====================================
+
+async function loadStockOut(){
+
+    let result = await supabaseRequest(
+        "stock_issue",
+        "GET",
+        null,
+        "?select=*&order=id.asc"
+    );
+
+
+    if(!result.success){
+
+        console.error(
+            "Stock Out Load Error:",
+            result.error
+        );
+
+        return;
+
+    }
+
+
+    stockOutData =
+        result.data || [];
+
+
+    console.log(
+        "Graph Stock Out:",
+        stockOutData
+    );
+
+}
+
+
+// =====================================
+// LOAD DEMAND HISTORY
+// =====================================
+
+async function loadDemandHistory(){
+
+    let result = await supabaseRequest(
+        "demand_history",
+        "GET",
+        null,
+        "?select=*&order=id.asc"
+    );
+
+
+    if(!result.success){
+
+        console.error(
+            "Demand History Load Error:",
+            result.error
+        );
+
+        return;
+
+    }
+
+
+    demandHistory =
+        result.data || [];
+
+
+    console.log(
+        "Graph Demand History:",
+        demandHistory
+    );
+
+}
+
+
+// =====================================
+// LOAD ALL DATA
+// =====================================
+
+async function loadAllGraphData(){
+
+    console.log(
+        "================================="
+    );
+
+    console.log(
+        "Loading Graph Data from Supabase..."
+    );
+
+    console.log(
+        "================================="
+    );
+
+
+    await loadItems();
+
+    await loadStockIn();
+
+    await loadStockOut();
+
+    await loadDemandHistory();
+
+
+    loadYears();
+
+    changePeriodType();
+
+    updateGraphs();
+
+
+    console.log(
+        "================================="
+    );
+
+    console.log(
+        "Graph Data Loaded Successfully"
+    );
+
+    console.log(
+        "================================="
+    );
+
+}
+
+
+// =====================================
+// LOAD ITEMS INTO SELECT
+// =====================================
+
+function loadItemSelect(){
+
+    let select =
+        document.getElementById(
+            "itemSelect"
+        );
+
+
+    if(!select){
+
+        return;
+
+    }
+
+
+    select.innerHTML = "";
+
+
+    let allOption =
+        document.createElement("option");
+
+
+    allOption.value =
+        "all";
+
+
+    allOption.textContent =
+        "📊 All Items";
+
+
+    select.appendChild(
+        allOption
+    );
+
+
+    for(
+        let i = 0;
+        i < items.length;
+        i++
+    ){
+
+        let item =
+            items[i];
+
+
+        let option =
+            document.createElement(
+                "option"
+            );
+
+
+        option.value =
+            item.code;
+
+
+        option.textContent =
+            item.code +
+            " - " +
+            (
+                item.item_name ||
+                item.itemName ||
+                ""
+            );
+
+
+        select.appendChild(
+            option
+        );
+
+    }
+
 
     let saved =
         localStorage.getItem(
@@ -74,25 +309,26 @@ function loadItems(){
 
     if(saved){
 
-        let exists = false;
-
-        for(let i = 0; i < items.length; i++){
+        for(
+            let i = 0;
+            i < items.length;
+            i++
+        ){
 
             if(
-                String(items[i].code).trim() ==
+                String(
+                    items[i].code
+                ).trim()
+                ===
                 String(saved).trim()
             ){
 
-                exists = true;
+                select.value =
+                    saved;
+
                 break;
 
             }
-
-        }
-
-        if(exists){
-
-            select.value = saved;
 
         }
 
@@ -107,21 +343,30 @@ function loadItems(){
 
 function loadYears(){
 
-    let years = new Set();
+    let years =
+        new Set();
 
 
-    // HISTORY
+    // STOCK IN YEARS
 
-    for(let i = 0; i < history.length; i++){
+    for(
+        let i = 0;
+        i < stockInData.length;
+        i++
+    ){
 
-        if(!history[i].date){
+        if(!stockInData[i].date){
 
             continue;
 
         }
 
+
         let date =
-            new Date(history[i].date);
+            new Date(
+                stockInData[i].date
+            );
+
 
         if(!isNaN(date)){
 
@@ -134,18 +379,67 @@ function loadYears(){
     }
 
 
-    // DEMANDS
+    // STOCK OUT YEARS
 
-    for(let i = 0; i < demands.length; i++){
+    for(
+        let i = 0;
+        i < stockOutData.length;
+        i++
+    ){
 
-        if(!demands[i].date){
+        if(!stockOutData[i].date){
 
             continue;
 
         }
 
+
         let date =
-            new Date(demands[i].date);
+            new Date(
+                stockOutData[i].date
+            );
+
+
+        if(!isNaN(date)){
+
+            years.add(
+                date.getFullYear()
+            );
+
+        }
+
+    }
+
+
+    // DEMAND YEARS
+
+    for(
+        let i = 0;
+        i < demandHistory.length;
+        i++
+    ){
+
+        let record =
+            demandHistory[i];
+
+
+        let dateValue =
+            record.date ||
+            record.generate_date;
+
+
+        if(!dateValue){
+
+            continue;
+
+        }
+
+
+        let date =
+            new Date(
+                dateValue
+            );
+
 
         if(!isNaN(date)){
 
@@ -163,11 +457,26 @@ function loadYears(){
             "yearSelect"
         );
 
-    yearSelect.innerHTML = "";
+
+    if(!yearSelect){
+
+        return;
+
+    }
+
+
+    yearSelect.innerHTML =
+        "";
 
 
     let yearArray =
-        Array.from(years).sort();
+        Array.from(
+            years
+        ).sort(
+            function(a,b){
+                return a - b;
+            }
+        );
 
 
     if(yearArray.length == 0){
@@ -179,33 +488,50 @@ function loadYears(){
     }
 
 
-    for(let i = 0; i < yearArray.length; i++){
+    for(
+        let i = 0;
+        i < yearArray.length;
+        i++
+    ){
 
         let option =
-            document.createElement("option");
+            document.createElement(
+                "option"
+            );
+
 
         option.value =
             yearArray[i];
 
+
         option.textContent =
             yearArray[i];
 
-        yearSelect.appendChild(option);
+
+        yearSelect.appendChild(
+            option
+        );
 
     }
 
 
-    // Current year select
-
     let currentYear =
         new Date().getFullYear();
 
-    if(yearArray.includes(currentYear)){
+
+    if(
+        yearArray.includes(
+            currentYear
+        )
+    ){
 
         yearSelect.value =
             currentYear;
 
     }
+
+
+    loadItemSelect();
 
 }
 
@@ -221,10 +547,12 @@ function changePeriodType(){
             "periodType"
         ).value;
 
+
     let month =
         document.getElementById(
             "monthSelect"
         );
+
 
     let monthLabel =
         document.getElementById(
@@ -234,14 +562,22 @@ function changePeriodType(){
 
     if(type == "year"){
 
-        month.style.display = "none";
-        monthLabel.style.display = "none";
+        month.style.display =
+            "none";
+
+
+        monthLabel.style.display =
+            "none";
 
     }
     else{
 
-        month.style.display = "inline-block";
-        monthLabel.style.display = "inline-block";
+        month.style.display =
+            "inline-block";
+
+
+        monthLabel.style.display =
+            "inline-block";
 
     }
 
@@ -262,7 +598,9 @@ function dateMatches(dateValue){
 
 
     let date =
-        new Date(dateValue);
+        new Date(
+            dateValue
+        );
 
 
     if(isNaN(date)){
@@ -272,30 +610,50 @@ function dateMatches(dateValue){
     }
 
 
-    let selectedYear =
-        Number(
-            document.getElementById(
-                "yearSelect"
-            ).value
+    let yearSelect =
+        document.getElementById(
+            "yearSelect"
         );
 
 
-    let selectedMonth =
-        Number(
-            document.getElementById(
-                "monthSelect"
-            ).value
+    let monthSelect =
+        document.getElementById(
+            "monthSelect"
         );
 
 
     let periodType =
         document.getElementById(
             "periodType"
-        ).value;
+        );
 
 
     if(
-        date.getFullYear() !=
+        !yearSelect ||
+        !monthSelect ||
+        !periodType
+    ){
+
+        return false;
+
+    }
+
+
+    let selectedYear =
+        Number(
+            yearSelect.value
+        );
+
+
+    let selectedMonth =
+        Number(
+            monthSelect.value
+        );
+
+
+    if(
+        date.getFullYear()
+        !=
         selectedYear
     ){
 
@@ -304,7 +662,11 @@ function dateMatches(dateValue){
     }
 
 
-    if(periodType == "year"){
+    if(
+        periodType.value
+        ==
+        "year"
+    ){
 
         return true;
 
@@ -312,7 +674,8 @@ function dateMatches(dateValue){
 
 
     return (
-        date.getMonth() + 1 ==
+        date.getMonth() + 1
+        ==
         selectedMonth
     );
 
@@ -320,82 +683,162 @@ function dateMatches(dateValue){
 
 
 // =====================================
-// GET DEMAND
+// ITEM CODE HELPER
+// =====================================
+
+function getRecordItemCode(record){
+
+    return String(
+        record.item_code ||
+        record.itemCode ||
+        ""
+    ).trim();
+
+}
+
+
+// =====================================
+// ITEM NAME HELPER
+// =====================================
+
+function getRecordItemName(record){
+
+    return (
+        record.item_name ||
+        record.itemName ||
+        "-"
+    );
+
+}
+
+
+// =====================================
+// DEMAND VALUE
+// =====================================
+
+function getDemandValue(record){
+
+    return Number(
+        record.finalDemand ||
+        record.final_demand ||
+        record.approvedQty ||
+        record.approved_qty ||
+        record.quantity ||
+        record.demandQuantity ||
+        record.demand_quantity ||
+        0
+    );
+
+}
+
+
+// =====================================
+// GET DEMAND FOR ITEM
 // =====================================
 
 function getDemandForItem(itemCode){
 
-    let total = 0;
+    let total =
+        0;
 
 
-    // CURRENT DEMANDS
-
-    for(let i = 0; i < demands.length; i++){
+    for(
+        let i = 0;
+        i < demandHistory.length;
+        i++
+    ){
 
         let record =
-            demands[i];
+            demandHistory[i];
 
+
+        // ---------------------------------
+        // DEMAND ITEMS
+        // ---------------------------------
+
+        let list =
+            record.demand_items ||
+            record.demandItems ||
+            record.items ||
+            [];
+
+
+        // اگر JSON string ہو
 
         if(
-            String(record.itemCode || "").trim() ==
-            String(itemCode).trim()
+            typeof list ===
+            "string"
         ){
 
-            if(dateMatches(record.date)){
+            try{
 
-                total += Number(
-                    record.finalDemand ||
-                    record.approvedQty ||
-                    record.quantity ||
-                    record.demandQuantity ||
-                    0
-                );
+                list =
+                    JSON.parse(
+                        list
+                    );
+
+            }
+            catch(error){
+
+                list = [];
 
             }
 
         }
 
-    }
 
+        if(
+            Array.isArray(list)
+        ){
 
-    // DEMAND HISTORY
-
-    for(let i = 0; i < demandHistory.length; i++){
-
-        let historyRecord =
-            demandHistory[i];
-
-        let list =
-            historyRecord.demandItems ||
-            historyRecord.items ||
-            [];
-
-
-        for(let j = 0; j < list.length; j++){
-
-            let demandItem =
-                list[j];
-
-
-            if(
-                String(demandItem.code || "").trim() ==
-                String(itemCode).trim()
+            for(
+                let j = 0;
+                j < list.length;
+                j++
             ){
+
+                let demandItem =
+                    list[j];
+
+
+                let code =
+                    String(
+                        demandItem.code ||
+                        demandItem.item_code ||
+                        demandItem.itemCode ||
+                        ""
+                    ).trim();
+
+
+                if(
+                    code
+                    !=
+                    String(
+                        itemCode
+                    ).trim()
+                ){
+
+                    continue;
+
+                }
+
+
+                let demandDate =
+                    record.date ||
+                    record.generate_date ||
+                    demandItem.date;
+
 
                 if(
                     dateMatches(
-                        historyRecord.date ||
-                        demandItem.date
+                        demandDate
                     )
                 ){
 
-                    total += Number(
-                        demandItem.finalDemand ||
-                        demandItem.approvedQty ||
-                        demandItem.quantity ||
-                        demandItem.demandQuantity ||
-                        0
-                    );
+                    total +=
+                        getDemandValue(
+                            demandItem
+                        );
 
                 }
 
@@ -412,7 +855,7 @@ function getDemandForItem(itemCode){
 
 
 // =====================================
-// CREATE ITEM DATA
+// CREATE GRAPH DATA
 // =====================================
 
 function createGraphData(){
@@ -423,27 +866,36 @@ function createGraphData(){
         ).value;
 
 
-    let selectedItems = [];
+    let selectedItems =
+        [];
 
 
-    // ALL ITEMS
-
-    if(selectedCode == "all"){
+    if(
+        selectedCode
+        ==
+        "all"
+    ){
 
         selectedItems =
             items.slice();
 
     }
-
-    // SINGLE ITEM
-
     else{
 
-        for(let i = 0; i < items.length; i++){
+        for(
+            let i = 0;
+            i < items.length;
+            i++
+        ){
 
             if(
-                String(items[i].code).trim() ==
-                String(selectedCode).trim()
+                String(
+                    items[i].code
+                ).trim()
+                ==
+                String(
+                    selectedCode
+                ).trim()
             ){
 
                 selectedItems.push(
@@ -459,31 +911,58 @@ function createGraphData(){
     }
 
 
-    let result = [];
+    let result =
+        [];
 
 
-    for(let i = 0; i < selectedItems.length; i++){
+    for(
+        let i = 0;
+        i < selectedItems.length;
+        i++
+    ){
 
         let item =
             selectedItems[i];
 
 
-        let stockIn = 0;
-        let stockOut = 0;
-        let cost = 0;
+        let stockIn =
+            0;
 
 
-        // HISTORY
+        let stockOut =
+            0;
 
-        for(let j = 0; j < history.length; j++){
+
+        let cost =
+            0;
+
+
+        // =================================
+        // STOCK IN
+        // =================================
+
+        for(
+            let j = 0;
+            j < stockInData.length;
+            j++
+        ){
 
             let record =
-                history[j];
+                stockInData[j];
+
+
+            let code =
+                getRecordItemCode(
+                    record
+                );
 
 
             if(
-                String(record.itemCode).trim() !=
-                String(item.code).trim()
+                code
+                !=
+                String(
+                    item.code
+                ).trim()
             ){
 
                 continue;
@@ -492,7 +971,9 @@ function createGraphData(){
 
 
             if(
-                !dateMatches(record.date)
+                !dateMatches(
+                    record.date
+                )
             ){
 
                 continue;
@@ -500,32 +981,88 @@ function createGraphData(){
             }
 
 
-            if(record.type == "Stock In"){
-
-                let qty =
-                    Number(record.quantity || 0);
-
-                let unitCost =
-                    Number(record.unitCost || 0);
+            let qty =
+                Number(
+                    record.quantity ||
+                    0
+                );
 
 
-                stockIn += qty;
+            let unitCost =
+                Number(
+                    record.unit_cost ||
+                    record.unitCost ||
+                    0
+                );
 
-                cost +=
-                    qty * unitCost;
 
-            }
+            stockIn +=
+                qty;
 
 
-            if(record.type == "Stock Issue"){
-
-                stockOut +=
-                    Number(record.quantity || 0);
-
-            }
+            cost +=
+                qty *
+                unitCost;
 
         }
 
+
+        // =================================
+        // STOCK OUT
+        // =================================
+
+        for(
+            let j = 0;
+            j < stockOutData.length;
+            j++
+        ){
+
+            let record =
+                stockOutData[j];
+
+
+            let code =
+                getRecordItemCode(
+                    record
+                );
+
+
+            if(
+                code
+                !=
+                String(
+                    item.code
+                ).trim()
+            ){
+
+                continue;
+
+            }
+
+
+            if(
+                !dateMatches(
+                    record.date
+                )
+            ){
+
+                continue;
+
+            }
+
+
+            stockOut +=
+                Number(
+                    record.quantity ||
+                    0
+                );
+
+        }
+
+
+        // =================================
+        // DEMAND
+        // =================================
 
         let demand =
             getDemandForItem(
@@ -539,10 +1076,13 @@ function createGraphData(){
                 item.code,
 
             name:
-                item.itemName || "-",
+                item.item_name ||
+                item.itemName ||
+                "-",
 
             unit:
-                item.unit || "-",
+                item.unit ||
+                "-",
 
             stockIn:
                 stockIn,
@@ -572,15 +1112,24 @@ function createGraphData(){
 
 function createPeriodData(){
 
-    let labels = [];
+    let labels =
+        [];
 
-    let stockIn = [];
 
-    let stockOut = [];
+    let stockIn =
+        [];
 
-    let demand = [];
 
-    let cost = [];
+    let stockOut =
+        [];
+
+
+    let demand =
+        [];
+
+
+    let cost =
+        [];
 
 
     let type =
@@ -603,21 +1152,25 @@ function createPeriodData(){
         ).value;
 
 
-    // =================================
-    // CHECK ITEM
-    // =================================
-
     function itemAllowed(code){
 
-        if(selectedCode == "all"){
+        if(
+            selectedCode
+            ==
+            "all"
+        ){
 
             return true;
 
         }
 
+
         return (
-            String(code).trim() ==
-            String(selectedCode).trim()
+            String(code).trim()
+            ==
+            String(
+                selectedCode
+            ).trim()
         );
 
     }
@@ -627,7 +1180,11 @@ function createPeriodData(){
     // MONTH WISE
     // =================================
 
-    if(type == "month"){
+    if(
+        type
+        ==
+        "month"
+    ){
 
         let month =
             Number(
@@ -645,28 +1202,54 @@ function createPeriodData(){
             ).getDate();
 
 
-        for(let day = 1; day <= days; day++){
+        for(
+            let day = 1;
+            day <= days;
+            day++
+        ){
 
-            labels.push(day);
+            labels.push(
+                day
+            );
 
 
-            let inQty = 0;
-            let outQty = 0;
-            let demandQty = 0;
-            let purchaseCost = 0;
+            let inQty =
+                0;
 
 
-            // HISTORY
+            let outQty =
+                0;
 
-            for(let i = 0; i < history.length; i++){
+
+            let demandQty =
+                0;
+
+
+            let purchaseCost =
+                0;
+
+
+            // =================================
+            // STOCK IN
+            // =================================
+
+            for(
+                let i = 0;
+                i < stockInData.length;
+                i++
+            ){
 
                 let record =
-                    history[i];
+                    stockInData[i];
 
 
                 if(
                     !record.date ||
-                    !itemAllowed(record.itemCode)
+                    !itemAllowed(
+                        getRecordItemCode(
+                            record
+                        )
+                    )
                 ){
 
                     continue;
@@ -675,95 +1258,253 @@ function createPeriodData(){
 
 
                 let date =
-                    new Date(record.date);
-
-
-                if(
-                    date.getFullYear() == year &&
-                    date.getMonth() + 1 == month &&
-                    date.getDate() == day
-                ){
-
-                    if(
-                        record.type ==
-                        "Stock In"
-                    ){
-
-                        let qty =
-                            Number(record.quantity || 0);
-
-                        let unitCost =
-                            Number(record.unitCost || 0);
-
-
-                        inQty += qty;
-
-                        purchaseCost +=
-                            qty * unitCost;
-
-                    }
-
-
-                    if(
-                        record.type ==
-                        "Stock Issue"
-                    ){
-
-                        outQty +=
-                            Number(record.quantity || 0);
-
-                    }
-
-                }
-
-            }
-
-
-            // DEMAND
-
-            for(let i = 0; i < demands.length; i++){
-
-                let record =
-                    demands[i];
-
-
-                if(
-                    !record.date ||
-                    !itemAllowed(record.itemCode)
-                ){
-
-                    continue;
-
-                }
-
-
-                let date =
-                    new Date(record.date);
-
-
-                if(
-                    date.getFullYear() == year &&
-                    date.getMonth() + 1 == month &&
-                    date.getDate() == day
-                ){
-
-                    demandQty += Number(
-                        record.finalDemand ||
-                        record.approvedQty ||
-                        record.quantity ||
-                        record.demandQuantity ||
-                        0
+                    new Date(
+                        record.date
                     );
 
+
+                if(
+                    date.getFullYear()
+                    ==
+                    year
+                    &&
+                    date.getMonth() + 1
+                    ==
+                    month
+                    &&
+                    date.getDate()
+                    ==
+                    day
+                ){
+
+                    let qty =
+                        Number(
+                            record.quantity ||
+                            0
+                        );
+
+
+                    let unitCost =
+                        Number(
+                            record.unit_cost ||
+                            record.unitCost ||
+                            0
+                        );
+
+
+                    inQty +=
+                        qty;
+
+
+                    purchaseCost +=
+                        qty *
+                        unitCost;
+
                 }
 
             }
 
 
-            stockIn.push(inQty);
-            stockOut.push(outQty);
-            demand.push(demandQty);
-            cost.push(purchaseCost);
+            // =================================
+            // STOCK OUT
+            // =================================
+
+            for(
+                let i = 0;
+                i < stockOutData.length;
+                i++
+            ){
+
+                let record =
+                    stockOutData[i];
+
+
+                if(
+                    !record.date ||
+                    !itemAllowed(
+                        getRecordItemCode(
+                            record
+                        )
+                    )
+                ){
+
+                    continue;
+
+                }
+
+
+                let date =
+                    new Date(
+                        record.date
+                    );
+
+
+                if(
+                    date.getFullYear()
+                    ==
+                    year
+                    &&
+                    date.getMonth() + 1
+                    ==
+                    month
+                    &&
+                    date.getDate()
+                    ==
+                    day
+                ){
+
+                    outQty +=
+                        Number(
+                            record.quantity ||
+                            0
+                        );
+
+                }
+
+            }
+
+
+            // =================================
+            // DEMAND
+            // =================================
+
+            for(
+                let i = 0;
+                i < demandHistory.length;
+                i++
+            ){
+
+                let record =
+                    demandHistory[i];
+
+
+                let recordDate =
+                    record.date ||
+                    record.generate_date;
+
+
+                if(!recordDate){
+
+                    continue;
+
+                }
+
+
+                let date =
+                    new Date(
+                        recordDate
+                    );
+
+
+                if(
+                    date.getFullYear()
+                    !=
+                    year
+                    ||
+                    date.getMonth() + 1
+                    !=
+                    month
+                    ||
+                    date.getDate()
+                    !=
+                    day
+                ){
+
+                    continue;
+
+                }
+
+
+                let list =
+                    record.demand_items ||
+                    record.demandItems ||
+                    record.items ||
+                    [];
+
+
+                if(
+                    typeof list ===
+                    "string"
+                ){
+
+                    try{
+
+                        list =
+                            JSON.parse(
+                                list
+                            );
+
+                    }
+                    catch(error){
+
+                        list = [];
+
+                    }
+
+                }
+
+
+                if(
+                    Array.isArray(list)
+                ){
+
+                    for(
+                        let j = 0;
+                        j < list.length;
+                        j++
+                    ){
+
+                        let demandItem =
+                            list[j];
+
+
+                        let code =
+                            String(
+                                demandItem.code ||
+                                demandItem.item_code ||
+                                demandItem.itemCode ||
+                                ""
+                            ).trim();
+
+
+                        if(
+                            itemAllowed(
+                                code
+                            )
+                        ){
+
+                            demandQty +=
+                                getDemandValue(
+                                    demandItem
+                                );
+
+                        }
+
+                    }
+
+                }
+
+            }
+
+
+            stockIn.push(
+                inQty
+            );
+
+
+            stockOut.push(
+                outQty
+            );
+
+
+            demand.push(
+                demandQty
+            );
+
+
+            cost.push(
+                purchaseCost
+            );
 
         }
 
@@ -777,34 +1518,71 @@ function createPeriodData(){
     else{
 
         let months = [
-            "Jan","Feb","Mar","Apr",
-            "May","Jun","Jul","Aug",
-            "Sep","Oct","Nov","Dec"
+
+            "Jan",
+            "Feb",
+            "Mar",
+            "Apr",
+            "May",
+            "Jun",
+            "Jul",
+            "Aug",
+            "Sep",
+            "Oct",
+            "Nov",
+            "Dec"
+
         ];
 
 
-        for(let month = 1; month <= 12; month++){
+        for(
+            let month = 1;
+            month <= 12;
+            month++
+        ){
 
             labels.push(
-                months[month - 1]
+                months[
+                    month - 1
+                ]
             );
 
 
-            let inQty = 0;
-            let outQty = 0;
-            let demandQty = 0;
-            let purchaseCost = 0;
+            let inQty =
+                0;
 
 
-            for(let i = 0; i < history.length; i++){
+            let outQty =
+                0;
+
+
+            let demandQty =
+                0;
+
+
+            let purchaseCost =
+                0;
+
+
+            // STOCK IN
+
+            for(
+                let i = 0;
+                i < stockInData.length;
+                i++
+            ){
 
                 let record =
-                    history[i];
+                    stockInData[i];
 
 
                 if(
                     !record.date ||
-                    !itemAllowed(record.itemCode)
+                    !itemAllowed(
+                        getRecordItemCode(
+                            record
+                        )
+                    )
                 ){
 
                     continue;
@@ -813,91 +1591,237 @@ function createPeriodData(){
 
 
                 let date =
-                    new Date(record.date);
-
-
-                if(
-                    date.getFullYear() == year &&
-                    date.getMonth() + 1 == month
-                ){
-
-                    if(
-                        record.type ==
-                        "Stock In"
-                    ){
-
-                        let qty =
-                            Number(record.quantity || 0);
-
-                        let unitCost =
-                            Number(record.unitCost || 0);
-
-
-                        inQty += qty;
-
-                        purchaseCost +=
-                            qty * unitCost;
-
-                    }
-
-
-                    if(
-                        record.type ==
-                        "Stock Issue"
-                    ){
-
-                        outQty +=
-                            Number(record.quantity || 0);
-
-                    }
-
-                }
-
-            }
-
-
-            for(let i = 0; i < demands.length; i++){
-
-                let record =
-                    demands[i];
-
-
-                if(
-                    !record.date ||
-                    !itemAllowed(record.itemCode)
-                ){
-
-                    continue;
-
-                }
-
-
-                let date =
-                    new Date(record.date);
-
-
-                if(
-                    date.getFullYear() == year &&
-                    date.getMonth() + 1 == month
-                ){
-
-                    demandQty += Number(
-                        record.finalDemand ||
-                        record.approvedQty ||
-                        record.quantity ||
-                        record.demandQuantity ||
-                        0
+                    new Date(
+                        record.date
                     );
 
+
+                if(
+                    date.getFullYear()
+                    ==
+                    year
+                    &&
+                    date.getMonth() + 1
+                    ==
+                    month
+                ){
+
+                    let qty =
+                        Number(
+                            record.quantity ||
+                            0
+                        );
+
+
+                    let unitCost =
+                        Number(
+                            record.unit_cost ||
+                            record.unitCost ||
+                            0
+                        );
+
+
+                    inQty +=
+                        qty;
+
+
+                    purchaseCost +=
+                        qty *
+                        unitCost;
+
                 }
 
             }
 
 
-            stockIn.push(inQty);
-            stockOut.push(outQty);
-            demand.push(demandQty);
-            cost.push(purchaseCost);
+            // STOCK OUT
+
+            for(
+                let i = 0;
+                i < stockOutData.length;
+                i++
+            ){
+
+                let record =
+                    stockOutData[i];
+
+
+                if(
+                    !record.date ||
+                    !itemAllowed(
+                        getRecordItemCode(
+                            record
+                        )
+                    )
+                ){
+
+                    continue;
+
+                }
+
+
+                let date =
+                    new Date(
+                        record.date
+                    );
+
+
+                if(
+                    date.getFullYear()
+                    ==
+                    year
+                    &&
+                    date.getMonth() + 1
+                    ==
+                    month
+                ){
+
+                    outQty +=
+                        Number(
+                            record.quantity ||
+                            0
+                        );
+
+                }
+
+            }
+
+
+            // DEMAND
+
+            for(
+                let i = 0;
+                i < demandHistory.length;
+                i++
+            ){
+
+                let record =
+                    demandHistory[i];
+
+
+                let recordDate =
+                    record.date ||
+                    record.generate_date;
+
+
+                if(!recordDate){
+
+                    continue;
+
+                }
+
+
+                let date =
+                    new Date(
+                        recordDate
+                    );
+
+
+                if(
+                    date.getFullYear()
+                    !=
+                    year
+                    ||
+                    date.getMonth() + 1
+                    !=
+                    month
+                ){
+
+                    continue;
+
+                }
+
+
+                let list =
+                    record.demand_items ||
+                    record.demandItems ||
+                    record.items ||
+                    [];
+
+
+                if(
+                    typeof list ===
+                    "string"
+                ){
+
+                    try{
+
+                        list =
+                            JSON.parse(
+                                list
+                            );
+
+                    }
+                    catch(error){
+
+                        list = [];
+
+                    }
+
+                }
+
+
+                if(
+                    Array.isArray(list)
+                ){
+
+                    for(
+                        let j = 0;
+                        j < list.length;
+                        j++
+                    ){
+
+                        let demandItem =
+                            list[j];
+
+
+                        let code =
+                            String(
+                                demandItem.code ||
+                                demandItem.item_code ||
+                                demandItem.itemCode ||
+                                ""
+                            ).trim();
+
+
+                        if(
+                            itemAllowed(
+                                code
+                            )
+                        ){
+
+                            demandQty +=
+                                getDemandValue(
+                                    demandItem
+                                );
+
+                        }
+
+                    }
+
+                }
+
+            }
+
+
+            stockIn.push(
+                inQty
+            );
+
+
+            stockOut.push(
+                outQty
+            );
+
+
+            demand.push(
+                demandQty
+            );
+
+
+            cost.push(
+                purchaseCost
+            );
 
         }
 
@@ -906,11 +1830,20 @@ function createPeriodData(){
 
     return {
 
-        labels:labels,
-        stockIn:stockIn,
-        stockOut:stockOut,
-        demand:demand,
-        cost:cost
+        labels:
+            labels,
+
+        stockIn:
+            stockIn,
+
+        stockOut:
+            stockOut,
+
+        demand:
+            demand,
+
+        cost:
+            cost
 
     };
 
@@ -918,23 +1851,47 @@ function createPeriodData(){
 
 
 // =====================================
-// UPDATE SUMMARY
+// SUMMARY
 // =====================================
 
 function updateSummary(data){
 
-    let totalIn = 0;
-    let totalOut = 0;
-    let totalDemand = 0;
-    let totalCost = 0;
+    let totalIn =
+        0;
 
 
-    for(let i = 0; i < data.length; i++){
+    let totalOut =
+        0;
 
-        totalIn += data[i].stockIn;
-        totalOut += data[i].stockOut;
-        totalDemand += data[i].demand;
-        totalCost += data[i].cost;
+
+    let totalDemand =
+        0;
+
+
+    let totalCost =
+        0;
+
+
+    for(
+        let i = 0;
+        i < data.length;
+        i++
+    ){
+
+        totalIn +=
+            data[i].stockIn;
+
+
+        totalOut +=
+            data[i].stockOut;
+
+
+        totalDemand +=
+            data[i].demand;
+
+
+        totalCost +=
+            data[i].cost;
 
     }
 
@@ -972,7 +1929,7 @@ function updateSummary(data){
 
 
 // =====================================
-// UPDATE ITEM INFO
+// ITEM INFO
 // =====================================
 
 function updateItemInfo(){
@@ -989,7 +1946,11 @@ function updateItemInfo(){
         );
 
 
-    if(selected == "all"){
+    if(
+        selected
+        ==
+        "all"
+    ){
 
         info.innerHTML =
             "📊 Showing <b>ALL ITEMS</b> — complete store data";
@@ -999,17 +1960,29 @@ function updateItemInfo(){
     }
 
 
-    let item = null;
+    let item =
+        null;
 
 
-    for(let i = 0; i < items.length; i++){
+    for(
+        let i = 0;
+        i < items.length;
+        i++
+    ){
 
         if(
-            String(items[i].code).trim() ==
-            String(selected).trim()
+            String(
+                items[i].code
+            ).trim()
+            ==
+            String(
+                selected
+            ).trim()
         ){
 
-            item = items[i];
+            item =
+                items[i];
+
             break;
 
         }
@@ -1023,9 +1996,16 @@ function updateItemInfo(){
             "✅ Selected Item: <b>" +
             item.code +
             "</b> — " +
-            (item.itemName || "-") +
+            (
+                item.item_name ||
+                item.itemName ||
+                "-"
+            ) +
             " | Unit: " +
-            (item.unit || "-");
+            (
+                item.unit ||
+                "-"
+            );
 
     }
 
@@ -1043,13 +2023,28 @@ function buildDataTable(data){
             "graphDataBody"
         );
 
-    body.innerHTML = "";
+
+    if(!body){
+
+        return;
+
+    }
 
 
-    for(let i = 0; i < data.length; i++){
+    body.innerHTML =
+        "";
+
+
+    for(
+        let i = 0;
+        i < data.length;
+        i++
+    ){
 
         let row =
-            document.createElement("tr");
+            document.createElement(
+                "tr"
+            );
 
 
         row.innerHTML =
@@ -1089,7 +2084,9 @@ function buildDataTable(data){
             "</td>";
 
 
-        body.appendChild(row);
+        body.appendChild(
+            row
+        );
 
     }
 
@@ -1102,6 +2099,17 @@ function buildDataTable(data){
 
 function updateGraphs(){
 
+    if(
+        !document.getElementById(
+            "itemSelect"
+        ).value
+    ){
+
+        return;
+
+    }
+
+
     let data =
         createGraphData();
 
@@ -1110,26 +2118,49 @@ function updateGraphs(){
         createPeriodData();
 
 
-    updateSummary(data);
+    updateSummary(
+        data
+    );
+
 
     updateItemInfo();
 
-    buildDataTable(data);
+
+    buildDataTable(
+        data
+    );
 
 
-    // DESTROY OLD
+    // =================================
+    // DESTROY OLD CHARTS
+    // =================================
 
-    if(stockDemandChart)
+    if(stockDemandChart){
+
         stockDemandChart.destroy();
 
-    if(quantityChart)
+    }
+
+
+    if(quantityChart){
+
         quantityChart.destroy();
 
-    if(costChart)
+    }
+
+
+    if(costChart){
+
         costChart.destroy();
 
-    if(periodChart)
+    }
+
+
+    if(periodChart){
+
         periodChart.destroy();
+
+    }
 
 
     // =================================
@@ -1145,39 +2176,56 @@ function updateGraphs(){
 
             {
 
-                type:"bar",
+                type:
+                    "bar",
 
                 data:{
 
                     labels:
                         data.map(
-                            x => x.name
+                            x =>
+                                x.name
                         ),
 
                     datasets:[
 
                         {
-                            label:"Stock In",
+
+                            label:
+                                "Stock In",
+
                             data:
                                 data.map(
-                                    x => x.stockIn
+                                    x =>
+                                        x.stockIn
                                 )
+
                         },
 
                         {
-                            label:"Demand",
+
+                            label:
+                                "Demand",
+
                             data:
                                 data.map(
-                                    x => x.demand
+                                    x =>
+                                        x.demand
                                 )
+
                         },
 
                         {
-                            label:"Stock Out",
+
+                            label:
+                                "Stock Out",
+
                             data:
                                 data.map(
-                                    x => x.stockOut
+                                    x =>
+                                        x.stockOut
                                 )
+
                         }
 
                     ]
@@ -1186,33 +2234,57 @@ function updateGraphs(){
 
                 options:{
 
-                    responsive:true,
+                    responsive:
+                        true,
 
-                    maintainAspectRatio:false,
+                    maintainAspectRatio:
+                        false,
 
                     interaction:{
-                        mode:"index",
-                        intersect:false
+
+                        mode:
+                            "index",
+
+                        intersect:
+                            false
+
                     },
 
                     plugins:{
+
                         legend:{
-                            position:"top"
+
+                            position:
+                                "top"
+
                         }
+
                     },
 
                     scales:{
 
                         x:{
+
                             ticks:{
-                                autoSkip:false,
-                                maxRotation:60,
-                                minRotation:30
+
+                                autoSkip:
+                                    false,
+
+                                maxRotation:
+                                    60,
+
+                                minRotation:
+                                    30
+
                             }
+
                         },
 
                         y:{
-                            beginAtZero:true
+
+                            beginAtZero:
+                                true
+
                         }
 
                     }
@@ -1237,42 +2309,65 @@ function updateGraphs(){
 
             {
 
-                type:"line",
+                type:
+                    "line",
 
                 data:{
 
                     labels:
                         data.map(
-                            x => x.name
+                            x =>
+                                x.name
                         ),
 
                     datasets:[
 
                         {
-                            label:"Stock In",
+
+                            label:
+                                "Stock In",
+
                             data:
                                 data.map(
-                                    x => x.stockIn
+                                    x =>
+                                        x.stockIn
                                 ),
-                            tension:.3
+
+                            tension:
+                                .3
+
                         },
 
                         {
-                            label:"Demand",
+
+                            label:
+                                "Demand",
+
                             data:
                                 data.map(
-                                    x => x.demand
+                                    x =>
+                                        x.demand
                                 ),
-                            tension:.3
+
+                            tension:
+                                .3
+
                         },
 
                         {
-                            label:"Stock Out",
+
+                            label:
+                                "Stock Out",
+
                             data:
                                 data.map(
-                                    x => x.stockOut
+                                    x =>
+                                        x.stockOut
                                 ),
-                            tension:.3
+
+                            tension:
+                                .3
+
                         }
 
                     ]
@@ -1281,14 +2376,21 @@ function updateGraphs(){
 
                 options:{
 
-                    responsive:true,
+                    responsive:
+                        true,
 
-                    maintainAspectRatio:false,
+                    maintainAspectRatio:
+                        false,
 
                     plugins:{
+
                         legend:{
-                            position:"top"
+
+                            position:
+                                "top"
+
                         }
+
                     }
 
                 }
@@ -1311,23 +2413,30 @@ function updateGraphs(){
 
             {
 
-                type:"bar",
+                type:
+                    "bar",
 
                 data:{
 
                     labels:
                         data.map(
-                            x => x.name
+                            x =>
+                                x.name
                         ),
 
                     datasets:[
 
                         {
-                            label:"Purchase Cost",
+
+                            label:
+                                "Purchase Cost",
+
                             data:
                                 data.map(
-                                    x => x.cost
+                                    x =>
+                                        x.cost
                                 )
+
                         }
 
                     ]
@@ -1336,30 +2445,38 @@ function updateGraphs(){
 
                 options:{
 
-                    responsive:true,
+                    responsive:
+                        true,
 
-                    maintainAspectRatio:false,
+                    maintainAspectRatio:
+                        false,
 
                     plugins:{
 
                         legend:{
-                            position:"top"
+
+                            position:
+                                "top"
+
                         },
 
                         tooltip:{
 
                             callbacks:{
 
-                                label:function(context){
+                                label:
+                                    function(
+                                        context
+                                    ){
 
-                                    return (
-                                        "Rs. " +
-                                        Number(
-                                            context.raw
-                                        ).toLocaleString()
-                                    );
+                                        return (
+                                            "Rs. " +
+                                            Number(
+                                                context.raw
+                                            ).toLocaleString()
+                                        );
 
-                                }
+                                    }
 
                             }
 
@@ -1387,7 +2504,8 @@ function updateGraphs(){
 
             {
 
-                type:"line",
+                type:
+                    "line",
 
                 data:{
 
@@ -1397,32 +2515,58 @@ function updateGraphs(){
                     datasets:[
 
                         {
-                            label:"Stock In",
+
+                            label:
+                                "Stock In",
+
                             data:
                                 periodData.stockIn,
-                            tension:.3
+
+                            tension:
+                                .3
+
                         },
 
                         {
-                            label:"Demand",
+
+                            label:
+                                "Demand",
+
                             data:
                                 periodData.demand,
-                            tension:.3
+
+                            tension:
+                                .3
+
                         },
 
                         {
-                            label:"Stock Out",
+
+                            label:
+                                "Stock Out",
+
                             data:
                                 periodData.stockOut,
-                            tension:.3
+
+                            tension:
+                                .3
+
                         },
 
                         {
-                            label:"Purchase Cost",
+
+                            label:
+                                "Purchase Cost",
+
                             data:
                                 periodData.cost,
-                            tension:.3,
-                            yAxisID:"costAxis"
+
+                            tension:
+                                .3,
+
+                            yAxisID:
+                                "costAxis"
+
                         }
 
                     ]
@@ -1431,36 +2575,64 @@ function updateGraphs(){
 
                 options:{
 
-                    responsive:true,
+                    responsive:
+                        true,
 
-                    maintainAspectRatio:false,
+                    maintainAspectRatio:
+                        false,
 
                     interaction:{
-                        mode:"index",
-                        intersect:false
+
+                        mode:
+                            "index",
+
+                        intersect:
+                            false
+
                     },
 
                     scales:{
 
                         y:{
-                            beginAtZero:true,
+
+                            beginAtZero:
+                                true,
+
                             title:{
-                                display:true,
-                                text:"Quantity"
+
+                                display:
+                                    true,
+
+                                text:
+                                    "Quantity"
+
                             }
+
                         },
 
                         costAxis:{
-                            beginAtZero:true,
-                            position:"right",
+
+                            beginAtZero:
+                                true,
+
+                            position:
+                                "right",
 
                             grid:{
-                                drawOnChartArea:false
+
+                                drawOnChartArea:
+                                    false
+
                             },
 
                             title:{
-                                display:true,
-                                text:"Cost (Rs.)"
+
+                                display:
+                                    true,
+
+                                text:
+                                    "Cost (Rs.)"
+
                             }
 
                         }
@@ -1470,39 +2642,46 @@ function updateGraphs(){
                     plugins:{
 
                         legend:{
-                            position:"top"
+
+                            position:
+                                "top"
+
                         },
 
                         tooltip:{
 
                             callbacks:{
 
-                                label:function(context){
-
-                                    if(
-                                        context.dataset.label ==
-                                        "Purchase Cost"
+                                label:
+                                    function(
+                                        context
                                     ){
 
+                                        if(
+                                            context.dataset.label
+                                            ==
+                                            "Purchase Cost"
+                                        ){
+
+                                            return (
+                                                "Purchase Cost: Rs. " +
+                                                Number(
+                                                    context.raw
+                                                ).toLocaleString()
+                                            );
+
+                                        }
+
+
                                         return (
-                                            "Purchase Cost: Rs. " +
+                                            context.dataset.label +
+                                            ": " +
                                             Number(
                                                 context.raw
                                             ).toLocaleString()
                                         );
 
                                     }
-
-
-                                    return (
-                                        context.dataset.label +
-                                        ": " +
-                                        Number(
-                                            context.raw
-                                        ).toLocaleString()
-                                    );
-
-                                }
 
                             }
 
@@ -1520,13 +2699,18 @@ function updateGraphs(){
 
 
 // =====================================
+// START GRAPH
+// =====================================
+
+async function startGraphs(){
+
+    await loadAllGraphData();
+
+}
+
+
+// =====================================
 // START
 // =====================================
 
-loadItems();
-
-loadYears();
-
-changePeriodType();
-
-updateGraphs();
+startGraphs();
