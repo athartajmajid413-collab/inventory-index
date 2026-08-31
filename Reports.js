@@ -1,21 +1,17 @@
 // =====================================================
-// REPORTS SYSTEM - SUPABASE VERSION
+// REPORTS SYSTEM
 // MECAS ENGINEERING PVT LIMITED SUNDAR
-// =====================================================
-
-// =====================================================
-// GLOBAL DATA
+// SUPABASE VERSION
 // =====================================================
 
 let items = [];
-let stockInData = [];
-let stockOutData = [];
+let history = [];
 let demands = [];
 let demandHistory = [];
 
 
 // =====================================================
-// LOAD ALL DATA FROM SUPABASE
+// LOAD REPORT DATA FROM SUPABASE
 // =====================================================
 
 async function loadReportData(){
@@ -26,162 +22,270 @@ async function loadReportData(){
 
     try{
 
-        // =============================================
+        // -------------------------------
         // ITEMS
-        // =============================================
+        // -------------------------------
 
         let itemsResult =
-            await supabaseRequest(
-                "items",
-                "GET",
-                null,
-                "?select=*&order=id.asc"
-            );
+            await supabaseRequest("items");
 
+        if(itemsResult.success){
 
-        if(!itemsResult.success){
+            items =
+                itemsResult.data || [];
+
+        }
+        else{
 
             console.error(
                 "Items Load Error:",
                 itemsResult.error
             );
 
-            alert(
-                "Items data load نہیں ہو سکا۔"
-            );
-
-            return false;
+            items = [];
 
         }
 
 
-        items =
-            itemsResult.data || [];
-
-
-        console.log(
-            "Report Items:",
-            items.length
-        );
-
-
-        // =============================================
+        // -------------------------------
         // STOCK IN
-        // =============================================
+        // -------------------------------
 
         let stockInResult =
             await supabaseRequest(
-                "stock_in",
-                "GET",
-                null,
-                "?select=*&order=id.asc"
+                "stock_in"
             );
 
+        let stockIn = [];
 
-        if(!stockInResult.success){
+        if(stockInResult.success){
+
+            stockIn =
+                stockInResult.data || [];
+
+        }
+        else{
 
             console.error(
                 "Stock In Load Error:",
                 stockInResult.error
             );
 
-            alert(
-                "Stock In data load نہیں ہو سکا۔"
-            );
-
-            return false;
-
         }
 
 
-        stockInData =
-            stockInResult.data || [];
+        // -------------------------------
+        // STOCK ISSUE
+        // -------------------------------
 
-
-        console.log(
-            "Report Stock In:",
-            stockInData.length
-        );
-
-
-        // =============================================
-        // STOCK OUT
-        // =============================================
-
-        let stockOutResult =
+        let stockIssueResult =
             await supabaseRequest(
-                "stock_issue",
-                "GET",
-                null,
-                "?select=*&order=id.asc"
+                "stock_issue"
             );
 
+        let stockIssue = [];
 
-        if(!stockOutResult.success){
+        if(stockIssueResult.success){
 
-            console.error(
-                "Stock Out Load Error:",
-                stockOutResult.error
-            );
-
-            alert(
-                "Stock Out data load نہیں ہو سکا۔"
-            );
-
-            return false;
-
-        }
-
-
-        stockOutData =
-            stockOutResult.data || [];
-
-
-        console.log(
-            "Report Stock Out:",
-            stockOutData.length
-        );
-
-
-        // =============================================
-        // DEMAND HISTORY
-        // =============================================
-
-        let demandResult =
-            await supabaseRequest(
-                "demand_history",
-                "GET",
-                null,
-                "?select=*&order=id.asc"
-            );
-
-
-        if(demandResult.success){
-
-            demandHistory =
-                demandResult.data || [];
-
-            console.log(
-                "Report Demand History:",
-                demandHistory.length
-            );
+            stockIssue =
+                stockIssueResult.data || [];
 
         }
         else{
 
-            console.warn(
-                "Demand History could not be loaded:",
-                demandResult.error
+            console.error(
+                "Stock Issue Load Error:",
+                stockIssueResult.error
             );
-
-            demandHistory = [];
 
         }
 
 
-        console.log("=================================");
-        console.log("Report Data Loaded Successfully");
-        console.log("=================================");
+        // =================================================
+        // CONVERT STOCK IN TO HISTORY FORMAT
+        // =================================================
+
+        let stockInHistory = [];
+
+        for(let i = 0; i < stockIn.length; i++){
+
+            let record =
+                stockIn[i];
+
+            stockInHistory.push({
+
+                id:
+                    record.id,
+
+                date:
+                    record.date || "",
+
+                time:
+                    record.time || "",
+
+                itemCode:
+                    record.item_code || record.itemCode || "",
+
+                itemName:
+                    record.item_name || record.itemName || "",
+
+                unit:
+                    record.unit || "",
+
+                source:
+                    record.source || "",
+
+                supplier:
+                    record.supplier || "",
+
+                location:
+                    record.location || "",
+
+                department:
+                    record.department || "",
+
+                type:
+                    "Stock In",
+
+                quantity:
+                    Number(record.quantity || 0),
+
+                unitCost:
+                    Number(
+                        record.unit_cost ||
+                        record.unitCost ||
+                        0
+                    ),
+
+                totalCost:
+                    Number(
+                        record.total_cost ||
+                        record.totalCost ||
+                        (
+                            Number(record.quantity || 0) *
+                            Number(
+                                record.unit_cost ||
+                                record.unitCost ||
+                                0
+                            )
+                        )
+                    )
+
+            });
+
+        }
+
+
+        // =================================================
+        // CONVERT STOCK ISSUE TO HISTORY FORMAT
+        // =================================================
+
+        let stockIssueHistory = [];
+
+        for(let i = 0; i < stockIssue.length; i++){
+
+            let record =
+                stockIssue[i];
+
+            stockIssueHistory.push({
+
+                id:
+                    record.id,
+
+                date:
+                    record.date || "",
+
+                time:
+                    record.time || "",
+
+                itemCode:
+                    record.item_code || record.itemCode || "",
+
+                itemName:
+                    record.item_name || record.itemName || "",
+
+                unit:
+                    record.unit || "",
+
+                source:
+                    record.source || "",
+
+                supplier:
+                    record.supplier || "",
+
+                location:
+                    record.location || "",
+
+                department:
+                    record.department || "",
+
+                type:
+                    "Stock Issue",
+
+                quantity:
+                    Number(record.quantity || 0),
+
+                unitCost:
+                    Number(
+                        record.unit_cost ||
+                        record.unitCost ||
+                        0
+                    ),
+
+                totalCost:
+                    Number(
+                        record.total_cost ||
+                        record.totalCost ||
+                        0
+                    )
+
+            });
+
+        }
+
+
+        // =================================================
+        // COMBINE HISTORY
+        // =================================================
+
+        history =
+            stockInHistory.concat(
+                stockIssueHistory
+            );
+
+
+        console.log(
+            "Report Items:",
+            items
+        );
+
+        console.log(
+            "Report Stock In:",
+            stockInHistory
+        );
+
+        console.log(
+            "Report Stock Out:",
+            stockIssueHistory
+        );
+
+        console.log(
+            "Report History:",
+            history
+        );
+
+        console.log(
+            "================================="
+        );
+
+        console.log(
+            "Report Data Loaded Successfully"
+        );
+
+        console.log(
+            "================================="
+        );
+
 
         return true;
 
@@ -193,217 +297,9 @@ async function loadReportData(){
             error
         );
 
-        alert(
-            "Report data load کرتے وقت error آیا۔"
-        );
-
         return false;
 
     }
-
-}
-
-
-// =====================================================
-// DATE FILTER
-// =====================================================
-
-function dateAllowed(date, fromDate, toDate){
-
-    if(!date){
-
-        return false;
-
-    }
-
-
-    let value =
-        String(date).substring(0,10);
-
-
-    if(
-        fromDate &&
-        value < fromDate
-    ){
-
-        return false;
-
-    }
-
-
-    if(
-        toDate &&
-        value > toDate
-    ){
-
-        return false;
-
-    }
-
-
-    return true;
-
-}
-
-
-// =====================================================
-// ITEM FILTER
-// =====================================================
-
-function itemAllowed(code, selectedCode){
-
-    if(!selectedCode){
-
-        return true;
-
-    }
-
-
-    return (
-        String(code || "").trim() ==
-        String(selectedCode || "").trim()
-    );
-
-}
-
-
-// =====================================================
-// DEPARTMENT FILTER
-// =====================================================
-
-function departmentAllowed(
-    recordDepartment,
-    selectedDepartment
-){
-
-    if(!selectedDepartment){
-
-        return true;
-
-    }
-
-
-    return (
-        String(recordDepartment || "")
-        .trim()
-        .toLowerCase() ==
-        String(selectedDepartment || "")
-        .trim()
-        .toLowerCase()
-    );
-
-}
-
-
-// =====================================================
-// GET ITEM
-// =====================================================
-
-function getItemByCode(code){
-
-    for(let i = 0; i < items.length; i++){
-
-        if(
-            String(items[i].code || "").trim() ==
-            String(code || "").trim()
-        ){
-
-            return items[i];
-
-        }
-
-    }
-
-
-    return null;
-
-}
-
-
-// =====================================================
-// CALCULATE CURRENT STOCK
-// =====================================================
-
-function calculateCurrentStock(code){
-
-    let stock = 0;
-
-
-    // =============================================
-    // OPENING STOCK
-    // =============================================
-
-    let item =
-        getItemByCode(code);
-
-
-    if(item){
-
-        stock =
-            Number(
-                item.opening_stock || 0
-            );
-
-    }
-
-
-    // =============================================
-    // STOCK IN
-    // =============================================
-
-    for(let i = 0; i < stockInData.length; i++){
-
-        let record =
-            stockInData[i];
-
-
-        if(
-            String(record.item_code || "").trim() !=
-            String(code || "").trim()
-        ){
-
-            continue;
-
-        }
-
-
-        stock +=
-            Number(
-                record.quantity || 0
-            );
-
-    }
-
-
-    // =============================================
-    // STOCK OUT
-    // =============================================
-
-    for(let i = 0; i < stockOutData.length; i++){
-
-        let record =
-            stockOutData[i];
-
-
-        if(
-            String(record.item_code || "").trim() !=
-            String(code || "").trim()
-        ){
-
-            continue;
-
-        }
-
-
-        stock -=
-            Number(
-                record.quantity || 0
-            );
-
-    }
-
-
-    return stock;
 
 }
 
@@ -414,13 +310,19 @@ function calculateCurrentStock(code){
 
 async function generateReport(){
 
-    // Reload latest Supabase data
+    // -----------------------------------------------
+    // LOAD FRESH SUPABASE DATA
+    // -----------------------------------------------
 
     let loaded =
         await loadReportData();
 
 
     if(!loaded){
+
+        alert(
+            "Report data load failed. Please check Supabase."
+        );
 
         return;
 
@@ -432,24 +334,20 @@ async function generateReport(){
             "reportType"
         ).value;
 
-
     let fromDate =
         document.getElementById(
             "fromDate"
         ).value;
-
 
     let toDate =
         document.getElementById(
             "toDate"
         ).value;
 
-
     let itemCode =
         document.getElementById(
             "itemCode"
         ).value.trim();
-
 
     let department =
         document.getElementById(
@@ -457,23 +355,19 @@ async function generateReport(){
         ).value;
 
 
-    // Clear table
-
     document.getElementById(
         "reportBody"
     ).innerHTML = "";
 
-
-    // Update headers
 
     updateReportHeaders(
         reportType
     );
 
 
-    // =============================================
+    // =================================================
     // REPORT TITLE
-    // =============================================
+    // =================================================
 
     let reportTitle =
         "STORE REPORT";
@@ -521,55 +415,53 @@ async function generateReport(){
         reportTitle;
 
 
-    // =============================================
+    // =================================================
     // PRINT DATE
-    // =============================================
+    // =================================================
 
     let today =
         new Date();
 
 
-    let printDate =
-        today.getDate() +
-        "-" +
-        (today.getMonth() + 1) +
-        "-" +
-        today.getFullYear();
-
-
     document.getElementById(
         "printDate"
     ).innerHTML =
-        printDate;
+        today.toLocaleDateString();
 
 
-    // =============================================
+    // =================================================
     // SUMMARY
-    // =============================================
+    // =================================================
 
     let totalEntries = 0;
+
     let totalQuantity = 0;
+
     let totalCost = 0;
 
 
     // =================================================
-    // STOCK IN REPORT
+    // STOCK IN
     // =================================================
 
     if(reportType == "stockIn"){
 
-        for(let i = 0; i < stockInData.length; i++){
+        for(let i = 0; i < history.length; i++){
 
             let record =
-                stockInData[i];
+                history[i];
+
+
+            if(record.type != "Stock In"){
+
+                continue;
+
+            }
 
 
             if(
-                !dateAllowed(
-                    record.date,
-                    fromDate,
-                    toDate
-                )
+                fromDate &&
+                record.date < fromDate
             ){
 
                 continue;
@@ -578,10 +470,8 @@ async function generateReport(){
 
 
             if(
-                !itemAllowed(
-                    record.item_code,
-                    itemCode
-                )
+                toDate &&
+                record.date > toDate
             ){
 
                 continue;
@@ -590,10 +480,22 @@ async function generateReport(){
 
 
             if(
-                !departmentAllowed(
-                    record.department,
-                    department
-                )
+                itemCode &&
+                String(
+                    record.itemCode
+                ).trim() != itemCode
+            ){
+
+                continue;
+
+            }
+
+
+            if(
+                department &&
+                String(
+                    record.department || ""
+                ).trim() != department
             ){
 
                 continue;
@@ -603,29 +505,20 @@ async function generateReport(){
 
             totalEntries++;
 
-
-            let quantity =
+            totalQuantity +=
                 Number(
                     record.quantity || 0
                 );
 
-
-            let totalRecordCost =
+            totalCost +=
                 Number(
-                    record.total_cost || 0
+                    record.totalCost || 0
                 );
 
 
-            totalQuantity +=
-                quantity;
-
-
-            totalCost +=
-                totalRecordCost;
-
-
             addStockInRow(
-                record
+                record,
+                i
             );
 
         }
@@ -634,23 +527,19 @@ async function generateReport(){
 
 
     // =================================================
-    // STOCK OUT REPORT
+    // STOCK OUT
     // =================================================
 
     else if(reportType == "stockOut"){
 
-        for(let i = 0; i < stockOutData.length; i++){
+        for(let i = 0; i < history.length; i++){
 
             let record =
-                stockOutData[i];
+                history[i];
 
 
             if(
-                !dateAllowed(
-                    record.date,
-                    fromDate,
-                    toDate
-                )
+                record.type != "Stock Issue"
             ){
 
                 continue;
@@ -659,10 +548,8 @@ async function generateReport(){
 
 
             if(
-                !itemAllowed(
-                    record.item_code,
-                    itemCode
-                )
+                fromDate &&
+                record.date < fromDate
             ){
 
                 continue;
@@ -671,10 +558,32 @@ async function generateReport(){
 
 
             if(
-                !departmentAllowed(
-                    record.department,
-                    department
-                )
+                toDate &&
+                record.date > toDate
+            ){
+
+                continue;
+
+            }
+
+
+            if(
+                itemCode &&
+                String(
+                    record.itemCode
+                ).trim() != itemCode
+            ){
+
+                continue;
+
+            }
+
+
+            if(
+                department &&
+                String(
+                    record.department || ""
+                ).trim() != department
             ){
 
                 continue;
@@ -684,7 +593,6 @@ async function generateReport(){
 
             totalEntries++;
 
-
             totalQuantity +=
                 Number(
                     record.quantity || 0
@@ -692,7 +600,8 @@ async function generateReport(){
 
 
             addStockOutRow(
-                record
+                record,
+                i
             );
 
         }
@@ -706,22 +615,15 @@ async function generateReport(){
 
     else if(reportType == "all"){
 
-        // =============================================
-        // STOCK IN
-        // =============================================
-
-        for(let i = 0; i < stockInData.length; i++){
+        for(let i = 0; i < history.length; i++){
 
             let record =
-                stockInData[i];
+                history[i];
 
 
             if(
-                !dateAllowed(
-                    record.date,
-                    fromDate,
-                    toDate
-                )
+                fromDate &&
+                record.date < fromDate
             ){
 
                 continue;
@@ -730,10 +632,8 @@ async function generateReport(){
 
 
             if(
-                !itemAllowed(
-                    record.item_code,
-                    itemCode
-                )
+                toDate &&
+                record.date > toDate
             ){
 
                 continue;
@@ -742,10 +642,22 @@ async function generateReport(){
 
 
             if(
-                !departmentAllowed(
-                    record.department,
-                    department
-                )
+                itemCode &&
+                String(
+                    record.itemCode
+                ).trim() != itemCode
+            ){
+
+                continue;
+
+            }
+
+
+            if(
+                department &&
+                String(
+                    record.department || ""
+                ).trim() != department
             ){
 
                 continue;
@@ -755,86 +667,20 @@ async function generateReport(){
 
             totalEntries++;
 
-
             totalQuantity +=
                 Number(
                     record.quantity || 0
                 );
-
 
             totalCost +=
                 Number(
-                    record.total_cost || 0
+                    record.totalCost || 0
                 );
 
 
             addAllTransactionRow(
                 record,
-                "Stock In"
-            );
-
-        }
-
-
-        // =============================================
-        // STOCK OUT
-        // =============================================
-
-        for(let i = 0; i < stockOutData.length; i++){
-
-            let record =
-                stockOutData[i];
-
-
-            if(
-                !dateAllowed(
-                    record.date,
-                    fromDate,
-                    toDate
-                )
-            ){
-
-                continue;
-
-            }
-
-
-            if(
-                !itemAllowed(
-                    record.item_code,
-                    itemCode
-                )
-            ){
-
-                continue;
-
-            }
-
-
-            if(
-                !departmentAllowed(
-                    record.department,
-                    department
-                )
-            ){
-
-                continue;
-
-            }
-
-
-            totalEntries++;
-
-
-            totalQuantity +=
-                Number(
-                    record.quantity || 0
-                );
-
-
-            addAllTransactionRow(
-                record,
-                "Stock Issue"
+                i
             );
 
         }
@@ -855,10 +701,10 @@ async function generateReport(){
 
 
             if(
-                !itemAllowed(
-                    item.code,
-                    itemCode
-                )
+                itemCode &&
+                String(
+                    item.code
+                ).trim() != itemCode
             ){
 
                 continue;
@@ -874,7 +720,9 @@ async function generateReport(){
 
             let minimumStock =
                 Number(
-                    item.minimum_stock || 0
+                    item.minimumStock ||
+                    item.minimum_stock ||
+                    0
                 );
 
 
@@ -893,7 +741,6 @@ async function generateReport(){
 
 
             totalEntries++;
-
 
             totalQuantity +=
                 currentStock;
@@ -920,18 +767,14 @@ async function generateReport(){
         let costData = {};
 
 
-        for(let i = 0; i < stockInData.length; i++){
+        for(let i = 0; i < history.length; i++){
 
             let record =
-                stockInData[i];
+                history[i];
 
 
             if(
-                !dateAllowed(
-                    record.date,
-                    fromDate,
-                    toDate
-                )
+                record.type != "Stock In"
             ){
 
                 continue;
@@ -940,10 +783,30 @@ async function generateReport(){
 
 
             if(
-                !itemAllowed(
-                    record.item_code,
-                    itemCode
-                )
+                fromDate &&
+                record.date < fromDate
+            ){
+
+                continue;
+
+            }
+
+
+            if(
+                toDate &&
+                record.date > toDate
+            ){
+
+                continue;
+
+            }
+
+
+            if(
+                itemCode &&
+                String(
+                    record.itemCode
+                ).trim() != itemCode
             ){
 
                 continue;
@@ -953,7 +816,7 @@ async function generateReport(){
 
             let code =
                 String(
-                    record.item_code || ""
+                    record.itemCode
                 ).trim();
 
 
@@ -965,7 +828,7 @@ async function generateReport(){
                         code,
 
                     itemName:
-                        record.item_name || "",
+                        record.itemName || "",
 
                     quantity:
                         0,
@@ -986,7 +849,7 @@ async function generateReport(){
 
             costData[code].totalCost +=
                 Number(
-                    record.total_cost || 0
+                    record.totalCost || 0
                 );
 
         }
@@ -1000,10 +863,8 @@ async function generateReport(){
 
             totalEntries++;
 
-
             totalQuantity +=
                 record.quantity;
-
 
             totalCost +=
                 record.totalCost;
@@ -1019,53 +880,42 @@ async function generateReport(){
 
 
     // =================================================
-    // MONTHLY DEMAND
+    // DEMAND
     // =================================================
 
     else if(reportType == "demand"){
 
+        // Demand is still read from localStorage
+        // until demand table is connected.
+
+        demands =
+            JSON.parse(
+                localStorage.getItem(
+                    "demands"
+                )
+            ) || [];
+
+
         let demandData = {};
 
 
-        // =============================================
-        // DEMAND HISTORY
-        // =============================================
+        for(let i = 0; i < demands.length; i++){
 
-        for(let i = 0; i < demandHistory.length; i++){
-
-            let historyRecord =
-                demandHistory[i];
+            let demand =
+                demands[i];
 
 
-            let list =
-                historyRecord.demand_items ||
-                historyRecord.items ||
-                [];
-
-
-            // Supabase JSON field can sometimes be string
-
-            if(
-                typeof list == "string"
-            ){
-
-                try{
-
-                    list =
-                        JSON.parse(list);
-
-                }
-                catch(error){
-
-                    list = [];
-
-                }
-
-            }
+            let code =
+                String(
+                    demand.itemCode ||
+                    demand.code ||
+                    ""
+                ).trim();
 
 
             if(
-                !Array.isArray(list)
+                itemCode &&
+                code != itemCode
             ){
 
                 continue;
@@ -1073,96 +923,57 @@ async function generateReport(){
             }
 
 
-            for(let j = 0; j < list.length; j++){
+            if(!demandData[code]){
 
-                let demand =
-                    list[j];
+                demandData[code] = {
 
-
-                let code =
-                    String(
-                        demand.code ||
-                        demand.itemCode ||
-                        demand.item_code ||
-                        ""
-                    ).trim();
-
-
-                if(
-                    !itemAllowed(
+                    itemCode:
                         code,
-                        itemCode
-                    )
-                ){
 
-                    continue;
+                    itemName:
+                        demand.itemName ||
+                        demand.name ||
+                        "",
 
-                }
+                    demand:
+                        0,
 
+                    pendingDemand:
+                        0,
 
-                let name =
-                    demand.itemName ||
-                    demand.item_name ||
-                    demand.name ||
-                    "";
-
-
-                if(!demandData[code]){
-
-                    demandData[code] = {
-
-                        itemCode:
-                            code,
-
-                        itemName:
-                            name,
-
-                        demand:
-                            0,
-
-                        pendingDemand:
-                            0,
-
-                        pendingPO:
-                            0
-
-                    };
-
-                }
-
-
-                demandData[code].demand +=
-                    Number(
-                        demand.finalDemand ||
-                        demand.approvedQty ||
-                        demand.demandQuantity ||
-                        demand.quantity ||
+                    pendingPO:
                         0
-                    );
 
-
-                demandData[code].pendingDemand +=
-                    Number(
-                        demand.pendingDemand ||
-                        0
-                    );
-
-
-                demandData[code].pendingPO +=
-                    Number(
-                        demand.pendingPO ||
-                        demand.po ||
-                        0
-                    );
+                };
 
             }
 
+
+            demandData[code].demand +=
+                Number(
+                    demand.demand ||
+                    demand.finalDemand ||
+                    demand.quantity ||
+                    0
+                );
+
+
+            demandData[code].pendingDemand +=
+                Number(
+                    demand.pendingDemand ||
+                    0
+                );
+
+
+            demandData[code].pendingPO +=
+                Number(
+                    demand.pendingPO ||
+                    demand.po ||
+                    0
+                );
+
         }
 
-
-        // =============================================
-        // SHOW DEMAND
-        // =============================================
 
         for(let code in demandData){
 
@@ -1171,7 +982,6 @@ async function generateReport(){
 
 
             totalEntries++;
-
 
             totalQuantity +=
                 record.demand;
@@ -1187,7 +997,7 @@ async function generateReport(){
 
 
     // =================================================
-    // SHOW SUMMARY
+    // SUMMARY
     // =================================================
 
     document.getElementById(
@@ -1208,8 +1018,7 @@ async function generateReport(){
         totalCost.toLocaleString(
             undefined,
             {
-                minimumFractionDigits: 2,
-                maximumFractionDigits: 2
+                minimumFractionDigits:2
             }
         );
 
@@ -1217,7 +1026,7 @@ async function generateReport(){
 
 
 // =====================================================
-// UPDATE TABLE HEADERS
+// UPDATE HEADERS
 // =====================================================
 
 function updateReportHeaders(reportType){
@@ -1348,6 +1157,7 @@ function updateReportHeaders(reportType){
                 <th>Quantity</th>
                 <th>Unit Cost</th>
                 <th>Total Cost</th>
+
                 <th class="deleteColumn">
                     Action
                 </th>
@@ -1362,10 +1172,99 @@ function updateReportHeaders(reportType){
 
 
 // =====================================================
+// CURRENT STOCK
+// =====================================================
+
+function calculateCurrentStock(code){
+
+    let stock = 0;
+
+
+    // Opening Stock
+
+    for(let i = 0; i < items.length; i++){
+
+        if(
+            String(
+                items[i].code
+            ).trim() ==
+            String(code).trim()
+        ){
+
+            stock =
+                Number(
+                    items[i].openingStock ||
+                    items[i].opening_stock ||
+                    0
+                );
+
+            break;
+
+        }
+
+    }
+
+
+    // Transactions
+
+    for(let i = 0; i < history.length; i++){
+
+        let record =
+            history[i];
+
+
+        if(
+            String(
+                record.itemCode
+            ).trim() !=
+            String(code).trim()
+        ){
+
+            continue;
+
+        }
+
+
+        let quantity =
+            Number(
+                record.quantity || 0
+            );
+
+
+        if(
+            record.type ==
+            "Stock In"
+        ){
+
+            stock +=
+                quantity;
+
+        }
+
+
+        if(
+            record.type ==
+            "Stock Issue"
+        ){
+
+            stock -=
+                quantity;
+
+        }
+
+    }
+
+
+    return stock;
+
+}
+
+
+// =====================================================
 // STOCK IN ROW
 // =====================================================
 
-function addStockInRow(record){
+function addStockInRow(record,index){
 
     let row =
         document.createElement("tr");
@@ -1377,21 +1276,21 @@ function addStockInRow(record){
 
         <td>${record.time || ""}</td>
 
-        <td>${record.item_code || ""}</td>
+        <td>${record.itemCode || ""}</td>
 
-        <td>${record.item_name || ""}</td>
+        <td>${record.itemName || ""}</td>
 
         <td>${record.quantity || 0}</td>
 
-        <td>${record.unit_cost || "-"}</td>
+        <td>${record.unitCost || "-"}</td>
 
-        <td>${record.total_cost || "-"}</td>
+        <td>${record.totalCost || "-"}</td>
 
         <td class="deleteColumn">
 
             <button
                 class="deleteButton"
-                onclick="deleteStockIn(${record.id})"
+                onclick="deleteTransaction(${index})"
             >
                 🗑️ Delete
             </button>
@@ -1402,7 +1301,9 @@ function addStockInRow(record){
 
 
     document
-        .getElementById("reportBody")
+        .getElementById(
+            "reportBody"
+        )
         .appendChild(row);
 
 }
@@ -1412,7 +1313,7 @@ function addStockInRow(record){
 // STOCK OUT ROW
 // =====================================================
 
-function addStockOutRow(record){
+function addStockOutRow(record,index){
 
     let row =
         document.createElement("tr");
@@ -1424,9 +1325,9 @@ function addStockOutRow(record){
 
         <td>${record.time || ""}</td>
 
-        <td>${record.item_code || ""}</td>
+        <td>${record.itemCode || ""}</td>
 
-        <td>${record.item_name || ""}</td>
+        <td>${record.itemName || ""}</td>
 
         <td>${record.department || "-"}</td>
 
@@ -1436,7 +1337,7 @@ function addStockOutRow(record){
 
             <button
                 class="deleteButton"
-                onclick="deleteStockOut(${record.id})"
+                onclick="deleteTransaction(${index})"
             >
                 🗑️ Delete
             </button>
@@ -1447,7 +1348,9 @@ function addStockOutRow(record){
 
 
     document
-        .getElementById("reportBody")
+        .getElementById(
+            "reportBody"
+        )
         .appendChild(row);
 
 }
@@ -1457,58 +1360,10 @@ function addStockOutRow(record){
 // ALL TRANSACTION ROW
 // =====================================================
 
-function addAllTransactionRow(
-    record,
-    type
-){
+function addAllTransactionRow(record,index){
 
     let row =
         document.createElement("tr");
-
-
-    let unitCost =
-        type == "Stock In"
-        ? (record.unit_cost || "-")
-        : "-";
-
-
-    let totalCost =
-        type == "Stock In"
-        ? (record.total_cost || "-")
-        : "-";
-
-
-    let deleteButton = "";
-
-
-    if(type == "Stock In"){
-
-        deleteButton = `
-
-            <button
-                class="deleteButton"
-                onclick="deleteStockIn(${record.id})"
-            >
-                🗑️ Delete
-            </button>
-
-        `;
-
-    }
-    else{
-
-        deleteButton = `
-
-            <button
-                class="deleteButton"
-                onclick="deleteStockOut(${record.id})"
-            >
-                🗑️ Delete
-            </button>
-
-        `;
-
-    }
 
 
     row.innerHTML = `
@@ -1517,23 +1372,28 @@ function addAllTransactionRow(
 
         <td>${record.time || ""}</td>
 
-        <td>${type}</td>
+        <td>${record.type || ""}</td>
 
-        <td>${record.item_code || ""}</td>
+        <td>${record.itemCode || ""}</td>
 
-        <td>${record.item_name || ""}</td>
+        <td>${record.itemName || ""}</td>
 
         <td>${record.department || "-"}</td>
 
         <td>${record.quantity || 0}</td>
 
-        <td>${unitCost}</td>
+        <td>${record.unitCost || "-"}</td>
 
-        <td>${totalCost}</td>
+        <td>${record.totalCost || "-"}</td>
 
         <td class="deleteColumn">
 
-            ${deleteButton}
+            <button
+                class="deleteButton"
+                onclick="deleteTransaction(${index})"
+            >
+                🗑️ Delete
+            </button>
 
         </td>
 
@@ -1541,7 +1401,9 @@ function addAllTransactionRow(
 
 
     document
-        .getElementById("reportBody")
+        .getElementById(
+            "reportBody"
+        )
         .appendChild(row);
 
 }
@@ -1566,7 +1428,7 @@ function addCurrentStockRow(
 
         <td>${item.code || ""}</td>
 
-        <td>${item.item_name || ""}</td>
+        <td>${item.itemName || item.item_name || ""}</td>
 
         <td>${item.unit || ""}</td>
 
@@ -1580,7 +1442,9 @@ function addCurrentStockRow(
 
 
     document
-        .getElementById("reportBody")
+        .getElementById(
+            "reportBody"
+        )
         .appendChild(row);
 
 }
@@ -1624,7 +1488,9 @@ function addCostRow(record){
 
 
     document
-        .getElementById("reportBody")
+        .getElementById(
+            "reportBody"
+        )
         .appendChild(row);
 
 }
@@ -1656,22 +1522,27 @@ function addDemandRow(record){
 
 
     document
-        .getElementById("reportBody")
+        .getElementById(
+            "reportBody"
+        )
         .appendChild(row);
 
 }
 
 
 // =====================================================
-// DELETE STOCK IN
+// DELETE TRANSACTION
 // =====================================================
 
-async function deleteStockIn(id){
+async function deleteTransaction(index){
 
-    if(!id){
+    if(
+        index < 0 ||
+        index >= history.length
+    ){
 
         alert(
-            "Stock In record ID نہیں ملا۔"
+            "Transaction not found."
         );
 
         return;
@@ -1680,48 +1551,18 @@ async function deleteStockIn(id){
 
 
     let record =
-        null;
-
-
-    for(let i = 0; i < stockInData.length; i++){
-
-        if(
-            String(stockInData[i].id) ==
-            String(id)
-        ){
-
-            record =
-                stockInData[i];
-
-            break;
-
-        }
-
-    }
-
-
-    if(!record){
-
-        alert(
-            "Stock In transaction نہیں ملی۔"
-        );
-
-        return;
-
-    }
+        history[index];
 
 
     let confirmDelete =
         confirm(
-
-            "Are you sure you want to delete this Stock In transaction?\n\n" +
-
+            "Are you sure you want to delete this transaction?\n\n" +
             "Item: " +
-            (record.item_name || "") +
-
+            (record.itemName || "") +
             "\nQuantity: " +
-            (record.quantity || 0)
-
+            (record.quantity || 0) +
+            "\nType: " +
+            (record.type || "")
         );
 
 
@@ -1732,24 +1573,49 @@ async function deleteStockIn(id){
     }
 
 
+    // =================================================
+    // DELETE FROM SUPABASE
+    // =================================================
+
+    let table =
+        record.type ==
+        "Stock In"
+            ? "stock_in"
+            : "stock_issue";
+
+
+    if(!record.id){
+
+        alert(
+            "This transaction has no Supabase ID."
+        );
+
+        return;
+
+    }
+
+
     let result =
         await supabaseRequest(
-            "stock_in",
+            table,
             "DELETE",
             null,
-            "?id=eq." + id
+            "?id=eq." +
+            encodeURIComponent(
+                record.id
+            )
         );
 
 
     if(!result.success){
 
         console.error(
-            "Stock In Delete Error:",
+            "Delete Error:",
             result.error
         );
 
         alert(
-            "Stock In delete نہیں ہو سکا۔"
+            "Delete failed. Please check Supabase."
         );
 
         return;
@@ -1758,7 +1624,7 @@ async function deleteStockIn(id){
 
 
     alert(
-        "Stock In transaction deleted successfully."
+        "Transaction deleted successfully."
     );
 
 
@@ -1768,112 +1634,7 @@ async function deleteStockIn(id){
 
 
 // =====================================================
-// DELETE STOCK OUT
-// =====================================================
-
-async function deleteStockOut(id){
-
-    if(!id){
-
-        alert(
-            "Stock Out record ID نہیں ملا۔"
-        );
-
-        return;
-
-    }
-
-
-    let record =
-        null;
-
-
-    for(let i = 0; i < stockOutData.length; i++){
-
-        if(
-            String(stockOutData[i].id) ==
-            String(id)
-        ){
-
-            record =
-                stockOutData[i];
-
-            break;
-
-        }
-
-    }
-
-
-    if(!record){
-
-        alert(
-            "Stock Out transaction نہیں ملی۔"
-        );
-
-        return;
-
-    }
-
-
-    let confirmDelete =
-        confirm(
-
-            "Are you sure you want to delete this Stock Out transaction?\n\n" +
-
-            "Item: " +
-            (record.item_name || "") +
-
-            "\nQuantity: " +
-            (record.quantity || 0)
-
-        );
-
-
-    if(!confirmDelete){
-
-        return;
-
-    }
-
-
-    let result =
-        await supabaseRequest(
-            "stock_issue",
-            "DELETE",
-            null,
-            "?id=eq." + id
-        );
-
-
-    if(!result.success){
-
-        console.error(
-            "Stock Out Delete Error:",
-            result.error
-        );
-
-        alert(
-            "Stock Out delete نہیں ہو سکا۔"
-        );
-
-        return;
-
-    }
-
-
-    alert(
-        "Stock Out transaction deleted successfully."
-    );
-
-
-    await generateReport();
-
-}
-
-
-// =====================================================
-// CLEAR REPORT
+// CLEAR
 // =====================================================
 
 function clearReport(){
@@ -1952,7 +1713,7 @@ function clearReport(){
 
 
 // =====================================================
-// PRINT REPORT
+// PRINT
 // =====================================================
 
 function printReport(){
@@ -1966,13 +1727,10 @@ function printReport(){
 // START
 // =====================================================
 
-document.addEventListener(
-    "DOMContentLoaded",
-    async function(){
+console.log(
+    "Reports.js loaded successfully."
+);
 
-        updateReportHeaders("all");
-
-        await loadReportData();
-
-    }
+updateReportHeaders(
+    "all"
 );
