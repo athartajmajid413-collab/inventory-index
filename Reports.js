@@ -1,12 +1,144 @@
 // =====================================================
 // REPORTS SYSTEM
 // MECAS ENGINEERING PVT LIMITED SUNDAR
-// SUPABASE VERSION
+// SUPABASE CONNECTED VERSION
+// =====================================================
+
+
+// =====================================================
+// SUPABASE SETTINGS
+// =====================================================
+
+const REPORT_SUPABASE_URL =
+    "https://tncmmkyrpzlkupdnkyqm.supabase.co";
+
+const REPORT_SUPABASE_KEY =
+    "sb_publishable_e6j_EkJescicSS3nEOnscg_INwxeukT";
+
+
+// =====================================================
+// SUPABASE REQUEST
+// =====================================================
+// اگر supabase.js پہلے سے load ہے تو وہی function استعمال ہوگا
+// ورنہ یہ fallback function خود request کرے گا.
+// =====================================================
+
+async function reportSupabaseRequest(
+    table,
+    method = "GET",
+    data = null,
+    query = ""
+){
+
+    try{
+
+        let options = {
+
+            method: method,
+
+            headers: {
+
+                "apikey":
+                    REPORT_SUPABASE_KEY,
+
+                "Authorization":
+                    "Bearer " +
+                    REPORT_SUPABASE_KEY,
+
+                "Content-Type":
+                    "application/json",
+
+                "Prefer":
+                    "return=representation"
+
+            }
+
+        };
+
+
+        if(data !== null){
+
+            options.body =
+                JSON.stringify(data);
+
+        }
+
+
+        let response =
+            await fetch(
+
+                REPORT_SUPABASE_URL +
+                "/rest/v1/" +
+                table +
+                query,
+
+                options
+
+            );
+
+
+        let result =
+            await response.json();
+
+
+        if(!response.ok){
+
+            console.error(
+                "Report Supabase Error:",
+                result
+            );
+
+            return {
+
+                success:false,
+
+                error:result
+
+            };
+
+        }
+
+
+        return {
+
+            success:true,
+
+            data:result
+
+        };
+
+    }
+
+    catch(error){
+
+        console.error(
+            "Report Supabase Connection Error:",
+            error
+        );
+
+        return {
+
+            success:false,
+
+            error:error
+
+        };
+
+    }
+
+}
+
+
+// =====================================================
+// DATA
 // =====================================================
 
 let items = [];
+
 let history = [];
+
 let demands = [];
+
 let demandHistory = [];
 
 
@@ -16,30 +148,48 @@ let demandHistory = [];
 
 async function loadReportData(){
 
-    console.log("=================================");
-    console.log("Loading Report Data from Supabase...");
-    console.log("=================================");
+    console.log(
+        "================================="
+    );
+
+    console.log(
+        "Loading Report Data from Supabase..."
+    );
+
+    console.log(
+        "================================="
+    );
+
 
     try{
 
-        // -------------------------------
+        // =============================================
         // ITEMS
-        // -------------------------------
+        // =============================================
 
-        let itemsResult =
-            await supabaseRequest("items");
+        let itemResult =
+            await reportSupabaseRequest(
+                "items",
+                "GET",
+                null,
+                "?select=*"
+            );
 
-        if(itemsResult.success){
+
+        if(itemResult.success){
 
             items =
-                itemsResult.data || [];
+                Array.isArray(itemResult.data)
+                    ? itemResult.data
+                    : [];
 
         }
+
         else{
 
             console.error(
                 "Items Load Error:",
-                itemsResult.error
+                itemResult.error
             );
 
             items = [];
@@ -47,23 +197,31 @@ async function loadReportData(){
         }
 
 
-        // -------------------------------
+        // =============================================
         // STOCK IN
-        // -------------------------------
+        // =============================================
 
         let stockInResult =
-            await supabaseRequest(
-                "stock_in"
+            await reportSupabaseRequest(
+                "stock_in",
+                "GET",
+                null,
+                "?select=*"
             );
 
-        let stockIn = [];
+
+        let stockInData = [];
+
 
         if(stockInResult.success){
 
-            stockIn =
-                stockInResult.data || [];
+            stockInData =
+                Array.isArray(stockInResult.data)
+                    ? stockInResult.data
+                    : [];
 
         }
+
         else{
 
             console.error(
@@ -74,23 +232,31 @@ async function loadReportData(){
         }
 
 
-        // -------------------------------
+        // =============================================
         // STOCK ISSUE
-        // -------------------------------
+        // =============================================
 
         let stockIssueResult =
-            await supabaseRequest(
-                "stock_issue"
+            await reportSupabaseRequest(
+                "stock_issue",
+                "GET",
+                null,
+                "?select=*"
             );
 
-        let stockIssue = [];
+
+        let stockIssueData = [];
+
 
         if(stockIssueResult.success){
 
-            stockIssue =
-                stockIssueResult.data || [];
+            stockIssueData =
+                Array.isArray(stockIssueResult.data)
+                    ? stockIssueResult.data
+                    : [];
 
         }
+
         else{
 
             console.error(
@@ -101,18 +267,63 @@ async function loadReportData(){
         }
 
 
-        // =================================================
-        // CONVERT STOCK IN TO HISTORY FORMAT
-        // =================================================
+        // =============================================
+        // HISTORY TABLE
+        // =============================================
 
-        let stockInHistory = [];
+        let historyResult =
+            await reportSupabaseRequest(
+                "history",
+                "GET",
+                null,
+                "?select=*"
+            );
 
-        for(let i = 0; i < stockIn.length; i++){
+
+        let historyData = [];
+
+
+        if(historyResult.success){
+
+            historyData =
+                Array.isArray(historyResult.data)
+                    ? historyResult.data
+                    : [];
+
+        }
+
+        else{
+
+            console.warn(
+                "History table could not be loaded:",
+                historyResult.error
+            );
+
+        }
+
+
+        // =============================================
+        // CREATE COMMON HISTORY
+        // =============================================
+
+        history = [];
+
+
+        // ---------------------------------------------
+        // STOCK IN
+        // ---------------------------------------------
+
+        for(
+            let i = 0;
+            i < stockInData.length;
+            i++
+        ){
 
             let record =
-                stockIn[i];
+                stockInData[i];
 
-            stockInHistory.push({
+
+            history.push({
 
                 id:
                     record.id,
@@ -124,36 +335,48 @@ async function loadReportData(){
                     record.time || "",
 
                 itemCode:
-                    record.item_code || record.itemCode || "",
+                    record.item_code ||
+                    record.itemCode ||
+                    "",
 
                 itemName:
-                    record.item_name || record.itemName || "",
+                    record.item_name ||
+                    record.itemName ||
+                    "",
 
                 unit:
-                    record.unit || "",
+                    record.unit ||
+                    "",
 
                 source:
-                    record.source || "",
+                    record.source ||
+                    "",
 
                 supplier:
-                    record.supplier || "",
+                    record.supplier ||
+                    "",
 
                 location:
-                    record.location || "",
+                    record.location ||
+                    "",
 
                 department:
-                    record.department || "",
+                    record.department ||
+                    "",
 
                 type:
                     "Stock In",
 
                 quantity:
-                    Number(record.quantity || 0),
+                    Number(
+                        record.quantity || 0
+                    ),
 
                 unitCost:
                     Number(
                         record.unit_cost ||
                         record.unitCost ||
+                        record.cost ||
                         0
                     ),
 
@@ -162,32 +385,41 @@ async function loadReportData(){
                         record.total_cost ||
                         record.totalCost ||
                         (
-                            Number(record.quantity || 0) *
+                            Number(
+                                record.quantity || 0
+                            ) *
                             Number(
                                 record.unit_cost ||
                                 record.unitCost ||
+                                record.cost ||
                                 0
                             )
                         )
-                    )
+                    ),
+
+                sourceTable:
+                    "stock_in"
 
             });
 
         }
 
 
-        // =================================================
-        // CONVERT STOCK ISSUE TO HISTORY FORMAT
-        // =================================================
+        // ---------------------------------------------
+        // STOCK ISSUE
+        // ---------------------------------------------
 
-        let stockIssueHistory = [];
-
-        for(let i = 0; i < stockIssue.length; i++){
+        for(
+            let i = 0;
+            i < stockIssueData.length;
+            i++
+        ){
 
             let record =
-                stockIssue[i];
+                stockIssueData[i];
 
-            stockIssueHistory.push({
+
+            history.push({
 
                 id:
                     record.id,
@@ -199,31 +431,42 @@ async function loadReportData(){
                     record.time || "",
 
                 itemCode:
-                    record.item_code || record.itemCode || "",
+                    record.item_code ||
+                    record.itemCode ||
+                    "",
 
                 itemName:
-                    record.item_name || record.itemName || "",
+                    record.item_name ||
+                    record.itemName ||
+                    "",
 
                 unit:
-                    record.unit || "",
+                    record.unit ||
+                    "",
 
                 source:
-                    record.source || "",
+                    record.source ||
+                    "",
 
                 supplier:
-                    record.supplier || "",
+                    record.supplier ||
+                    "",
 
                 location:
-                    record.location || "",
+                    record.location ||
+                    "",
 
                 department:
-                    record.department || "",
+                    record.department ||
+                    "",
 
                 type:
                     "Stock Issue",
 
                 quantity:
-                    Number(record.quantity || 0),
+                    Number(
+                        record.quantity || 0
+                    ),
 
                 unitCost:
                     Number(
@@ -237,41 +480,226 @@ async function loadReportData(){
                         record.total_cost ||
                         record.totalCost ||
                         0
-                    )
+                    ),
+
+                sourceTable:
+                    "stock_issue"
 
             });
 
         }
 
 
-        // =================================================
-        // COMBINE HISTORY
-        // =================================================
+        // ---------------------------------------------
+        // IF HISTORY TABLE HAS DATA
+        // USE IT AS ADDITIONAL SOURCE ONLY WHEN
+        // STOCK TABLES ARE EMPTY
+        // ---------------------------------------------
 
-        history =
-            stockInHistory.concat(
-                stockIssueHistory
+        if(
+            history.length == 0 &&
+            historyData.length > 0
+        ){
+
+            for(
+                let i = 0;
+                i < historyData.length;
+                i++
+            ){
+
+                let record =
+                    historyData[i];
+
+
+                history.push({
+
+                    id:
+                        record.id,
+
+                    date:
+                        record.date || "",
+
+                    time:
+                        record.time || "",
+
+                    itemCode:
+                        record.item_code ||
+                        record.itemCode ||
+                        "",
+
+                    itemName:
+                        record.item_name ||
+                        record.itemName ||
+                        "",
+
+                    unit:
+                        record.unit ||
+                        "",
+
+                    source:
+                        record.source ||
+                        "",
+
+                    supplier:
+                        record.supplier ||
+                        "",
+
+                    location:
+                        record.location ||
+                        "",
+
+                    department:
+                        record.department ||
+                        "",
+
+                    type:
+                        record.type || "",
+
+                    quantity:
+                        Number(
+                            record.quantity || 0
+                        ),
+
+                    unitCost:
+                        Number(
+                            record.unit_cost ||
+                            record.unitCost ||
+                            0
+                        ),
+
+                    totalCost:
+                        Number(
+                            record.total_cost ||
+                            record.totalCost ||
+                            0
+                        ),
+
+                    sourceTable:
+                        "history"
+
+                });
+
+            }
+
+        }
+
+
+        // =============================================
+        // SORT HISTORY
+        // =============================================
+
+        history.sort(
+            function(a,b){
+
+                let dateA =
+                    String(a.date || "") +
+                    " " +
+                    String(a.time || "");
+
+                let dateB =
+                    String(b.date || "") +
+                    " " +
+                    String(b.time || "");
+
+                return dateA.localeCompare(
+                    dateB
+                );
+
+            }
+        );
+
+
+        // =============================================
+        // DEMANDS
+        // =============================================
+
+        let demandResult =
+            await reportSupabaseRequest(
+                "demands",
+                "GET",
+                null,
+                "?select=*"
             );
+
+
+        if(demandResult.success){
+
+            demands =
+                Array.isArray(
+                    demandResult.data
+                )
+                    ? demandResult.data
+                    : [];
+
+        }
+
+        else{
+
+            demands = [];
+
+            console.warn(
+                "Demands table not available."
+            );
+
+        }
+
+
+        // =============================================
+        // DEMAND HISTORY
+        // =============================================
+
+        let demandHistoryResult =
+            await reportSupabaseRequest(
+                "demand_history",
+                "GET",
+                null,
+                "?select=*"
+            );
+
+
+        if(
+            demandHistoryResult.success
+        ){
+
+            demandHistory =
+                Array.isArray(
+                    demandHistoryResult.data
+                )
+                    ? demandHistoryResult.data
+                    : [];
+
+        }
+
+        else{
+
+            demandHistory = [];
+
+        }
 
 
         console.log(
             "Report Items:",
-            items
+            items.length
         );
 
         console.log(
             "Report Stock In:",
-            stockInHistory
+            stockInData.length
         );
 
         console.log(
             "Report Stock Out:",
-            stockIssueHistory
+            stockIssueData.length
         );
 
         console.log(
             "Report History:",
-            history
+            history.length
+        );
+
+        console.log(
+            "Report Demands:",
+            demands.length
         );
 
         console.log(
@@ -290,6 +718,7 @@ async function loadReportData(){
         return true;
 
     }
+
     catch(error){
 
         console.error(
@@ -310,9 +739,9 @@ async function loadReportData(){
 
 async function generateReport(){
 
-    // -----------------------------------------------
-    // LOAD FRESH SUPABASE DATA
-    // -----------------------------------------------
+    // =============================================
+    // LOAD FRESH DATA
+    // =============================================
 
     let loaded =
         await loadReportData();
@@ -321,7 +750,7 @@ async function generateReport(){
     if(!loaded){
 
         alert(
-            "Report data load failed. Please check Supabase."
+            "Report data could not be loaded from Supabase."
         );
 
         return;
@@ -334,25 +763,36 @@ async function generateReport(){
             "reportType"
         ).value;
 
+
     let fromDate =
         document.getElementById(
             "fromDate"
         ).value;
+
 
     let toDate =
         document.getElementById(
             "toDate"
         ).value;
 
+
     let itemCode =
         document.getElementById(
             "itemCode"
-        ).value.trim();
+        ).value
+        .trim();
 
-    let department =
+
+    let departmentElement =
         document.getElementById(
             "department"
-        ).value;
+        );
+
+
+    let department =
+        departmentElement
+            ? departmentElement.value
+            : "";
 
 
     document.getElementById(
@@ -365,9 +805,9 @@ async function generateReport(){
     );
 
 
-    // =================================================
+    // =============================================
     // REPORT TITLE
-    // =================================================
+    // =============================================
 
     let reportTitle =
         "STORE REPORT";
@@ -415,9 +855,9 @@ async function generateReport(){
         reportTitle;
 
 
-    // =================================================
+    // =============================================
     // PRINT DATE
-    // =================================================
+    // =============================================
 
     let today =
         new Date();
@@ -426,12 +866,17 @@ async function generateReport(){
     document.getElementById(
         "printDate"
     ).innerHTML =
-        today.toLocaleDateString();
+
+        today.getDate() +
+        "-" +
+        (today.getMonth() + 1) +
+        "-" +
+        today.getFullYear();
 
 
-    // =================================================
+    // =============================================
     // SUMMARY
-    // =================================================
+    // =============================================
 
     let totalEntries = 0;
 
@@ -446,13 +891,20 @@ async function generateReport(){
 
     if(reportType == "stockIn"){
 
-        for(let i = 0; i < history.length; i++){
+        for(
+            let i = 0;
+            i < history.length;
+            i++
+        ){
 
             let record =
                 history[i];
 
 
-            if(record.type != "Stock In"){
+            if(
+                record.type !=
+                "Stock In"
+            ){
 
                 continue;
 
@@ -461,7 +913,8 @@ async function generateReport(){
 
             if(
                 fromDate &&
-                record.date < fromDate
+                String(record.date) <
+                fromDate
             ){
 
                 continue;
@@ -471,7 +924,8 @@ async function generateReport(){
 
             if(
                 toDate &&
-                record.date > toDate
+                String(record.date) >
+                toDate
             ){
 
                 continue;
@@ -482,8 +936,9 @@ async function generateReport(){
             if(
                 itemCode &&
                 String(
-                    record.itemCode
-                ).trim() != itemCode
+                    record.itemCode || ""
+                ).trim() !=
+                itemCode
             ){
 
                 continue;
@@ -495,7 +950,8 @@ async function generateReport(){
                 department &&
                 String(
                     record.department || ""
-                ).trim() != department
+                ).trim() !=
+                department
             ){
 
                 continue;
@@ -505,10 +961,12 @@ async function generateReport(){
 
             totalEntries++;
 
+
             totalQuantity +=
                 Number(
                     record.quantity || 0
                 );
+
 
             totalCost +=
                 Number(
@@ -532,14 +990,19 @@ async function generateReport(){
 
     else if(reportType == "stockOut"){
 
-        for(let i = 0; i < history.length; i++){
+        for(
+            let i = 0;
+            i < history.length;
+            i++
+        ){
 
             let record =
                 history[i];
 
 
             if(
-                record.type != "Stock Issue"
+                record.type !=
+                "Stock Issue"
             ){
 
                 continue;
@@ -549,7 +1012,8 @@ async function generateReport(){
 
             if(
                 fromDate &&
-                record.date < fromDate
+                String(record.date) <
+                fromDate
             ){
 
                 continue;
@@ -559,7 +1023,8 @@ async function generateReport(){
 
             if(
                 toDate &&
-                record.date > toDate
+                String(record.date) >
+                toDate
             ){
 
                 continue;
@@ -570,8 +1035,9 @@ async function generateReport(){
             if(
                 itemCode &&
                 String(
-                    record.itemCode
-                ).trim() != itemCode
+                    record.itemCode || ""
+                ).trim() !=
+                itemCode
             ){
 
                 continue;
@@ -583,7 +1049,8 @@ async function generateReport(){
                 department &&
                 String(
                     record.department || ""
-                ).trim() != department
+                ).trim() !=
+                department
             ){
 
                 continue;
@@ -592,6 +1059,7 @@ async function generateReport(){
 
 
             totalEntries++;
+
 
             totalQuantity +=
                 Number(
@@ -615,7 +1083,11 @@ async function generateReport(){
 
     else if(reportType == "all"){
 
-        for(let i = 0; i < history.length; i++){
+        for(
+            let i = 0;
+            i < history.length;
+            i++
+        ){
 
             let record =
                 history[i];
@@ -623,7 +1095,8 @@ async function generateReport(){
 
             if(
                 fromDate &&
-                record.date < fromDate
+                String(record.date) <
+                fromDate
             ){
 
                 continue;
@@ -633,7 +1106,8 @@ async function generateReport(){
 
             if(
                 toDate &&
-                record.date > toDate
+                String(record.date) >
+                toDate
             ){
 
                 continue;
@@ -644,8 +1118,9 @@ async function generateReport(){
             if(
                 itemCode &&
                 String(
-                    record.itemCode
-                ).trim() != itemCode
+                    record.itemCode || ""
+                ).trim() !=
+                itemCode
             ){
 
                 continue;
@@ -657,7 +1132,8 @@ async function generateReport(){
                 department &&
                 String(
                     record.department || ""
-                ).trim() != department
+                ).trim() !=
+                department
             ){
 
                 continue;
@@ -667,10 +1143,12 @@ async function generateReport(){
 
             totalEntries++;
 
+
             totalQuantity +=
                 Number(
                     record.quantity || 0
                 );
+
 
             totalCost +=
                 Number(
@@ -694,7 +1172,11 @@ async function generateReport(){
 
     else if(reportType == "currentStock"){
 
-        for(let i = 0; i < items.length; i++){
+        for(
+            let i = 0;
+            i < items.length;
+            i++
+        ){
 
             let item =
                 items[i];
@@ -703,8 +1185,9 @@ async function generateReport(){
             if(
                 itemCode &&
                 String(
-                    item.code
-                ).trim() != itemCode
+                    item.code || ""
+                ).trim() !=
+                itemCode
             ){
 
                 continue;
@@ -731,7 +1214,8 @@ async function generateReport(){
 
 
             if(
-                currentStock <= minimumStock
+                currentStock <=
+                minimumStock
             ){
 
                 status =
@@ -741,6 +1225,7 @@ async function generateReport(){
 
 
             totalEntries++;
+
 
             totalQuantity +=
                 currentStock;
@@ -767,14 +1252,19 @@ async function generateReport(){
         let costData = {};
 
 
-        for(let i = 0; i < history.length; i++){
+        for(
+            let i = 0;
+            i < history.length;
+            i++
+        ){
 
             let record =
                 history[i];
 
 
             if(
-                record.type != "Stock In"
+                record.type !=
+                "Stock In"
             ){
 
                 continue;
@@ -784,7 +1274,8 @@ async function generateReport(){
 
             if(
                 fromDate &&
-                record.date < fromDate
+                String(record.date) <
+                fromDate
             ){
 
                 continue;
@@ -794,7 +1285,8 @@ async function generateReport(){
 
             if(
                 toDate &&
-                record.date > toDate
+                String(record.date) >
+                toDate
             ){
 
                 continue;
@@ -805,8 +1297,9 @@ async function generateReport(){
             if(
                 itemCode &&
                 String(
-                    record.itemCode
-                ).trim() != itemCode
+                    record.itemCode || ""
+                ).trim() !=
+                itemCode
             ){
 
                 continue;
@@ -816,11 +1309,13 @@ async function generateReport(){
 
             let code =
                 String(
-                    record.itemCode
+                    record.itemCode || ""
                 ).trim();
 
 
-            if(!costData[code]){
+            if(
+                !costData[code]
+            ){
 
                 costData[code] = {
 
@@ -855,7 +1350,9 @@ async function generateReport(){
         }
 
 
-        for(let code in costData){
+        for(
+            let code in costData
+        ){
 
             let record =
                 costData[code];
@@ -863,8 +1360,10 @@ async function generateReport(){
 
             totalEntries++;
 
+
             totalQuantity +=
                 record.quantity;
+
 
             totalCost +=
                 record.totalCost;
@@ -880,26 +1379,19 @@ async function generateReport(){
 
 
     // =================================================
-    // DEMAND
+    // MONTHLY DEMAND
     // =================================================
 
     else if(reportType == "demand"){
 
-        // Demand is still read from localStorage
-        // until demand table is connected.
-
-        demands =
-            JSON.parse(
-                localStorage.getItem(
-                    "demands"
-                )
-            ) || [];
-
-
         let demandData = {};
 
 
-        for(let i = 0; i < demands.length; i++){
+        for(
+            let i = 0;
+            i < demands.length;
+            i++
+        ){
 
             let demand =
                 demands[i];
@@ -907,6 +1399,7 @@ async function generateReport(){
 
             let code =
                 String(
+                    demand.item_code ||
                     demand.itemCode ||
                     demand.code ||
                     ""
@@ -923,7 +1416,9 @@ async function generateReport(){
             }
 
 
-            if(!demandData[code]){
+            if(
+                !demandData[code]
+            ){
 
                 demandData[code] = {
 
@@ -931,6 +1426,7 @@ async function generateReport(){
                         code,
 
                     itemName:
+                        demand.item_name ||
                         demand.itemName ||
                         demand.name ||
                         "",
@@ -953,6 +1449,7 @@ async function generateReport(){
                 Number(
                     demand.demand ||
                     demand.finalDemand ||
+                    demand.final_demand ||
                     demand.quantity ||
                     0
                 );
@@ -961,6 +1458,7 @@ async function generateReport(){
             demandData[code].pendingDemand +=
                 Number(
                     demand.pendingDemand ||
+                    demand.pending_demand ||
                     0
                 );
 
@@ -968,6 +1466,7 @@ async function generateReport(){
             demandData[code].pendingPO +=
                 Number(
                     demand.pendingPO ||
+                    demand.pending_po ||
                     demand.po ||
                     0
                 );
@@ -975,13 +1474,16 @@ async function generateReport(){
         }
 
 
-        for(let code in demandData){
+        for(
+            let code in demandData
+        ){
 
             let record =
                 demandData[code];
 
 
             totalEntries++;
+
 
             totalQuantity +=
                 record.demand;
@@ -997,7 +1499,7 @@ async function generateReport(){
 
 
     // =================================================
-    // SUMMARY
+    // SHOW SUMMARY
     // =================================================
 
     document.getElementById(
@@ -1015,21 +1517,24 @@ async function generateReport(){
     document.getElementById(
         "reportCost"
     ).innerHTML =
-        totalCost.toLocaleString(
-            undefined,
-            {
-                minimumFractionDigits:2
-            }
-        );
+        totalCost.toFixed(2);
+
+
+    console.log(
+        "Report Generated:",
+        reportType
+    );
 
 }
 
 
 // =====================================================
-// UPDATE HEADERS
+// UPDATE TABLE HEADERS
 // =====================================================
 
-function updateReportHeaders(reportType){
+function updateReportHeaders(
+    reportType
+){
 
     let reportHead =
         document.getElementById(
@@ -1044,12 +1549,19 @@ function updateReportHeaders(reportType){
             <tr>
 
                 <th>Date</th>
+
                 <th>Time</th>
+
                 <th>Item Code</th>
+
                 <th>Item Name</th>
+
                 <th>Quantity</th>
+
                 <th>Unit Cost</th>
+
                 <th>Total Cost</th>
+
                 <th class="deleteColumn">
                     Action
                 </th>
@@ -1068,11 +1580,17 @@ function updateReportHeaders(reportType){
             <tr>
 
                 <th>Date</th>
+
                 <th>Time</th>
+
                 <th>Item Code</th>
+
                 <th>Item Name</th>
+
                 <th>Department</th>
+
                 <th>Quantity</th>
+
                 <th class="deleteColumn">
                     Action
                 </th>
@@ -1091,10 +1609,15 @@ function updateReportHeaders(reportType){
             <tr>
 
                 <th>Item Code</th>
+
                 <th>Item Name</th>
+
                 <th>Unit</th>
+
                 <th>Current Stock</th>
+
                 <th>Minimum Stock</th>
+
                 <th>Stock Status</th>
 
             </tr>
@@ -1111,9 +1634,13 @@ function updateReportHeaders(reportType){
             <tr>
 
                 <th>Item Code</th>
+
                 <th>Item Name</th>
+
                 <th>Quantity</th>
+
                 <th>Average Cost</th>
+
                 <th>Total Cost</th>
 
             </tr>
@@ -1130,9 +1657,13 @@ function updateReportHeaders(reportType){
             <tr>
 
                 <th>Item Code</th>
+
                 <th>Item Name</th>
+
                 <th>Demand</th>
+
                 <th>Pending Demand</th>
+
                 <th>Pending PO</th>
 
             </tr>
@@ -1149,13 +1680,21 @@ function updateReportHeaders(reportType){
             <tr>
 
                 <th>Date</th>
+
                 <th>Time</th>
+
                 <th>Type</th>
+
                 <th>Item Code</th>
+
                 <th>Item Name</th>
+
                 <th>Department</th>
+
                 <th>Quantity</th>
+
                 <th>Unit Cost</th>
+
                 <th>Total Cost</th>
 
                 <th class="deleteColumn">
@@ -1175,20 +1714,28 @@ function updateReportHeaders(reportType){
 // CURRENT STOCK
 // =====================================================
 
-function calculateCurrentStock(code){
+function calculateCurrentStock(
+    code
+){
 
     let stock = 0;
 
 
-    // Opening Stock
+    // =============================================
+    // OPENING STOCK
+    // =============================================
 
-    for(let i = 0; i < items.length; i++){
+    for(
+        let i = 0;
+        i < items.length;
+        i++
+    ){
 
         if(
             String(
-                items[i].code
+                items[i].code || ""
             ).trim() ==
-            String(code).trim()
+            String(code || "").trim()
         ){
 
             stock =
@@ -1205,9 +1752,15 @@ function calculateCurrentStock(code){
     }
 
 
-    // Transactions
+    // =============================================
+    // TRANSACTIONS
+    // =============================================
 
-    for(let i = 0; i < history.length; i++){
+    for(
+        let i = 0;
+        i < history.length;
+        i++
+    ){
 
         let record =
             history[i];
@@ -1215,9 +1768,9 @@ function calculateCurrentStock(code){
 
         if(
             String(
-                record.itemCode
+                record.itemCode || ""
             ).trim() !=
-            String(code).trim()
+            String(code || "").trim()
         ){
 
             continue;
@@ -1236,8 +1789,7 @@ function calculateCurrentStock(code){
             "Stock In"
         ){
 
-            stock +=
-                quantity;
+            stock += quantity;
 
         }
 
@@ -1247,8 +1799,7 @@ function calculateCurrentStock(code){
             "Stock Issue"
         ){
 
-            stock -=
-                quantity;
+            stock -= quantity;
 
         }
 
@@ -1264,7 +1815,10 @@ function calculateCurrentStock(code){
 // STOCK IN ROW
 // =====================================================
 
-function addStockInRow(record,index){
+function addStockInRow(
+    record,
+    index
+){
 
     let row =
         document.createElement("tr");
@@ -1292,7 +1846,9 @@ function addStockInRow(record,index){
                 class="deleteButton"
                 onclick="deleteTransaction(${index})"
             >
+
                 🗑️ Delete
+
             </button>
 
         </td>
@@ -1313,7 +1869,10 @@ function addStockInRow(record,index){
 // STOCK OUT ROW
 // =====================================================
 
-function addStockOutRow(record,index){
+function addStockOutRow(
+    record,
+    index
+){
 
     let row =
         document.createElement("tr");
@@ -1339,7 +1898,9 @@ function addStockOutRow(record,index){
                 class="deleteButton"
                 onclick="deleteTransaction(${index})"
             >
+
                 🗑️ Delete
+
             </button>
 
         </td>
@@ -1360,7 +1921,10 @@ function addStockOutRow(record,index){
 // ALL TRANSACTION ROW
 // =====================================================
 
-function addAllTransactionRow(record,index){
+function addAllTransactionRow(
+    record,
+    index
+){
 
     let row =
         document.createElement("tr");
@@ -1392,7 +1956,9 @@ function addAllTransactionRow(record,index){
                 class="deleteButton"
                 onclick="deleteTransaction(${index})"
             >
+
                 🗑️ Delete
+
             </button>
 
         </td>
@@ -1454,7 +2020,9 @@ function addCurrentStockRow(
 // COST ROW
 // =====================================================
 
-function addCostRow(record){
+function addCostRow(
+    record
+){
 
     let row =
         document.createElement("tr");
@@ -1463,11 +2031,13 @@ function addCostRow(record){
     let averageCost = 0;
 
 
-    if(record.quantity > 0){
+    if(
+        Number(record.quantity) > 0
+    ){
 
         averageCost =
-            record.totalCost /
-            record.quantity;
+            Number(record.totalCost) /
+            Number(record.quantity);
 
     }
 
@@ -1482,7 +2052,9 @@ function addCostRow(record){
 
         <td>${averageCost.toFixed(2)}</td>
 
-        <td>${record.totalCost.toFixed(2)}</td>
+        <td>${Number(
+            record.totalCost
+        ).toFixed(2)}</td>
 
     `;
 
@@ -1500,7 +2072,9 @@ function addCostRow(record){
 // DEMAND ROW
 // =====================================================
 
-function addDemandRow(record){
+function addDemandRow(
+    record
+){
 
     let row =
         document.createElement("tr");
@@ -1531,10 +2105,12 @@ function addDemandRow(record){
 
 
 // =====================================================
-// DELETE TRANSACTION
+// DELETE TRANSACTION FROM SUPABASE
 // =====================================================
 
-async function deleteTransaction(index){
+async function deleteTransaction(
+    index
+){
 
     if(
         index < 0 ||
@@ -1556,13 +2132,27 @@ async function deleteTransaction(index){
 
     let confirmDelete =
         confirm(
+
             "Are you sure you want to delete this transaction?\n\n" +
+
             "Item: " +
-            (record.itemName || "") +
+            (
+                record.itemName ||
+                ""
+            ) +
+
             "\nQuantity: " +
-            (record.quantity || 0) +
+            (
+                record.quantity ||
+                0
+            ) +
+
             "\nType: " +
-            (record.type || "")
+            (
+                record.type ||
+                ""
+            )
+
         );
 
 
@@ -1573,21 +2163,25 @@ async function deleteTransaction(index){
     }
 
 
-    // =================================================
-    // DELETE FROM SUPABASE
-    // =================================================
+    // =============================================
+    // DELETE FROM ORIGINAL SUPABASE TABLE
+    // =============================================
 
     let table =
-        record.type ==
-        "Stock In"
-            ? "stock_in"
-            : "stock_issue";
+        record.sourceTable;
 
 
-    if(!record.id){
+    let id =
+        record.id;
+
+
+    if(
+        !table ||
+        !id
+    ){
 
         alert(
-            "This transaction has no Supabase ID."
+            "This transaction does not have a Supabase ID."
         );
 
         return;
@@ -1596,26 +2190,35 @@ async function deleteTransaction(index){
 
 
     let result =
-        await supabaseRequest(
+        await reportSupabaseRequest(
+
             table,
+
             "DELETE",
+
             null,
+
             "?id=eq." +
-            encodeURIComponent(
-                record.id
-            )
+            encodeURIComponent(id)
+
         );
 
 
-    if(!result.success){
+    if(
+        !result.success
+    ){
 
         console.error(
             "Delete Error:",
             result.error
         );
 
+
         alert(
-            "Delete failed. Please check Supabase."
+            "Delete failed.\n\n" +
+            JSON.stringify(
+                result.error
+            )
         );
 
         return;
@@ -1628,13 +2231,17 @@ async function deleteTransaction(index){
     );
 
 
+    // =============================================
+    // RELOAD REPORT
+    // =============================================
+
     await generateReport();
 
 }
 
 
 // =====================================================
-// CLEAR
+// CLEAR REPORT
 // =====================================================
 
 function clearReport(){
@@ -1663,10 +2270,17 @@ function clearReport(){
         "";
 
 
-    document.getElementById(
-        "department"
-    ).value =
-        "";
+    let department =
+        document.getElementById(
+            "department"
+        );
+
+
+    if(department){
+
+        department.value = "";
+
+    }
 
 
     document.getElementById(
@@ -1713,7 +2327,7 @@ function clearReport(){
 
 
 // =====================================================
-// PRINT
+// PRINT REPORT
 // =====================================================
 
 function printReport(){
@@ -1724,13 +2338,26 @@ function printReport(){
 
 
 // =====================================================
-// START
+// PAGE START
 // =====================================================
 
-console.log(
-    "Reports.js loaded successfully."
-);
+document.addEventListener(
+    "DOMContentLoaded",
+    async function(){
 
-updateReportHeaders(
-    "all"
+        console.log(
+            "Reports Page Started"
+        );
+
+
+        // پہلے data load کریں
+
+        await loadReportData();
+
+
+        console.log(
+            "Reports Ready"
+        );
+
+    }
 );
