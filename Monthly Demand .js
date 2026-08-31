@@ -1316,14 +1316,7 @@ async function saveGeneratedDemand(){
             "POST",
             demandRecord
         );
-console.log("=====================================");
-console.log("DEMAND INSERT RESULT");
-console.log("=====================================");
-console.log("Success:", result.success);
-console.log("Data:", result.data);
-console.log("Error:", result.error);
-console.log("Demand Record:", demandRecord);
-console.log("=====================================");
+
 
     if(!result.success){
 
@@ -1343,7 +1336,14 @@ console.log("=====================================");
 
     }
 
-
+console.log("=====================================");
+console.log("DEMAND INSERT RESULT");
+console.log("=====================================");
+console.log("Success:", result.success);
+console.log("Data:", result.data);
+console.log("Error:", result.error);
+console.log("Demand Record:", demandRecord);
+console.log("=====================================");
     console.log(
         "✅ Demand Saved:",
         result.data
