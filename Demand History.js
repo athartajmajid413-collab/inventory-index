@@ -282,32 +282,28 @@ function showDemandHistory(){
             document.createElement("td");
 
 
-        // PRINT
-        let previewButton =
-            document.createElement("button");
+        // EXCEL
+let excelButton =
+    document.createElement("button");
 
+excelButton.innerHTML =
+    "📊 Excel";
 
-        previewButton.innerHTML =
-            "Print Preview";
+excelButton.type =
+    "button";
 
+excelButton.onclick =
+    function(){
 
-        previewButton.type =
-            "button";
-
-
-        previewButton.onclick =
-            function(){
-
-                printDemandPreview(
-                    record
-                );
-
-            };
-
-
-        cell5.appendChild(
-            previewButton
+        exportDemandToExcel(
+            record
         );
+
+    };
+
+cell5.appendChild(
+    excelButton
+);
 
 
         // EDIT
@@ -1846,3 +1842,441 @@ window.addEventListener(
 
     }
 );
+// =====================================
+// EXPORT DEMAND TO EXCEL
+// =====================================
+
+function exportDemandToExcel(record){
+
+    let list =
+        getDemandItems(record);
+
+
+    if(
+        !Array.isArray(list) ||
+        list.length === 0
+    ){
+
+        alert(
+            "Complete Demand data is not available."
+        );
+
+        return;
+
+    }
+
+
+    let demandNo =
+        getValue(
+            record,
+            [
+                "demand_no",
+                "demandNo",
+                "demandNumber"
+            ],
+            "Demand"
+        );
+
+
+    let demandMonth =
+        getValue(
+            record,
+            [
+                "demand_month",
+                "demandMonth",
+                "month"
+            ],
+            "-"
+        );
+
+
+    let generateDate =
+        getValue(
+            record,
+            [
+                "generate_date",
+                "generateDate",
+                "date"
+            ],
+            "-"
+        );
+
+
+    let rows = [];
+
+
+    // =====================================
+    // EXCEL HEADER INFORMATION
+    // =====================================
+
+    rows.push([
+        "MECAS ENGINEERING PVT LIMITED SUNDAR"
+    ]);
+
+
+    rows.push([
+        "MONTHLY DEMAND"
+    ]);
+
+
+    rows.push([
+        "Demand No",
+        demandNo
+    ]);
+
+
+    rows.push([
+        "Demand Month",
+        demandMonth
+    ]);
+
+
+    rows.push([
+        "Generate Date",
+        generateDate
+    ]);
+
+
+    rows.push([]);
+
+
+    // =====================================
+    // TABLE HEADERS
+    // =====================================
+
+    rows.push([
+
+        "Category",
+        "Item Code",
+        "Item Name",
+        "Specification",
+        "Source",
+        "Supplier",
+        "Latest Purchase Date",
+        "1st Rate",
+        "2nd Rate",
+        "Latest Rate",
+        "Unit",
+        "Packing Qty",
+        "Packed Unit",
+        "Consumption / Average",
+        "Stock Month",
+        "Current Stock",
+        "Demand Quantity",
+        "Approved Qty",
+        "Remarks"
+
+    ]);
+
+
+    // =====================================
+    // ITEMS
+    // =====================================
+
+    for(
+        let i = 0;
+        i < list.length;
+        i++
+    ){
+
+        let item =
+            list[i];
+
+
+        rows.push([
+
+            getValue(
+                item,
+                ["category"],
+                "-"
+            ),
+
+            getValue(
+                item,
+                [
+                    "itemCode",
+                    "item_code",
+                    "code"
+                ],
+                "-"
+            ),
+
+            getValue(
+                item,
+                [
+                    "itemName",
+                    "item_name",
+                    "name"
+                ],
+                "-"
+            ),
+
+            getValue(
+                item,
+                [
+                    "specification",
+                    "spec"
+                ],
+                "-"
+            ),
+
+            getValue(
+                item,
+                ["source"],
+                "-"
+            ),
+
+            getValue(
+                item,
+                [
+                    "supplier"
+                ],
+                "-"
+            ),
+
+            getValue(
+                item,
+                [
+                    "latestPurchaseDate",
+                    "latestDate",
+                    "purchaseDate"
+                ],
+                "-"
+            ),
+
+            getValue(
+                item,
+                [
+                    "firstRate"
+                ],
+                "-"
+            ),
+
+            getValue(
+                item,
+                [
+                    "secondRate"
+                ],
+                "-"
+            ),
+
+            getValue(
+                item,
+                [
+                    "latestRate",
+                    "unitCost",
+                    "purchaseRate",
+                    "rate",
+                    "cost"
+                ],
+                "-"
+            ),
+
+            getValue(
+                item,
+                [
+                    "unit",
+                    "uom"
+                ],
+                "-"
+            ),
+
+            getValue(
+                item,
+                [
+                    "packingQty",
+                    "packQty",
+                    "packingQuantity"
+                ],
+                "-"
+            ),
+
+            getValue(
+                item,
+                [
+                    "packedUnit",
+                    "packingUnit"
+                ],
+                "-"
+            ),
+
+            getValue(
+                item,
+                [
+                    "average",
+                    "avgConsumption",
+                    "averageConsumption",
+                    "consumption"
+                ],
+                "-"
+            ),
+
+            getValue(
+                item,
+                [
+                    "stockMonth",
+                    "stockMonths"
+                ],
+                "-"
+            ),
+
+            getValue(
+                item,
+                [
+                    "currentStock",
+                    "currentQty",
+                    "balanceStock"
+                ],
+                "-"
+            ),
+
+            getValue(
+                item,
+                [
+                    "demandQuantity",
+                    "demandQty",
+                    "demand",
+                    "quantity"
+                ],
+                "-"
+            ),
+
+            getValue(
+                item,
+                [
+                    "finalDemand",
+                    "final_demand",
+                    "approvedQty",
+                    "approvedQuantity",
+                    "finalQty"
+                ],
+                "-"
+            ),
+
+            getValue(
+                item,
+                [
+                    "remarks",
+                    "remark"
+                ],
+                "-"
+            )
+
+        ]);
+
+    }
+
+
+    // =====================================
+    // CSV
+    // =====================================
+
+    let csv = "";
+
+
+    for(
+        let i = 0;
+        i < rows.length;
+        i++
+    ){
+
+        let row =
+            rows[i];
+
+
+        let values = [];
+
+
+        for(
+            let j = 0;
+            j < row.length;
+            j++
+        ){
+
+            let value =
+                row[j] === undefined ||
+                row[j] === null
+                ? ""
+                : String(row[j]);
+
+
+            value =
+                value
+                .replace(/"/g, '""');
+
+
+            values.push(
+                '"' +
+                value +
+                '"'
+            );
+
+        }
+
+
+        csv +=
+            values.join(",") +
+            "\r\n";
+
+    }
+
+
+    // =====================================
+    // DOWNLOAD
+    // =====================================
+
+    let blob =
+        new Blob(
+            [
+                "\uFEFF" +
+                csv
+            ],
+            {
+                type:
+                    "text/csv;charset=utf-8;"
+            }
+        );
+
+
+    let url =
+        URL.createObjectURL(
+            blob
+        );
+
+
+    let link =
+        document.createElement("a");
+
+
+    link.href =
+        url;
+
+
+    link.download =
+        demandNo +
+        "_Monthly_Demand.csv";
+
+
+    document.body.appendChild(
+        link
+    );
+
+
+    link.click();
+
+
+    document.body.removeChild(
+        link
+    );
+
+
+    URL.revokeObjectURL(
+        url
+    );
+
+
+    alert(
+        "Demand Excel file exported successfully!"
+    );
+
+}
