@@ -2982,9 +2982,9 @@ document.addEventListener(
 
     }
 );
-function openProfile(){
+function openUserProfile(){
 
     window.location.href =
-        "Profile.html";
+        "User Profile.html";
 
 }
