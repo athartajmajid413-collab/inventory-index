@@ -5,9 +5,12 @@
 
     <meta charset="UTF-8">
 
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport"
+          content="width=device-width, initial-scale=1.0">
 
-    <title>Store Management System - Login</title>
+    <title>
+        Store Management System - Login
+    </title>
 
 
     <style>
@@ -15,6 +18,7 @@
         *{
             box-sizing:border-box;
         }
+
 
         body{
 
@@ -36,14 +40,16 @@
 
             align-items:center;
 
+            padding:20px;
+
         }
 
 
         .login-container{
 
-            width:380px;
+            width:400px;
 
-            max-width:90%;
+            max-width:100%;
 
             background:white;
 
@@ -91,7 +97,7 @@
 
             color:#12355b;
 
-            font-size:25px;
+            font-size:24px;
 
         }
 
@@ -107,11 +113,22 @@
         }
 
 
+        .form-title{
+
+            color:#12355b;
+
+            font-size:20px;
+
+            margin-bottom:20px;
+
+        }
+
+
         .input-group{
 
             text-align:left;
 
-            margin-bottom:18px;
+            margin-bottom:16px;
 
         }
 
@@ -159,7 +176,48 @@
         }
 
 
-        .login-btn{
+        .password-box{
+
+            position:relative;
+
+        }
+
+
+        .password-box input{
+
+            padding-right:50px;
+
+        }
+
+
+        .show-password{
+
+            position:absolute;
+
+            right:10px;
+
+            top:50%;
+
+            transform:translateY(-50%);
+
+            border:none;
+
+            background:none;
+
+            color:#12355b;
+
+            cursor:pointer;
+
+            font-size:18px;
+
+            padding:5px;
+
+            margin:0;
+
+        }
+
+
+        .main-btn{
 
             width:100%;
 
@@ -184,9 +242,68 @@
         }
 
 
-        .login-btn:hover{
+        .main-btn:hover{
 
             background:#1677ff;
+
+        }
+
+
+        .switch-text{
+
+            margin-top:20px;
+
+            color:#777;
+
+            font-size:14px;
+
+        }
+
+
+        .switch-btn{
+
+            border:none;
+
+            background:none;
+
+            color:#1677ff;
+
+            font-weight:bold;
+
+            cursor:pointer;
+
+            font-size:14px;
+
+            padding:0;
+
+            margin:0;
+
+        }
+
+
+        .switch-btn:hover{
+
+            text-decoration:underline;
+
+        }
+
+
+        .message{
+
+            min-height:22px;
+
+            margin-top:15px;
+
+            font-size:14px;
+
+            font-weight:bold;
+
+        }
+
+
+        .success{
+
+            color:#1e8449;
 
         }
 
@@ -194,12 +311,6 @@
         .error{
 
             color:#e74c3c;
-
-            font-size:14px;
-
-            margin-top:15px;
-
-            min-height:20px;
 
         }
 
@@ -214,6 +325,39 @@
 
         }
 
+
+        .hidden{
+
+            display:none;
+
+        }
+
+
+        .loading{
+
+            opacity:.7;
+
+            pointer-events:none;
+
+        }
+
+
+        @media(max-width:450px){
+
+            .login-container{
+
+                padding:25px 20px;
+
+            }
+
+            h1{
+
+                font-size:21px;
+
+            }
+
+        }
+
     </style>
 
 </head>
@@ -222,38 +366,55 @@
 <body>
 
 
-    <div class="login-container">
+<div class="login-container">
 
 
-        <div class="logo">
-            🏭
+    <!-- ============================= -->
+    <!-- LOGO -->
+    <!-- ============================= -->
+
+    <div class="logo">
+        🏭
+    </div>
+
+
+    <h1>
+        STORE MANAGEMENT SYSTEM
+    </h1>
+
+
+    <div class="subtitle">
+        Inventory & Store Control
+    </div>
+
+
+
+    <!-- ============================= -->
+    <!-- LOGIN FORM -->
+    <!-- ============================= -->
+
+    <div id="loginSection">
+
+
+        <div class="form-title">
+            🔐 Login
         </div>
 
 
-        <h1>
-            STORE MANAGEMENT SYSTEM
-        </h1>
-
-
-        <div class="subtitle">
-            Inventory & Store Control
-        </div>
-
-
-        <form onsubmit="login(event)">
+        <form id="loginForm">
 
 
             <div class="input-group">
 
                 <label>
-                    Username
+                    Email
                 </label>
 
                 <input
-                    type="text"
-                    id="username"
-                    placeholder="Enter Username"
-                    autocomplete="username"
+                    type="email"
+                    id="loginEmail"
+                    placeholder="Enter Email"
+                    autocomplete="email"
                     required
                 >
 
@@ -266,37 +427,63 @@
                     Password
                 </label>
 
-                <input
-                    type="password"
-                    id="password"
-                    placeholder="Enter Password"
-                    autocomplete="current-password"
-                    required
-                >
+
+                <div class="password-box">
+
+                    <input
+                        type="password"
+                        id="loginPassword"
+                        placeholder="Enter Password"
+                        autocomplete="current-password"
+                        required
+                    >
+
+
+                    <button
+                        type="button"
+                        class="show-password"
+                        onclick="togglePassword(
+                            'loginPassword',
+                            this
+                        )"
+                    >
+                        👁️
+                    </button>
+
+                </div>
 
             </div>
 
 
             <button
                 type="submit"
-                class="login-btn"
+                class="main-btn"
+                id="loginButton"
             >
                 🔐 Login
             </button>
 
 
-            <div
-                id="error"
-                class="error"
-            ></div>
-
-
         </form>
 
 
-        <div class="footer">
+        <div
+            id="loginMessage"
+            class="message"
+        ></div>
 
-            Store Management System
+
+        <div class="switch-text">
+
+            Don't have an account?
+
+            <button
+                type="button"
+                class="switch-btn"
+                onclick="showRegister()"
+            >
+                Register
+            </button>
 
         </div>
 
@@ -305,55 +492,946 @@
 
 
 
-    <script>
+    <!-- ============================= -->
+    <!-- REGISTER FORM -->
+    <!-- ============================= -->
 
-        function login(event){
+    <div
+        id="registerSection"
+        class="hidden"
+    >
+
+
+        <div class="form-title">
+            📝 Register
+        </div>
+
+
+        <form id="registerForm">
+
+
+            <div class="input-group">
+
+                <label>
+                    Full Name
+                </label>
+
+                <input
+                    type="text"
+                    id="fullName"
+                    placeholder="Enter Full Name"
+                    autocomplete="name"
+                    required
+                >
+
+            </div>
+
+
+            <div class="input-group">
+
+                <label>
+                    Username
+                </label>
+
+                <input
+                    type="text"
+                    id="registerUsername"
+                    placeholder="Enter Username"
+                    autocomplete="username"
+                    required
+                >
+
+            </div>
+
+
+            <div class="input-group">
+
+                <label>
+                    Email
+                </label>
+
+                <input
+                    type="email"
+                    id="registerEmail"
+                    placeholder="Enter Email"
+                    autocomplete="email"
+                    required
+                >
+
+            </div>
+
+
+            <div class="input-group">
+
+                <label>
+                    Password
+                </label>
+
+
+                <div class="password-box">
+
+                    <input
+                        type="password"
+                        id="registerPassword"
+                        placeholder="Create Password"
+                        autocomplete="new-password"
+                        minlength="6"
+                        required
+                    >
+
+
+                    <button
+                        type="button"
+                        class="show-password"
+                        onclick="togglePassword(
+                            'registerPassword',
+                            this
+                        )"
+                    >
+                        👁️
+                    </button>
+
+                </div>
+
+            </div>
+
+
+            <div class="input-group">
+
+                <label>
+                    Confirm Password
+                </label>
+
+
+                <div class="password-box">
+
+                    <input
+                        type="password"
+                        id="confirmPassword"
+                        placeholder="Confirm Password"
+                        autocomplete="new-password"
+                        minlength="6"
+                        required
+                    >
+
+
+                    <button
+                        type="button"
+                        class="show-password"
+                        onclick="togglePassword(
+                            'confirmPassword',
+                            this
+                        )"
+                    >
+                        👁️
+                    </button>
+
+                </div>
+
+            </div>
+
+
+            <button
+                type="submit"
+                class="main-btn"
+                id="registerButton"
+            >
+                📝 Create Account
+            </button>
+
+
+        </form>
+
+
+        <div
+            id="registerMessage"
+            class="message"
+        ></div>
+
+
+        <div class="switch-text">
+
+            Already have an account?
+
+            <button
+                type="button"
+                class="switch-btn"
+                onclick="showLogin()"
+            >
+                Login
+            </button>
+
+        </div>
+
+
+    </div>
+
+
+
+    <div class="footer">
+
+        MECAS ENGINEERING PVT LIMITED SUNDAR
+
+    </div>
+
+
+</div>
+
+
+
+<!-- ================================= -->
+<!-- SUPABASE -->
+<!-- ================================= -->
+
+<script>
+
+const SUPABASE_URL =
+    "https://tncmmkyrpzlkupdnkyqm.supabase.co";
+
+
+const SUPABASE_KEY =
+    "sb_publishable_e6j_EkJescicSS3nEOnscg_INwxeukT";
+
+
+// =====================================
+// SUPABASE AUTH REQUEST
+// =====================================
+
+async function supabaseAuthRequest(
+    endpoint,
+    method,
+    data
+){
+
+    try{
+
+        const response =
+            await fetch(
+
+                SUPABASE_URL +
+                "/auth/v1/" +
+                endpoint,
+
+                {
+
+                    method:method,
+
+                    headers:{
+
+                        "apikey":
+                            SUPABASE_KEY,
+
+                        "Content-Type":
+                            "application/json"
+
+                    },
+
+                    body:
+                        JSON.stringify(data)
+
+                }
+
+            );
+
+
+        const result =
+            await response.json();
+
+
+        if(!response.ok){
+
+            return {
+
+                success:false,
+
+                error:
+                    result
+
+            };
+
+        }
+
+
+        return {
+
+            success:true,
+
+            data:
+                result
+
+        };
+
+
+    }
+    catch(error){
+
+        return {
+
+            success:false,
+
+            error:
+                error.message
+
+        };
+
+    }
+
+}
+
+
+
+// =====================================
+// SUPABASE DATABASE REQUEST
+// =====================================
+
+async function supabaseDatabaseRequest(
+    table,
+    method,
+    data
+){
+
+    try{
+
+        const response =
+            await fetch(
+
+                SUPABASE_URL +
+                "/rest/v1/" +
+                table,
+
+                {
+
+                    method:method,
+
+                    headers:{
+
+                        "apikey":
+                            SUPABASE_KEY,
+
+                        "Authorization":
+                            "Bearer " +
+                            SUPABASE_KEY,
+
+                        "Content-Type":
+                            "application/json",
+
+                        "Prefer":
+                            "return=representation"
+
+                    },
+
+                    body:
+                        JSON.stringify(data)
+
+                }
+
+            );
+
+
+        const result =
+            await response.json();
+
+
+        if(!response.ok){
+
+            return {
+
+                success:false,
+
+                error:
+                    result
+
+            };
+
+        }
+
+
+        return {
+
+            success:true,
+
+            data:
+                result
+
+        };
+
+    }
+    catch(error){
+
+        return {
+
+            success:false,
+
+            error:
+                error.message
+
+        };
+
+    }
+
+}
+
+
+
+// =====================================
+// SHOW LOGIN
+// =====================================
+
+function showLogin(){
+
+    document
+        .getElementById("loginSection")
+        .classList.remove("hidden");
+
+
+    document
+        .getElementById("registerSection")
+        .classList.add("hidden");
+
+
+    clearMessages();
+
+}
+
+
+
+// =====================================
+// SHOW REGISTER
+// =====================================
+
+function showRegister(){
+
+    document
+        .getElementById("loginSection")
+        .classList.add("hidden");
+
+
+    document
+        .getElementById("registerSection")
+        .classList.remove("hidden");
+
+
+    clearMessages();
+
+}
+
+
+
+// =====================================
+// CLEAR MESSAGES
+// =====================================
+
+function clearMessages(){
+
+    document
+        .getElementById("loginMessage")
+        .textContent = "";
+
+
+    document
+        .getElementById("registerMessage")
+        .textContent = "";
+
+}
+
+
+
+// =====================================
+// TOGGLE PASSWORD
+// =====================================
+
+function togglePassword(
+    inputId,
+    button
+){
+
+    const input =
+        document.getElementById(
+            inputId
+        );
+
+
+    if(input.type === "password"){
+
+        input.type = "text";
+
+        button.textContent =
+            "🙈";
+
+    }
+    else{
+
+        input.type = "password";
+
+        button.textContent =
+            "👁️";
+
+    }
+
+}
+
+
+
+// =====================================
+// LOGIN
+// =====================================
+
+document
+    .getElementById("loginForm")
+    .addEventListener(
+        "submit",
+        async function(event){
 
             event.preventDefault();
 
 
-            const username =
-                document.getElementById("username").value.trim();
+            const email =
+                document
+                .getElementById("loginEmail")
+                .value
+                .trim();
+
 
             const password =
-                document.getElementById("password").value;
+                document
+                .getElementById("loginPassword")
+                .value;
 
 
-            /*
-                Login Details
-            */
-
-            const correctUsername = "admin";
-
-            const correctPassword = "1234";
+            const button =
+                document
+                .getElementById("loginButton");
 
 
-            if(
-                username === correctUsername &&
-                password === correctPassword
-            ){
+            const message =
+                document
+                .getElementById("loginMessage");
 
-                /*
-                    Open existing Dashboard
-                */
 
-                window.location.href =
-                    "Dashboard.html";
+            message.textContent =
+                "Logging in...";
+
+
+            message.className =
+                "message";
+
+
+            button.classList.add(
+                "loading"
+            );
+
+
+            const result =
+                await supabaseAuthRequest(
+
+                    "token?grant_type=password",
+
+                    "POST",
+
+                    {
+
+                        email:
+                            email,
+
+                        password:
+                            password
+
+                    }
+
+                );
+
+
+            button.classList.remove(
+                "loading"
+            );
+
+
+            if(!result.success){
+
+                console.error(
+                    "Login Error:",
+                    result.error
+                );
+
+
+                message.textContent =
+                    "❌ Email or Password is incorrect.";
+
+
+                message.className =
+                    "message error";
+
+
+                return;
 
             }
 
-            else{
 
-                document.getElementById("error").textContent =
-                    "❌ Username or Password is incorrect.";
+            // =================================
+            // SAVE SESSION
+            // =================================
 
-            }
+            localStorage.setItem(
+                "supabase_access_token",
+                result.data.access_token
+            );
+
+
+            localStorage.setItem(
+                "supabase_refresh_token",
+                result.data.refresh_token
+            );
+
+
+            localStorage.setItem(
+                "supabase_user_id",
+                result.data.user.id
+            );
+
+
+            localStorage.setItem(
+                "supabase_user_email",
+                result.data.user.email
+            );
+
+
+            message.textContent =
+                "✅ Login successful. Opening Dashboard...";
+
+
+            message.className =
+                "message success";
+
+
+            setTimeout(
+                function(){
+
+                    window.location.href =
+                        "Dashboard.html";
+
+                },
+                500
+            );
 
         }
 
-    </script>
+    );
+
+
+
+// =====================================
+// REGISTER
+// =====================================
+
+document
+    .getElementById("registerForm")
+    .addEventListener(
+        "submit",
+        async function(event){
+
+            event.preventDefault();
+
+
+            const fullName =
+                document
+                .getElementById("fullName")
+                .value
+                .trim();
+
+
+            const username =
+                document
+                .getElementById("registerUsername")
+                .value
+                .trim();
+
+
+            const email =
+                document
+                .getElementById("registerEmail")
+                .value
+                .trim();
+
+
+            const password =
+                document
+                .getElementById("registerPassword")
+                .value;
+
+
+            const confirmPassword =
+                document
+                .getElementById("confirmPassword")
+                .value;
+
+
+            const button =
+                document
+                .getElementById("registerButton");
+
+
+            const message =
+                document
+                .getElementById("registerMessage");
+
+
+
+            // =================================
+            // PASSWORD CHECK
+            // =================================
+
+            if(password !== confirmPassword){
+
+                message.textContent =
+                    "❌ Passwords do not match.";
+
+
+                message.className =
+                    "message error";
+
+
+                return;
+
+            }
+
+
+            if(password.length < 6){
+
+                message.textContent =
+                    "❌ Password must be at least 6 characters.";
+
+
+                message.className =
+                    "message error";
+
+
+                return;
+
+            }
+
+
+            message.textContent =
+                "Creating account...";
+
+
+            message.className =
+                "message";
+
+
+            button.classList.add(
+                "loading"
+            );
+
+
+
+            // =================================
+            // CREATE AUTH USER
+            // =================================
+
+            const authResult =
+                await supabaseAuthRequest(
+
+                    "signup",
+
+                    "POST",
+
+                    {
+
+                        email:
+                            email,
+
+                        password:
+                            password
+
+                    }
+
+                );
+
+
+            if(!authResult.success){
+
+                button.classList.remove(
+                    "loading"
+                );
+
+
+                console.error(
+                    "Registration Error:",
+                    authResult.error
+                );
+
+
+                let errorMessage =
+                    "❌ Registration failed.";
+
+
+                if(
+                    authResult.error &&
+                    authResult.error.msg
+                ){
+
+                    errorMessage =
+                        "❌ " +
+                        authResult.error.msg;
+
+                }
+
+
+                if(
+                    authResult.error &&
+                    authResult.error.message
+                ){
+
+                    errorMessage =
+                        "❌ " +
+                        authResult.error.message;
+
+                }
+
+
+                message.textContent =
+                    errorMessage;
+
+
+                message.className =
+                    "message error";
+
+
+                return;
+
+            }
+
+
+
+            // =================================
+            // GET AUTH USER ID
+            // =================================
+
+            const authUser =
+                authResult.data.user;
+
+
+            if(!authUser){
+
+                button.classList.remove(
+                    "loading"
+                );
+
+
+                message.textContent =
+                    "❌ User account could not be created.";
+
+
+                message.className =
+                    "message error";
+
+
+                return;
+
+            }
+
+
+
+            // =================================
+            // SAVE PROFILE
+            // =================================
+
+            const profileResult =
+                await supabaseDatabaseRequest(
+
+                    "users",
+
+                    "POST",
+
+                    {
+
+                        auth_user_id:
+                            authUser.id,
+
+                        username:
+                            username,
+
+                        full_name:
+                            fullName,
+
+                        email:
+                            email,
+
+                        role:
+                            "User"
+
+                    }
+
+                );
+
+
+            button.classList.remove(
+                "loading"
+            );
+
+
+
+            if(!profileResult.success){
+
+                console.error(
+                    "Profile Save Error:",
+                    profileResult.error
+                );
+
+
+                message.textContent =
+                    "⚠️ Account created, but profile data could not be saved.";
+
+
+                message.className =
+                    "message error";
+
+
+                return;
+
+            }
+
+
+
+            // =================================
+            // SUCCESS
+            // =================================
+
+            message.textContent =
+                "✅ Registration successful! Please login.";
+
+
+            message.className =
+                "message success";
+
+
+            document
+                .getElementById("registerForm")
+                .reset();
+
+
+            setTimeout(
+                function(){
+
+                    showLogin();
+
+                    document
+                        .getElementById("loginEmail")
+                        .value =
+                        email;
+
+                },
+                1500
+            );
+
+        }
+
+    );
+
+</script>
 
 
 </body>
 
 </html>
+
