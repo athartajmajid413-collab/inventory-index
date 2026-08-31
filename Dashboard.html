@@ -416,13 +416,21 @@
 
         </div>
 
-       <div
-    class="user-box"
-    onclick="openProfile()"
-    style="cursor:pointer;"
-    title="Open My Profile"
->
-    👤 <span id="dashboardUserName">User</span>
+       <div class="user-box">
+    <button
+        type="button"
+        onclick="openUserProfile()"
+        style="
+            border:none;
+            background:none;
+            color:#12355b;
+            font-weight:bold;
+            cursor:pointer;
+            font-size:15px;
+        "
+    >
+        👤 <span id="dashboardUserName">User</span>
+    </button>
 </div>
     </div>
 
@@ -760,7 +768,7 @@
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script src="supabase.js"></script>
 <script src="Dashboard.js"></script>
-
+<script src="User Profile.js"></script>
 </body>
 
 </html>
