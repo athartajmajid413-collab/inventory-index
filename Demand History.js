@@ -1843,10 +1843,31 @@ window.addEventListener(
     }
 );
 // =====================================
-// EXPORT DEMAND TO EXCEL
+// EXPORT SINGLE DEMAND TO XLSX
+// WITH COLOURS
 // =====================================
 
 function exportDemandToExcel(record){
+
+    // =====================================
+    // CHECK XLSX LIBRARY
+    // =====================================
+
+    if(typeof XLSX === "undefined"){
+
+        alert(
+            "Excel library load نہیں ہوئی۔\n" +
+            "Demand History.html میں XLSX script check کریں۔"
+        );
+
+        return;
+
+    }
+
+
+    // =====================================
+    // GET ITEMS
+    // =====================================
 
     let list =
         getDemandItems(record);
@@ -1858,13 +1879,17 @@ function exportDemandToExcel(record){
     ){
 
         alert(
-            "Complete Demand data is not available."
+            "اس Demand میں detailed item data موجود نہیں ہے۔"
         );
 
         return;
 
     }
 
+
+    // =====================================
+    // DEMAND INFORMATION
+    // =====================================
 
     let demandNo =
         getValue(
@@ -1896,44 +1921,52 @@ function exportDemandToExcel(record){
             [
                 "generate_date",
                 "generateDate",
+                "generatedDate",
                 "date"
             ],
             "-"
         );
 
 
+    let status =
+        getValue(
+            record,
+            [
+                "status"
+            ],
+            "Generated"
+        );
+
+
+    // =====================================
+    // CREATE DATA
+    // =====================================
+
     let rows = [];
 
 
-    // =====================================
-    // EXCEL HEADER INFORMATION
-    // =====================================
-
+    // COMPANY
     rows.push([
         "MECAS ENGINEERING PVT LIMITED SUNDAR"
     ]);
 
 
+    // TITLE
     rows.push([
         "MONTHLY DEMAND"
     ]);
 
 
+    // DEMAND INFORMATION
     rows.push([
         "Demand No",
-        demandNo
-    ]);
-
-
-    rows.push([
+        demandNo,
         "Demand Month",
-        demandMonth
-    ]);
-
-
-    rows.push([
+        demandMonth,
         "Generate Date",
-        generateDate
+        generateDate,
+        "Status",
+        status
     ]);
 
 
@@ -1941,7 +1974,7 @@ function exportDemandToExcel(record){
 
 
     // =====================================
-    // TABLE HEADERS
+    // HEADERS
     // =====================================
 
     rows.push([
@@ -1961,6 +1994,7 @@ function exportDemandToExcel(record){
         "Packed Unit",
         "Consumption / Average",
         "Stock Month",
+        "Required Stock",
         "Current Stock",
         "Demand Quantity",
         "Approved Qty",
@@ -2028,9 +2062,7 @@ function exportDemandToExcel(record){
 
             getValue(
                 item,
-                [
-                    "supplier"
-                ],
+                ["supplier"],
                 "-"
             ),
 
@@ -2046,17 +2078,13 @@ function exportDemandToExcel(record){
 
             getValue(
                 item,
-                [
-                    "firstRate"
-                ],
+                ["firstRate"],
                 "-"
             ),
 
             getValue(
                 item,
-                [
-                    "secondRate"
-                ],
+                ["secondRate"],
                 "-"
             ),
 
@@ -2064,6 +2092,7 @@ function exportDemandToExcel(record){
                 item,
                 [
                     "latestRate",
+                    "latestPurchaseRate",
                     "unitCost",
                     "purchaseRate",
                     "rate",
@@ -2115,7 +2144,17 @@ function exportDemandToExcel(record){
                 item,
                 [
                     "stockMonth",
-                    "stockMonths"
+                    "stockMonths",
+                    "stockLevel"
+                ],
+                "-"
+            ),
+
+            getValue(
+                item,
+                [
+                    "requiredStock",
+                    "requiredQty"
                 ],
                 "-"
             ),
@@ -2168,837 +2207,213 @@ function exportDemandToExcel(record){
 
 
     // =====================================
-    // CSV
-    // =====================================
-
-    let csv = "";
-
-
-    for(
-        let i = 0;
-        i < rows.length;
-        i++
-    ){
-
-        let row =
-            rows[i];
-
-
-        let values = [];
-
-
-        for(
-            let j = 0;
-            j < row.length;
-            j++
-        ){
-
-            let value =
-                row[j] === undefined ||
-                row[j] === null
-                ? ""
-                : String(row[j]);
-
-
-            value =
-                value
-                .replace(/"/g, '""');
-
-
-            values.push(
-                '"' +
-                value +
-                '"'
-            );
-
-        }
-
-
-        csv +=
-            values.join(",") +
-            "\r\n";
-
-    }
-
-
-    // =====================================
-    // DOWNLOAD
-    // =====================================
-
-    let blob =
-        new Blob(
-            [
-                "\uFEFF" +
-                csv
-            ],
-            {
-                type:
-                    "text/csv;charset=utf-8;"
-            }
-        );
-
-
-    let url =
-        URL.createObjectURL(
-            blob
-        );
-
-
-    let link =
-        document.createElement("a");
-
-
-    link.href =
-        url;
-
-
-    link.download =
-        demandNo +
-        "_Monthly_Demand.csv";
-
-
-    document.body.appendChild(
-        link
-    );
-
-
-    link.click();
-
-
-    document.body.removeChild(
-        link
-    );
-
-
-    URL.revokeObjectURL(
-        url
-    );
-
-
-    alert(
-        "Demand Excel file exported successfully!"
-    );
-
-}
-// =====================================
-// EXPORT DEMAND HISTORY TO XLSX
-// WITH STOCK COLORS
-// =====================================
-
-function exportDemandHistoryToExcel(){
-
-    if(
-        !demandHistory ||
-        demandHistory.length === 0
-    ){
-
-        alert(
-            "Demand History میں export کرنے کے لیے کوئی data موجود نہیں ہے۔"
-        );
-
-        return;
-
-    }
-
-
-    // =====================================
-    // EXCEL DATA
-    // =====================================
-
-    let excelData = [];
-
-
-    for(
-        let i = 0;
-        i < demandHistory.length;
-        i++
-    ){
-
-        let record =
-            demandHistory[i];
-
-
-        let list =
-            getDemandItems(record);
-
-
-        if(
-            !Array.isArray(list) ||
-            list.length === 0
-        ){
-
-            continue;
-
-        }
-
-
-        for(
-            let j = 0;
-            j < list.length;
-            j++
-        ){
-
-            let item =
-                list[j];
-
-
-            let currentStock =
-                Number(
-                    getValue(
-                        item,
-                        [
-                            "currentStock",
-                            "currentQty",
-                            "balanceStock"
-                        ],
-                        0
-                    )
-                );
-
-
-            let stockLevel =
-                Number(
-                    getValue(
-                        item,
-                        [
-                            "stockLevel",
-                            "stockMonth"
-                        ],
-                        0
-                    )
-                );
-
-
-            let requiredStock =
-                Number(
-                    getValue(
-                        item,
-                        [
-                            "requiredStock",
-                            "requiredQty"
-                        ],
-                        0
-                    )
-                );
-
-
-            let demandQuantity =
-                Number(
-                    getValue(
-                        item,
-                        [
-                            "demandQuantity",
-                            "demandQty",
-                            "demand",
-                            "quantity"
-                        ],
-                        0
-                    )
-                );
-
-
-            let finalDemand =
-                Number(
-                    getValue(
-                        item,
-                        [
-                            "finalDemand",
-                            "final_demand",
-                            "approvedQty",
-                            "approvedQuantity",
-                            "finalQty"
-                        ],
-                        0
-                    )
-                );
-
-
-            excelData.push({
-
-                "Demand No":
-                    getValue(
-                        record,
-                        [
-                            "demand_no",
-                            "demandNo",
-                            "demandNumber"
-                        ],
-                        "-"
-                    ),
-
-                "Demand Month":
-                    getValue(
-                        record,
-                        [
-                            "demand_month",
-                            "demandMonth",
-                            "month"
-                        ],
-                        "-"
-                    ),
-
-                "Generate Date":
-                    getValue(
-                        record,
-                        [
-                            "generate_date",
-                            "generateDate",
-                            "date"
-                        ],
-                        "-"
-                    ),
-
-                "Status":
-                    getValue(
-                        record,
-                        [
-                            "status"
-                        ],
-                        "Generated"
-                    ),
-
-                "Category":
-                    getValue(
-                        item,
-                        [
-                            "category"
-                        ],
-                        "-"
-                    ),
-
-                "Item Code":
-                    getValue(
-                        item,
-                        [
-                            "itemCode",
-                            "item_code",
-                            "code"
-                        ],
-                        "-"
-                    ),
-
-                "Item Name":
-                    getValue(
-                        item,
-                        [
-                            "itemName",
-                            "item_name",
-                            "name"
-                        ],
-                        "-"
-                    ),
-
-                "Specification":
-                    getValue(
-                        item,
-                        [
-                            "specification",
-                            "spec"
-                        ],
-                        "-"
-                    ),
-
-                "Source":
-                    getValue(
-                        item,
-                        [
-                            "source"
-                        ],
-                        "-"
-                    ),
-
-                "Supplier":
-                    getValue(
-                        item,
-                        [
-                            "supplier"
-                        ],
-                        "-"
-                    ),
-
-                "Latest Purchase Date":
-                    getValue(
-                        item,
-                        [
-                            "latestPurchaseDate",
-                            "latestDate",
-                            "purchaseDate"
-                        ],
-                        "-"
-                    ),
-
-                "1st Rate":
-                    getValue(
-                        item,
-                        [
-                            "firstRate"
-                        ],
-                        "-"
-                    ),
-
-                "2nd Rate":
-                    getValue(
-                        item,
-                        [
-                            "secondRate"
-                        ],
-                        "-"
-                    ),
-
-                "Latest Rate":
-                    getValue(
-                        item,
-                        [
-                            "latestRate",
-                            "latestPurchaseRate",
-                            "unitCost",
-                            "purchaseRate",
-                            "rate",
-                            "cost"
-                        ],
-                        "-"
-                    ),
-
-                "Unit":
-                    getValue(
-                        item,
-                        [
-                            "unit",
-                            "uom"
-                        ],
-                        "-"
-                    ),
-
-                "Packing Qty":
-                    getValue(
-                        item,
-                        [
-                            "packingQty",
-                            "packQty",
-                            "packingQuantity"
-                        ],
-                        "-"
-                    ),
-
-                "Packed Unit":
-                    getValue(
-                        item,
-                        [
-                            "packedUnit",
-                            "packingUnit"
-                        ],
-                        "-"
-                    ),
-
-                "Consumption / Average":
-                    getValue(
-                        item,
-                        [
-                            "average",
-                            "avgConsumption",
-                            "averageConsumption",
-                            "consumption"
-                        ],
-                        "-"
-                    ),
-
-                "Stock Level":
-                    stockLevel,
-
-                "Required Stock":
-                    requiredStock,
-
-                "Current Stock":
-                    currentStock,
-
-                "Demand Quantity":
-                    demandQuantity,
-
-                "Approved Qty":
-                    finalDemand,
-
-                "Remarks":
-                    getValue(
-                        item,
-                        [
-                            "remarks",
-                            "remark"
-                        ],
-                        "-"
-                    )
-
-            });
-
-        }
-
-    }
-
-
-    if(
-        excelData.length === 0
-    ){
-
-        alert(
-            "Demand History میں detailed item data موجود نہیں ہے۔"
-        );
-
-        return;
-
-    }
-
-
-    // =====================================
     // CREATE WORKSHEET
     // =====================================
 
     let worksheet =
-        XLSX.utils.json_to_sheet(
-            excelData
+        XLSX.utils.aoa_to_sheet(
+            rows
         );
 
 
     // =====================================
-    // HEADER STYLE
+    // MERGE COMPANY TITLE
     // =====================================
 
-    let headerRange =
-        XLSX.utils.decode_range(
-            worksheet["!ref"]
-        );
+    worksheet["!merges"] = [
 
-
-    for(
-        let column =
-            headerRange.s.c;
-
-        column <= headerRange.e.c;
-
-        column++
-    ){
-
-        let cellAddress =
-            XLSX.utils.encode_cell({
-
+        {
+            s: {
                 r: 0,
+                c: 0
+            },
 
-                c: column
+            e: {
+                r: 0,
+                c: 19
+            }
+        },
 
-            });
+        {
+            s: {
+                r: 1,
+                c: 0
+            },
 
-
-        if(
-            worksheet[cellAddress]
-        ){
-
-            worksheet[cellAddress].s = {
-
-                fill: {
-
-                    patternType:
-                        "solid",
-
-                    fgColor: {
-
-                        rgb:
-                            "12355B"
-
-                    }
-
-                },
-
-                font: {
-
-                    bold:
-                        true,
-
-                    color: {
-
-                        rgb:
-                            "FFFFFF"
-
-                    }
-
-                },
-
-                alignment: {
-
-                    horizontal:
-                        "center",
-
-                    vertical:
-                        "center"
-
-                },
-
-                border: {
-
-                    top: {
-
-                        style:
-                            "thin",
-
-                        color: {
-
-                            rgb:
-                                "FFFFFF"
-
-                        }
-
-                    },
-
-                    bottom: {
-
-                        style:
-                            "thin",
-
-                        color: {
-
-                            rgb:
-                                "FFFFFF"
-
-                        }
-
-                    },
-
-                    left: {
-
-                        style:
-                            "thin",
-
-                        color: {
-
-                            rgb:
-                                "FFFFFF"
-
-                        }
-
-                    },
-
-                    right: {
-
-                        style:
-                            "thin",
-
-                        color: {
-
-                            rgb:
-                                "FFFFFF"
-
-                        }
-
-                    }
-
-                }
-
-            };
-
+            e: {
+                r: 1,
+                c: 19
+            }
         }
 
-    }
+    ];
 
 
     // =====================================
-    // FIND COLUMNS
+    // STYLES
     // =====================================
 
-    let currentStockColumn =
-        -1;
+    let darkBlue =
+        "12355B";
 
 
-    let requiredStockColumn =
-        -1;
+    let white =
+        "FFFFFF";
 
+
+    let green =
+        "D5F5E3";
+
+
+    let red =
+        "E74C3C";
+
+
+    let yellow =
+        "F1C40F";
+
+
+    let borderColor =
+        "B7B7B7";
+
+
+    let thinBorder = {
+
+        top: {
+            style: "thin",
+            color: {
+                rgb: borderColor
+            }
+        },
+
+        bottom: {
+            style: "thin",
+            color: {
+                rgb: borderColor
+            }
+        },
+
+        left: {
+            style: "thin",
+            color: {
+                rgb: borderColor
+            }
+        },
+
+        right: {
+            style: "thin",
+            color: {
+                rgb: borderColor
+            }
+        }
+
+    };
+
+
+    // =====================================
+    // COMPANY NAME STYLE
+    // =====================================
+
+    worksheet["A1"].s = {
+
+        fill: {
+            fgColor: {
+                rgb: darkBlue
+            }
+        },
+
+        font: {
+            bold: true,
+            color: {
+                rgb: white
+            },
+            sz: 16
+        },
+
+        alignment: {
+            horizontal: "center",
+            vertical: "center"
+        },
+
+        border: thinBorder
+
+    };
+
+
+    // =====================================
+    // TITLE STYLE
+    // =====================================
+
+    worksheet["A2"].s = {
+
+        fill: {
+            fgColor: {
+                rgb: "1F4E78"
+            }
+        },
+
+        font: {
+            bold: true,
+            color: {
+                rgb: white
+            },
+            sz: 14
+        },
+
+        alignment: {
+            horizontal: "center",
+            vertical: "center"
+        },
+
+        border: thinBorder
+
+    };
+
+
+    // =====================================
+    // DEMAND INFORMATION STYLE
+    // =====================================
 
     for(
-        let c =
-            headerRange.s.c;
-
-        c <= headerRange.e.c;
-
+        let c = 0;
+        c < 8;
         c++
     ){
 
         let address =
             XLSX.utils.encode_cell({
 
-                r: 0,
-
+                r: 2,
                 c: c
 
             });
 
 
-        let value =
+        if(
             worksheet[address]
-            ?.v;
-
-
-        if(
-            value ===
-            "Current Stock"
         ){
 
-            currentStockColumn =
-                c;
-
-        }
-
-
-        if(
-            value ===
-            "Required Stock"
-        ){
-
-            requiredStockColumn =
-                c;
-
-        }
-
-    }
-
-
-    // =====================================
-    // APPLY CURRENT STOCK COLORS
-    // =====================================
-
-    if(
-        currentStockColumn !== -1
-    ){
-
-        for(
-            let r =
-                1;
-
-            r <=
-                headerRange.e.r;
-
-            r++
-        ){
-
-            let currentAddress =
-                XLSX.utils.encode_cell({
-
-                    r:
-                        r,
-
-                    c:
-                        currentStockColumn
-
-                });
-
-
-            let requiredAddress =
-                XLSX.utils.encode_cell({
-
-                    r:
-                        r,
-
-                    c:
-                        requiredStockColumn
-
-                });
-
-
-            let current =
-                Number(
-                    worksheet[
-                        currentAddress
-                    ]?.v || 0
-                );
-
-
-            let required =
-                Number(
-                    worksheet[
-                        requiredAddress
-                    ]?.v || 0
-                );
-
-
-            let fillColor =
-                "D5F5E3";
-
-
-            let fontColor =
-                "1E8449";
-
-
-            // =================================
-            // RED = LOW
-            // =================================
-
-            if(
-                current <=
-                required * 0.5
-            ){
-
-                fillColor =
-                    "E74C3C";
-
-                fontColor =
-                    "FFFFFF";
-
-            }
-
-            // =================================
-            // YELLOW = NEAR REQUIRED
-            // =================================
-
-            else if(
-                current <=
-                required
-            ){
-
-                fillColor =
-                    "F1C40F";
-
-                fontColor =
-                    "000000";
-
-            }
-
-
-            worksheet[
-                currentAddress
-            ].s = {
+            worksheet[address].s = {
 
                 fill: {
-
-                    patternType:
-                        "solid",
-
                     fgColor: {
-
-                        rgb:
-                            fillColor
-
+                        rgb: "D9EAF7"
                     }
-
                 },
 
                 font: {
-
-                    bold:
-                        true,
-
+                    bold: true,
                     color: {
-
-                        rgb:
-                            fontColor
-
+                        rgb: "000000"
                     }
-
                 },
 
                 alignment: {
+                    horizontal: "center",
+                    vertical: "center"
+                },
 
-                    horizontal:
-                        "center",
-
-                    vertical:
-                        "center"
-
-                }
+                border: thinBorder
 
             };
 
@@ -3008,37 +2423,87 @@ function exportDemandHistoryToExcel(){
 
 
     // =====================================
-    // GENERAL CELL BORDERS
+    // TABLE HEADER STYLE
+    // =====================================
+
+    let headerRow =
+        4;
+
+
+    for(
+        let c = 0;
+        c < 20;
+        c++
+    ){
+
+        let address =
+            XLSX.utils.encode_cell({
+
+                r: headerRow,
+                c: c
+
+            });
+
+
+        if(
+            worksheet[address]
+        ){
+
+            worksheet[address].s = {
+
+                fill: {
+                    fgColor: {
+                        rgb: darkBlue
+                    }
+                },
+
+                font: {
+                    bold: true,
+                    color: {
+                        rgb: white
+                    }
+                },
+
+                alignment: {
+                    horizontal: "center",
+                    vertical: "center",
+                    wrapText: true
+                },
+
+                border: thinBorder
+
+            };
+
+        }
+
+    }
+
+
+    // =====================================
+    // DATA ROW STYLING
     // =====================================
 
     for(
-        let r =
-            1;
-
-        r <=
-            headerRange.e.r;
-
+        let r = headerRow + 1;
+        r < rows.length;
         r++
     ){
 
+        // ---------------------------------
+        // ALL CELLS BORDER
+        // ---------------------------------
+
         for(
-            let c =
-                headerRange.s.c;
-
-            c <=
-                headerRange.e.c;
-
+            let c = 0;
+            c < 20;
             c++
         ){
 
             let address =
                 XLSX.utils.encode_cell({
 
-                    r:
-                        r,
-
-                    c:
-                        c
+                    r: r,
+                    c: c
 
                 });
 
@@ -3047,76 +2512,227 @@ function exportDemandHistoryToExcel(){
                 worksheet[address]
             ){
 
-                if(
-                    !worksheet[address].s
-                ){
+                worksheet[address].s = {
 
-                    worksheet[address].s = {};
+                    border: thinBorder,
 
-                }
-
-
-                worksheet[address].s.border = {
-
-                    top: {
-
-                        style:
-                            "thin",
-
-                        color: {
-
-                            rgb:
-                                "CCCCCC"
-
-                        }
-
-                    },
-
-                    bottom: {
-
-                        style:
-                            "thin",
-
-                        color: {
-
-                            rgb:
-                                "CCCCCC"
-
-                        }
-
-                    },
-
-                    left: {
-
-                        style:
-                            "thin",
-
-                        color: {
-
-                            rgb:
-                                "CCCCCC"
-
-                        }
-
-                    },
-
-                    right: {
-
-                        style:
-                            "thin",
-
-                        color: {
-
-                            rgb:
-                                "CCCCCC"
-
-                        }
-
+                    alignment: {
+                        vertical: "center",
+                        horizontal: "center",
+                        wrapText: true
                     }
 
                 };
 
             }
+
+        }
+
+
+        // ---------------------------------
+        // CURRENT STOCK
+        // COLUMN Q = 16
+        // ---------------------------------
+
+        let currentStockAddress =
+            XLSX.utils.encode_cell({
+
+                r: r,
+                c: 16
+
+            });
+
+
+        // ---------------------------------
+        // REQUIRED STOCK
+        // COLUMN P = 15
+        // ---------------------------------
+
+        let requiredStockAddress =
+            XLSX.utils.encode_cell({
+
+                r: r,
+                c: 15
+
+            });
+
+
+        let currentStock =
+            Number(
+                worksheet[
+                    currentStockAddress
+                ]?.v || 0
+            );
+
+
+        let requiredStock =
+            Number(
+                worksheet[
+                    requiredStockAddress
+                ]?.v || 0
+            );
+
+
+        let stockColor =
+            green;
+
+
+        let stockFont =
+            "1E8449";
+
+
+        // =================================
+        // RED = VERY LOW
+        // =================================
+
+        if(
+            currentStock <=
+            requiredStock * 0.5
+        ){
+
+            stockColor =
+                red;
+
+            stockFont =
+                white;
+
+        }
+
+        // =================================
+        // YELLOW = LOW / NEAR REQUIRED
+        // =================================
+
+        else if(
+            currentStock <=
+            requiredStock
+        ){
+
+            stockColor =
+                yellow;
+
+            stockFont =
+                "000000";
+
+        }
+
+
+        // =================================
+        // APPLY CURRENT STOCK COLOR
+        // =================================
+
+        if(
+            worksheet[
+                currentStockAddress
+            ]
+        ){
+
+            worksheet[
+                currentStockAddress
+            ].s = {
+
+                fill: {
+                    fgColor: {
+                        rgb: stockColor
+                    }
+                },
+
+                font: {
+                    bold: true,
+                    color: {
+                        rgb: stockFont
+                    }
+                },
+
+                alignment: {
+                    horizontal: "center",
+                    vertical: "center"
+                },
+
+                border: thinBorder
+
+            };
+
+        }
+
+
+        // =================================
+        // DEMAND QUANTITY COLOR
+        // =================================
+
+        let demandAddress =
+            XLSX.utils.encode_cell({
+
+                r: r,
+                c: 17
+
+            });
+
+
+        if(
+            worksheet[demandAddress]
+        ){
+
+            worksheet[demandAddress].s = {
+
+                fill: {
+                    fgColor: {
+                        rgb: "FFF2CC"
+                    }
+                },
+
+                font: {
+                    bold: true
+                },
+
+                alignment: {
+                    horizontal: "center",
+                    vertical: "center"
+                },
+
+                border: thinBorder
+
+            };
+
+        }
+
+
+        // =================================
+        // APPROVED QTY COLOR
+        // =================================
+
+        let approvedAddress =
+            XLSX.utils.encode_cell({
+
+                r: r,
+                c: 18
+
+            });
+
+
+        if(
+            worksheet[approvedAddress]
+        ){
+
+            worksheet[approvedAddress].s = {
+
+                fill: {
+                    fgColor: {
+                        rgb: "D9EAD3"
+                    }
+                },
+
+                font: {
+                    bold: true
+                },
+
+                alignment: {
+                    horizontal: "center",
+                    vertical: "center"
+                },
+
+                border: thinBorder
+
+            };
 
         }
 
@@ -3129,28 +2745,41 @@ function exportDemandHistoryToExcel(){
 
     worksheet["!cols"] = [
 
-        {wch: 18},
-        {wch: 15},
-        {wch: 15},
-        {wch: 12},
-        {wch: 15},
-        {wch: 15},
-        {wch: 28},
-        {wch: 30},
-        {wch: 15},
-        {wch: 22},
-        {wch: 20},
-        {wch: 12},
-        {wch: 12},
-        {wch: 15},
-        {wch: 10},
-        {wch: 12},
-        {wch: 22},
-        {wch: 12},
-        {wch: 15},
-        {wch: 15},
-        {wch: 15},
-        {wch: 30}
+        {wch: 18}, // Category
+        {wch: 14}, // Item Code
+        {wch: 28}, // Item Name
+        {wch: 25}, // Specification
+        {wch: 16}, // Source
+        {wch: 18}, // Supplier
+        {wch: 20}, // Purchase Date
+        {wch: 12}, // 1st Rate
+        {wch: 12}, // 2nd Rate
+        {wch: 14}, // Latest Rate
+        {wch: 10}, // Unit
+        {wch: 12}, // Packing Qty
+        {wch: 12}, // Packed Unit
+        {wch: 18}, // Average
+        {wch: 12}, // Stock Month
+        {wch: 15}, // Required Stock
+        {wch: 15}, // Current Stock
+        {wch: 16}, // Demand
+        {wch: 15}, // Approved
+        {wch: 25}  // Remarks
+
+    ];
+
+
+    // =====================================
+    // ROW HEIGHTS
+    // =====================================
+
+    worksheet["!rows"] = [
+
+        {hpt: 28},
+        {hpt: 24},
+        {hpt: 22},
+        {hpt: 8},
+        {hpt: 35}
 
     ];
 
@@ -3166,7 +2795,7 @@ function exportDemandHistoryToExcel(){
     XLSX.utils.book_append_sheet(
         workbook,
         worksheet,
-        "Demand History"
+        "Monthly Demand"
     );
 
 
@@ -3174,20 +2803,17 @@ function exportDemandHistoryToExcel(){
     // FILE NAME
     // =====================================
 
-    let today =
-        new Date();
-
-
-    let dateString =
-        today
-        .toISOString()
-        .split("T")[0];
+    let safeDemandNo =
+        String(demandNo)
+        .replace(
+            /[\\/:*?"<>|]/g,
+            "_"
+        );
 
 
     let fileName =
-        "Demand_History_" +
-        dateString +
-        ".xlsx";
+        safeDemandNo +
+        "_Monthly_Demand.xlsx";
 
 
     // =====================================
@@ -3201,7 +2827,7 @@ function exportDemandHistoryToExcel(){
 
 
     alert(
-        "Demand History Excel file successfully export ہو گئی۔"
+        "✅ Monthly Demand Excel (.xlsx) successfully export ہو گئی۔"
     );
 
 }
