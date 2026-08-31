@@ -2982,3 +2982,9 @@ document.addEventListener(
 
     }
 );
+function openProfile(){
+
+    window.location.href =
+        "Profile.html";
+
+}
