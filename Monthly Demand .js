@@ -1,6 +1,7 @@
 // =====================================================
 // MONTHLY DEMAND
-// SUPABASE VERSION
+// SUPABASE CONNECTED VERSION
+// ORIGINAL TABLE ORDER PRESERVED
 // =====================================================
 
 
@@ -9,15 +10,24 @@
 // =====================================================
 
 let items = [];
-let stockIn = [];
-let stockOut = [];
-let demandHistory = [];
 
-let selectedItems = {};
+let history = [];
+
+let demandEdits =
+    JSON.parse(
+        localStorage.getItem("demandEdits")
+    ) || {};
+
+let stockMonths =
+    JSON.parse(
+        localStorage.getItem("stockMonths")
+    ) || {};
+
+let demandHistory = [];
 
 
 // =====================================================
-// LOAD DATA FROM SUPABASE
+// LOAD ALL DATA FROM SUPABASE
 // =====================================================
 
 async function loadMonthlyDemandData(){
@@ -27,9 +37,9 @@ async function loadMonthlyDemandData(){
     console.log("=====================================");
 
 
-    // -------------------------------------
-    // ITEMS
-    // -------------------------------------
+    // =================================================
+    // LOAD ITEMS
+    // =================================================
 
     let itemResult =
         await supabaseRequest(
@@ -43,11 +53,13 @@ async function loadMonthlyDemandData(){
     if(!itemResult.success){
 
         console.error(
-            "Items Load Error:",
+            "❌ Items Load Error:",
             itemResult.error
         );
 
-        alert("Items data load نہیں ہو سکا۔");
+        alert(
+            "Master List data load نہیں ہو سکا۔"
+        );
 
         return;
 
@@ -58,9 +70,12 @@ async function loadMonthlyDemandData(){
         itemResult.data || [];
 
 
-    // -------------------------------------
-    // STOCK IN
-    // -------------------------------------
+    // =================================================
+    // LOAD STOCK IN
+    // =================================================
+
+    history = [];
+
 
     let stockInResult =
         await supabaseRequest(
@@ -73,8 +88,64 @@ async function loadMonthlyDemandData(){
 
     if(stockInResult.success){
 
-        stockIn =
+        let stockIn =
             stockInResult.data || [];
+
+
+        stockIn.forEach(function(record){
+
+            history.push({
+
+                type:
+                    "Stock In",
+
+                itemCode:
+                    record.item_code ||
+                    record.itemCode ||
+                    "",
+
+                itemName:
+                    record.item_name ||
+                    record.itemName ||
+                    "",
+
+                quantity:
+                    Number(
+                        record.quantity || 0
+                    ),
+
+                unitCost:
+                    Number(
+                        record.unit_cost ||
+                        record.unitCost ||
+                        0
+                    ),
+
+                date:
+                    record.date ||
+                    record.transaction_date ||
+                    "",
+
+                time:
+                    record.time ||
+                    record.transaction_time ||
+                    "",
+
+                source:
+                    record.source ||
+                    "",
+
+                supplier:
+                    record.supplier ||
+                    "",
+
+                location:
+                    record.location ||
+                    ""
+
+            });
+
+        });
 
     }
     else{
@@ -84,14 +155,12 @@ async function loadMonthlyDemandData(){
             stockInResult.error
         );
 
-        stockIn = [];
-
     }
 
 
-    // -------------------------------------
-    // STOCK OUT / ISSUE
-    // -------------------------------------
+    // =================================================
+    // LOAD STOCK ISSUE
+    // =================================================
 
     let stockOutResult =
         await supabaseRequest(
@@ -104,8 +173,61 @@ async function loadMonthlyDemandData(){
 
     if(stockOutResult.success){
 
-        stockOut =
+        let stockOut =
             stockOutResult.data || [];
+
+
+        stockOut.forEach(function(record){
+
+            history.push({
+
+                type:
+                    "Stock Issue",
+
+                itemCode:
+                    record.item_code ||
+                    record.itemCode ||
+                    "",
+
+                itemName:
+                    record.item_name ||
+                    record.itemName ||
+                    "",
+
+                quantity:
+                    Number(
+                        record.quantity || 0
+                    ),
+
+                date:
+                    record.date ||
+                    record.transaction_date ||
+                    "",
+
+                time:
+                    record.time ||
+                    record.transaction_time ||
+                    "",
+
+                source:
+                    record.source ||
+                    "",
+
+                supplier:
+                    record.supplier ||
+                    "",
+
+                location:
+                    record.location ||
+                    "",
+
+                department:
+                    record.department ||
+                    ""
+
+            });
+
+        });
 
     }
     else{
@@ -115,14 +237,12 @@ async function loadMonthlyDemandData(){
             stockOutResult.error
         );
 
-        stockOut = [];
-
     }
 
 
-    // -------------------------------------
-    // DEMAND HISTORY
-    // -------------------------------------
+    // =================================================
+    // LOAD DEMAND HISTORY
+    // =================================================
 
     let demandResult =
         await supabaseRequest(
@@ -138,6 +258,11 @@ async function loadMonthlyDemandData(){
         demandHistory =
             demandResult.data || [];
 
+        console.log(
+            "✅ Demand History Loaded:",
+            demandHistory.length
+        );
+
     }
     else{
 
@@ -151,19 +276,18 @@ async function loadMonthlyDemandData(){
     }
 
 
+    // =================================================
+    // CONSOLE CHECK
+    // =================================================
+
     console.log(
         "Items:",
         items.length
     );
 
     console.log(
-        "Stock In:",
-        stockIn.length
-    );
-
-    console.log(
-        "Stock Out:",
-        stockOut.length
+        "History:",
+        history.length
     );
 
     console.log(
@@ -173,6 +297,10 @@ async function loadMonthlyDemandData(){
 
     console.log("=====================================");
 
+
+    // =================================================
+    // SHOW TABLE
+    // =================================================
 
     showAllItems();
 
@@ -185,21 +313,15 @@ async function loadMonthlyDemandData(){
 
 function getItemByCode(code){
 
-    let searchCode =
-        String(code || "")
-        .trim()
-        .toLowerCase();
-
-
     return items.find(function(item){
 
         return String(
             item.code || ""
-        )
-        .trim()
-        .toLowerCase()
+        ).trim()
         ===
-        searchCode;
+        String(
+            code || ""
+        ).trim();
 
     }) || null;
 
@@ -221,12 +343,9 @@ function getRecordDate(record){
 
     let value =
         record.date ||
-        record.transaction_date ||
         record.transactionDate ||
-        record.entry_date ||
+        record.transaction_date ||
         record.entryDate ||
-        record.generate_date ||
-        record.generateDate ||
         "";
 
 
@@ -247,8 +366,6 @@ function getRecordDate(record){
 
     }
 
-
-    // DD/MM/YYYY
 
     let parts =
         String(value).split("/");
@@ -289,203 +406,130 @@ function getRecordDate(record){
 
 
 // =====================================================
-// GET STOCK IN ITEM CODE
-// =====================================================
-
-function getStockInCode(record){
-
-    return String(
-        record.item_code ||
-        record.itemCode ||
-        record.code ||
-        ""
-    )
-    .trim();
-
-}
-
-
-// =====================================================
-// GET STOCK OUT ITEM CODE
-// =====================================================
-
-function getStockOutCode(record){
-
-    return String(
-        record.item_code ||
-        record.itemCode ||
-        record.code ||
-        ""
-    )
-    .trim();
-
-}
-
-
-// =====================================================
-// GET STOCK IN QUANTITY
-// =====================================================
-
-function getStockInQuantity(record){
-
-    return Number(
-        record.quantity ||
-        record.qty ||
-        0
-    );
-
-}
-
-
-// =====================================================
-// GET STOCK OUT QUANTITY
-// =====================================================
-
-function getStockOutQuantity(record){
-
-    return Number(
-        record.quantity ||
-        record.qty ||
-        0
-    );
-
-}
-
-
-// =====================================================
-// GET STOCK IN RATE
-// =====================================================
-
-function getStockInRate(record){
-
-    return Number(
-        record.unit_cost ??
-        record.unitCost ??
-        record.latest_rate ??
-        record.latestRate ??
-        record.rate ??
-        record.cost ??
-        0
-    );
-
-}
-
-
-// =====================================================
 // CURRENT STOCK
 // =====================================================
 
 function getCurrentStock(item){
 
-    if(!item){
-
-        return 0;
-
-    }
-
-
-    let openingStock =
+    let currentStock =
         Number(
-            item.opening_stock ??
             item.openingStock ??
+            item.opening_stock ??
             0
         );
 
 
-    let totalIn = 0;
-
-    let totalOut = 0;
-
-
-    // -------------------------------------
-    // STOCK IN
-    // -------------------------------------
-
     for(
         let i = 0;
-        i < stockIn.length;
+        i < history.length;
         i++
     ){
 
         let record =
-            stockIn[i];
+            history[i];
+
+
+        let recordCode =
+            String(
+                record.itemCode || ""
+            ).trim();
+
+
+        let itemCode =
+            String(
+                item.code || ""
+            ).trim();
 
 
         if(
-            getStockInCode(record)
-            ===
-            String(item.code || "").trim()
+            recordCode !==
+            itemCode
         ){
 
-            totalIn +=
-                getStockInQuantity(record);
+            continue;
+
+        }
+
+
+        if(
+            record.type ===
+            "Stock In"
+        ){
+
+            currentStock +=
+                Number(
+                    record.quantity || 0
+                );
+
+        }
+
+
+        if(
+            record.type ===
+            "Stock Issue"
+        ){
+
+            currentStock -=
+                Number(
+                    record.quantity || 0
+                );
 
         }
 
     }
 
 
-    // -------------------------------------
-    // STOCK OUT
-    // -------------------------------------
+    if(currentStock < 0){
 
-    for(
-        let i = 0;
-        i < stockOut.length;
-        i++
-    ){
-
-        let record =
-            stockOut[i];
-
-
-        if(
-            getStockOutCode(record)
-            ===
-            String(item.code || "").trim()
-        ){
-
-            totalOut +=
-                getStockOutQuantity(record);
-
-        }
+        currentStock = 0;
 
     }
 
 
-    return Math.max(
-        openingStock +
-        totalIn -
-        totalOut,
-        0
-    );
+    return currentStock;
 
 }
 
 
 // =====================================================
-// MONTHLY CONSUMPTION
+// AVERAGE CONSUMPTION
 // =====================================================
 
-function calculateAverageConsumption(itemCode){
+function calculateAverageConsumption(
+    itemCode
+){
 
-    let monthlyTotals = {};
+    let monthData = {};
 
 
     for(
         let i = 0;
-        i < stockOut.length;
+        i < history.length;
         i++
     ){
 
         let record =
-            stockOut[i];
+            history[i];
 
 
         if(
-            getStockOutCode(record)
+            record.type !==
+            "Stock Issue"
+        ){
+
+            continue;
+
+        }
+
+
+        if(
+            String(
+                record.itemCode || ""
+            ).trim()
             !==
-            String(itemCode || "").trim()
+            String(
+                itemCode || ""
+            ).trim()
         ){
 
             continue;
@@ -509,382 +553,340 @@ function calculateAverageConsumption(itemCode){
             "-" +
             String(
                 date.getMonth() + 1
-            )
-            .padStart(2,"0");
+            ).padStart(2,"0");
 
 
-        monthlyTotals[key] =
-            (
-                monthlyTotals[key] || 0
-            )
-            +
-            getStockOutQuantity(record);
+        if(
+            !monthData[key]
+        ){
+
+            monthData[key] = 0;
+
+        }
+
+
+        monthData[key] +=
+            Number(
+                record.quantity || 0
+            );
 
     }
 
 
-    let values =
-        Object.values(
-            monthlyTotals
+    let months =
+        Object.keys(
+            monthData
         );
 
 
-    if(values.length === 0){
+    if(
+        months.length === 0
+    ){
 
         return 0;
 
     }
 
 
-    let total =
-        values.reduce(
-            function(a,b){
-
-                return a + b;
-
-            },
-            0
-        );
+    let total = 0;
 
 
-    return total / values.length;
+    for(
+        let i = 0;
+        i < months.length;
+        i++
+    ){
+
+        total +=
+            monthData[
+                months[i]
+            ];
+
+    }
+
+
+    return total /
+        months.length;
 
 }
 
 
 // =====================================================
-// GET PURCHASE HISTORY
+// MINIMUM STOCK
+// LAST 3 MONTHS STOCK ISSUE
 // =====================================================
 
-function getPurchaseHistory(itemCode){
+function calculateMinimumStock(
+    itemCode
+){
 
-    let list = [];
+    let monthData = {};
 
 
     for(
         let i = 0;
-        i < stockIn.length;
+        i < history.length;
         i++
     ){
 
         let record =
-            stockIn[i];
+            history[i];
 
 
         if(
-            getStockInCode(record)
-            ===
-            String(itemCode || "").trim()
+            record.type !==
+            "Stock Issue"
         ){
 
-            list.push(record);
+            continue;
 
         }
+
+
+        if(
+            String(
+                record.itemCode || ""
+            ).trim()
+            !==
+            String(
+                itemCode || ""
+            ).trim()
+        ){
+
+            continue;
+
+        }
+
+
+        let date =
+            getRecordDate(record);
+
+
+        if(!date){
+
+            continue;
+
+        }
+
+
+        let month =
+            date.getFullYear() +
+            "-" +
+            String(
+                date.getMonth() + 1
+            ).padStart(2,"0");
+
+
+        if(
+            !monthData[month]
+        ){
+
+            monthData[month] = 0;
+
+        }
+
+
+        monthData[month] +=
+            Number(
+                record.quantity || 0
+            );
 
     }
 
 
-    list.sort(
+    let months =
+        Object.keys(
+            monthData
+        );
+
+
+    months.sort();
+
+
+    let lastThree =
+        months.slice(-3);
+
+
+    if(
+        lastThree.length === 0
+    ){
+
+        return 0;
+
+    }
+
+
+    let total = 0;
+
+
+    for(
+        let i = 0;
+        i < lastThree.length;
+        i++
+    ){
+
+        total +=
+            monthData[
+                lastThree[i]
+            ];
+
+    }
+
+
+    return total /
+        lastThree.length;
+
+}
+
+
+// =====================================================
+// PURCHASE RATES
+// =====================================================
+
+function getPurchaseRates(
+    itemCode
+){
+
+    let purchases = [];
+
+
+    for(
+        let i = 0;
+        i < history.length;
+        i++
+    ){
+
+        let record =
+            history[i];
+
+
+        if(
+            record.type !==
+            "Stock In"
+        ){
+
+            continue;
+
+        }
+
+
+        if(
+            String(
+                record.itemCode || ""
+            ).trim()
+            !==
+            String(
+                itemCode || ""
+            ).trim()
+        ){
+
+            continue;
+
+        }
+
+
+        purchases.push(
+            record
+        );
+
+    }
+
+
+    purchases.sort(
         function(a,b){
 
             let dateA =
-                getRecordDate(a);
+                String(
+                    a.date || ""
+                ) +
+                String(
+                    a.time || ""
+                );
+
 
             let dateB =
-                getRecordDate(b);
+                String(
+                    b.date || ""
+                ) +
+                String(
+                    b.time || ""
+                );
 
 
-            if(!dateA) return 1;
-
-            if(!dateB) return -1;
-
-
-            return dateB - dateA;
+            return dateA.localeCompare(
+                dateB
+            );
 
         }
     );
 
 
-    return list;
+    if(
+        purchases.length === 0
+    ){
 
-}
+        return {
 
+            firstRate: "-",
 
-// =====================================================
-// GET RATES
-// =====================================================
+            secondRate: "-",
 
-function getRates(itemCode){
+            latestRate: "-",
 
-    let purchases =
-        getPurchaseHistory(itemCode);
+            latestDate: "-"
 
-
-    let firstRate = 0;
-    let secondRate = 0;
-    let latestRate = 0;
-
-    let latestDate = "-";
-
-    let latestRecord = null;
-
-
-    if(purchases.length > 0){
-
-        latestRecord =
-            purchases[0];
-
-
-        latestRate =
-            getStockInRate(
-                latestRecord
-            );
-
-
-        latestDate =
-            latestRecord.date ||
-            latestRecord.transaction_date ||
-            "-";
-
-
-        if(purchases.length > 1){
-
-            secondRate =
-                getStockInRate(
-                    purchases[1]
-                );
-
-        }
-
-
-        if(purchases.length > 2){
-
-            firstRate =
-                getStockInRate(
-                    purchases[2]
-                );
-
-        }
-        else if(purchases.length === 2){
-
-            firstRate =
-                getStockInRate(
-                    purchases[1]
-                );
-
-        }
+        };
 
     }
-    else{
 
-        latestRate =
-            Number(
-                itemLatestRate(itemCode)
-            );
 
-    }
+    let first =
+        purchases[
+            purchases.length - 3
+        ];
+
+
+    let second =
+        purchases[
+            purchases.length - 2
+        ];
+
+
+    let latest =
+        purchases[
+            purchases.length - 1
+        ];
 
 
     return {
 
         firstRate:
-            firstRate,
+            first
+            ? Number(
+                first.unitCost || 0
+            ).toFixed(2)
+            : "-",
 
         secondRate:
-            secondRate,
+            second
+            ? Number(
+                second.unitCost || 0
+            ).toFixed(2)
+            : "-",
 
         latestRate:
-            latestRate,
+            latest
+            ? Number(
+                latest.unitCost || 0
+            ).toFixed(2)
+            : "-",
 
         latestDate:
-            latestDate,
-
-        latestRecord:
-            latestRecord
+            latest
+            ? latest.date
+            : "-"
 
     };
-
-}
-
-
-// =====================================================
-// ITEM LATEST RATE
-// =====================================================
-
-function itemLatestRate(itemCode){
-
-    let item =
-        getItemByCode(itemCode);
-
-
-    if(!item){
-
-        return 0;
-
-    }
-
-
-    return Number(
-        item.latest_rate ??
-        item.latestRate ??
-        item.unit_cost ??
-        item.unitCost ??
-        item.cost ??
-        item.opening_cost ??
-        item.openingCost ??
-        0
-    );
-
-}
-
-
-// =====================================================
-// SOURCE
-// =====================================================
-
-function getItemSource(item){
-
-    return (
-        item.source ||
-        item.source_supplier ||
-        item.sourceSupplier ||
-        "-"
-    );
-
-}
-
-
-// =====================================================
-// SUPPLIER
-// =====================================================
-
-function getItemSupplier(item){
-
-    return (
-        item.supplier ||
-        item.supplier_name ||
-        item.supplierName ||
-        "-"
-    );
-
-}
-
-
-// =====================================================
-// PACKING QTY
-// =====================================================
-
-function getPackingQty(item){
-
-    return (
-        item.packing_qty ??
-        item.packingQty ??
-        item.packing_quantity ??
-        item.packingQuantity ??
-        "-"
-    );
-
-}
-
-
-// =====================================================
-// PACKED UNIT
-// =====================================================
-
-function getPackedUnit(item){
-
-    return (
-        item.packed_unit ||
-        item.packedUnit ||
-        item.packing_unit ||
-        item.packingUnit ||
-        "-"
-    );
-
-}
-
-
-// =====================================================
-// STOCK MONTHS
-// =====================================================
-
-function calculateStockMonths(
-    currentStock,
-    average
-){
-
-    if(
-        !average ||
-        average <= 0
-    ){
-
-        return 0;
-
-    }
-
-
-    return currentStock / average;
-
-}
-
-
-// =====================================================
-// DEMAND QUANTITY
-// =====================================================
-
-function calculateDemandQuantity(
-    requiredStock,
-    currentStock
-){
-
-    return Math.max(
-        requiredStock -
-        currentStock,
-        0
-    );
-
-}
-
-
-// =====================================================
-// SHOW ITEM INFO
-// =====================================================
-
-function showItemInfo(){
-
-    let input =
-        document.getElementById(
-            "itemCode"
-        );
-
-
-    if(!input){
-
-        return;
-
-    }
-
-
-    let code =
-        input.value.trim();
-
-
-    if(code === ""){
-
-        return;
-
-    }
-
-
-    let item =
-        getItemByCode(code);
-
-
-    if(!item){
-
-        return;
-
-    }
 
 }
 
@@ -895,16 +897,16 @@ function showItemInfo(){
 
 function showAllItems(){
 
-    let body =
+    let demandBody =
         document.getElementById(
             "demandBody"
         );
 
 
-    if(!body){
+    if(!demandBody){
 
         console.error(
-            "demandBody not found."
+            "Demand body not found."
         );
 
         return;
@@ -912,7 +914,7 @@ function showAllItems(){
     }
 
 
-    body.innerHTML = "";
+    demandBody.innerHTML = "";
 
 
     for(
@@ -925,90 +927,6 @@ function showAllItems(){
             items[i];
 
 
-        let code =
-            String(
-                item.code || ""
-            ).trim();
-
-
-        let average =
-            calculateAverageConsumption(
-                code
-            );
-
-
-        let currentStock =
-            getCurrentStock(item);
-
-
-        // 3 MONTH STOCK
-
-        let requiredStock =
-            average * 3;
-
-
-        let demandQuantity =
-            calculateDemandQuantity(
-                requiredStock,
-                currentStock
-            );
-
-
-        let stockMonths =
-            calculateStockMonths(
-                currentStock,
-                average
-            );
-
-
-        let rates =
-            getRates(code);
-
-
-        let latestDate =
-            rates.latestDate;
-
-
-        let approvedQty =
-            demandQuantity;
-
-
-        let remarks =
-            "";
-
-
-        let saved =
-            selectedItems[code];
-
-
-        if(saved){
-
-            if(
-                saved.approvedQty !==
-                undefined
-            ){
-
-                approvedQty =
-                    Number(
-                        saved.approvedQty
-                    );
-
-            }
-
-
-            if(
-                saved.remarks !==
-                undefined
-            ){
-
-                remarks =
-                    saved.remarks;
-
-            }
-
-        }
-
-
         let row =
             document.createElement(
                 "tr"
@@ -1016,10 +934,10 @@ function showAllItems(){
 
 
         // =================================================
-        // SELECT
+        // 0 SELECT
         // =================================================
 
-        let selectCell =
+        let cell0 =
             document.createElement(
                 "td"
             );
@@ -1034,220 +952,421 @@ function showAllItems(){
         checkbox.type =
             "checkbox";
 
+
         checkbox.className =
-            "item-select";
-
-        checkbox.dataset.code =
-            code;
+            "demandCheck";
 
 
-        checkbox.checked =
-            !!(
-                selectedItems[code] &&
-                selectedItems[code].selected
-            );
+        checkbox.dataset.index =
+            i;
 
 
-        checkbox.addEventListener(
-            "change",
-            function(){
-
-                if(
-                    !selectedItems[code]
-                ){
-
-                    selectedItems[code] = {};
-
-                }
-
-
-                selectedItems[code].selected =
-                    checkbox.checked;
-
-            }
-        );
-
-
-        selectCell.appendChild(
+        cell0.appendChild(
             checkbox
         );
 
 
         row.appendChild(
-            selectCell
+            cell0
         );
 
 
         // =================================================
-        // CATEGORY
+        // 1 CATEGORY
         // =================================================
 
+        let cell1 =
+            document.createElement(
+                "td"
+            );
+
+
+        cell1.innerHTML =
+            item.category || "-";
+
+
         row.appendChild(
-            createCell(
-                item.category || "-"
-            )
+            cell1
         );
 
 
         // =================================================
-        // ITEM CODE
+        // 2 ITEM CODE
         // =================================================
 
+        let cell2 =
+            document.createElement(
+                "td"
+            );
+
+
+        cell2.innerHTML =
+            item.code || "-";
+
+
         row.appendChild(
-            createCell(
-                code || "-"
-            )
+            cell2
         );
 
 
         // =================================================
-        // ITEM NAME
+        // 3 ITEM NAME
         // =================================================
 
+        let cell3 =
+            document.createElement(
+                "td"
+            );
+
+
+        cell3.innerHTML =
+            item.itemName ||
+            item.item_name ||
+            "-";
+
+
         row.appendChild(
-            createCell(
-                item.item_name ||
-                item.itemName ||
-                "-"
-            )
+            cell3
         );
 
 
         // =================================================
-        // SPECIFICATION
+        // 4 SPECIFICATION
         // =================================================
 
+        let cell4 =
+            document.createElement(
+                "td"
+            );
+
+
+        cell4.innerHTML =
+            item.specification || "-";
+
+
         row.appendChild(
-            createCell(
-                item.specification ||
-                "-"
-            )
+            cell4
         );
 
 
         // =================================================
-        // SOURCE
+        // 5 SOURCE
         // =================================================
 
+        let cell5 =
+            document.createElement(
+                "td"
+            );
+
+
+        cell5.innerHTML =
+            item.source || "-";
+
+
         row.appendChild(
-            createCell(
-                getItemSource(item)
-            )
+            cell5
         );
 
 
         // =================================================
-        // SUPPLIER
+        // 6 SUPPLIER
         // =================================================
 
+        let cell6 =
+            document.createElement(
+                "td"
+            );
+
+
+        cell6.innerHTML =
+            item.supplier || "-";
+
+
         row.appendChild(
-            createCell(
-                getItemSupplier(item)
-            )
+            cell6
         );
 
 
         // =================================================
-        // LATEST PURCHASE DATE
+        // PURCHASE DATA
         // =================================================
 
+        let purchaseInfo =
+            getPurchaseRates(
+                item.code
+            );
+
+
+        // =================================================
+        // 7 LATEST PURCHASE DATE
+        // =================================================
+
+        let cell7 =
+            document.createElement(
+                "td"
+            );
+
+
+        cell7.innerHTML =
+            purchaseInfo.latestDate;
+
+
         row.appendChild(
-            createCell(
-                latestDate
-            )
+            cell7
         );
 
 
         // =================================================
-        // 1ST RATE
+        // 8 FIRST RATE
         // =================================================
 
+        let cell8 =
+            document.createElement(
+                "td"
+            );
+
+
+        cell8.innerHTML =
+            purchaseInfo.firstRate;
+
+
         row.appendChild(
-            createCell(
-                "Rs. " +
-                rates.firstRate.toFixed(2)
-            )
+            cell8
         );
 
 
         // =================================================
-        // 2ND RATE
+        // 9 SECOND RATE
         // =================================================
 
+        let cell9 =
+            document.createElement(
+                "td"
+            );
+
+
+        cell9.innerHTML =
+            purchaseInfo.secondRate;
+
+
         row.appendChild(
-            createCell(
-                "Rs. " +
-                rates.secondRate.toFixed(2)
-            )
+            cell9
         );
 
 
         // =================================================
-        // LATEST RATE
+        // 10 LATEST RATE
         // =================================================
 
+        let cell10 =
+            document.createElement(
+                "td"
+            );
+
+
+        cell10.innerHTML =
+            purchaseInfo.latestRate;
+
+
         row.appendChild(
-            createCell(
-                "Rs. " +
-                rates.latestRate.toFixed(2)
-            )
+            cell10
         );
 
 
         // =================================================
-        // UNIT
+        // 11 UNIT
         // =================================================
 
+        let cell11 =
+            document.createElement(
+                "td"
+            );
+
+
+        cell11.innerHTML =
+            item.unit || "-";
+
+
         row.appendChild(
-            createCell(
-                item.unit ||
-                item.uom ||
-                "-"
-            )
+            cell11
         );
 
 
         // =================================================
-        // PACKING QTY
+        // 12 PACKING QTY
         // =================================================
 
+        let cell12 =
+            document.createElement(
+                "td"
+            );
+
+
+        cell12.innerHTML =
+            item.packingQty ??
+            item.packing_qty ??
+            "-";
+
+
         row.appendChild(
-            createCell(
-                getPackingQty(item)
-            )
+            cell12
         );
 
 
         // =================================================
-        // PACKED UNIT
+        // 13 PACKED UNIT
         // =================================================
 
+        let cell13 =
+            document.createElement(
+                "td"
+            );
+
+
+        cell13.innerHTML =
+            item.packedUnit ??
+            item.packed_unit ??
+            "-";
+
+
         row.appendChild(
-            createCell(
-                getPackedUnit(item)
-            )
+            cell13
         );
 
 
         // =================================================
-        // CONSUMPTION / AVERAGE
+        // 14 CONSUMPTION / AVERAGE
         // =================================================
 
+        let averageConsumption =
+            calculateAverageConsumption(
+                item.code
+            );
+
+
+        let cell14 =
+            document.createElement(
+                "td"
+            );
+
+
+        cell14.innerHTML =
+            averageConsumption.toFixed(2);
+
+
         row.appendChild(
-            createCell(
-                average.toFixed(2)
-            )
+            cell14
         );
 
 
         // =================================================
-        // STOCK MONTHS
+        // 15 STOCK MONTHS
+        // EDITABLE
         // =================================================
 
+        let savedStockMonth =
+            stockMonths[
+                String(item.code)
+            ];
+
+
+        if(
+            savedStockMonth === undefined ||
+            savedStockMonth === null ||
+            savedStockMonth === ""
+        ){
+
+            savedStockMonth = 3;
+
+        }
+
+
+        let cell15 =
+            document.createElement(
+                "td"
+            );
+
+
+        let stockMonthInput =
+            document.createElement(
+                "input"
+            );
+
+
+        stockMonthInput.type =
+            "number";
+
+
+        stockMonthInput.step =
+            "0.5";
+
+
+        stockMonthInput.min =
+            "0";
+
+
+        stockMonthInput.value =
+            savedStockMonth;
+
+
+        stockMonthInput.style.width =
+            "80px";
+
+
+        stockMonthInput.style.padding =
+            "6px";
+
+
+        stockMonthInput.title =
+            "Enter required stock months";
+
+
+        stockMonthInput.onchange =
+            function(){
+
+                let value =
+                    Number(
+                        this.value
+                    );
+
+
+                if(
+                    isNaN(value) ||
+                    value < 0
+                ){
+
+                    value = 0;
+
+                    this.value = 0;
+
+                }
+
+
+                stockMonths[
+                    String(item.code)
+                ] = value;
+
+
+                localStorage.setItem(
+                    "stockMonths",
+                    JSON.stringify(
+                        stockMonths
+                    )
+                );
+
+
+                showAllItems();
+
+            };
+
+
+        cell15.appendChild(
+            stockMonthInput
+        );
+
+
         row.appendChild(
-            createCell(
-                stockMonths.toFixed(2)
-            )
+            cell15
         );
 
 
@@ -1255,235 +1374,356 @@ function showAllItems(){
         // CURRENT STOCK
         // =================================================
 
-        let currentStockCell =
-            createCell(
-                currentStock.toFixed(2)
+        let cell16 =
+            document.createElement(
+                "td"
             );
 
 
-        if(
-            currentStock <= 0
-        ){
-
-            currentStockCell.style.backgroundColor =
-                "#ffcccc";
-
-        }
-        else if(
-            average > 0 &&
-            stockMonths <= 1
-        ){
-
-            currentStockCell.style.backgroundColor =
-                "#fff2cc";
-
-        }
+        let currentStock =
+            getCurrentStock(
+                item
+            );
 
 
-        row.appendChild(
-            currentStockCell
-        );
+        cell16.innerHTML =
+            currentStock.toFixed(2);
+
+
+        // =================================================
+        // MINIMUM STOCK
+        // =================================================
+
+        let minimumStock =
+            calculateMinimumStock(
+                item.code
+            );
+
+
+        // =================================================
+        // REQUIRED STOCK
+        // =================================================
+
+        let requiredStock =
+            averageConsumption *
+            Number(
+                savedStockMonth
+            );
 
 
         // =================================================
         // DEMAND QUANTITY
         // =================================================
 
+        let demandQuantity =
+            requiredStock -
+            currentStock;
+
+
+        if(
+            demandQuantity < 0
+        ){
+
+            demandQuantity = 0;
+
+        }
+
+
+        // =================================================
+        // CURRENT STOCK COLOR
+        // =================================================
+
+        if(
+            currentStock <=
+            minimumStock
+        ){
+
+            cell16.style.backgroundColor =
+                "#e74c3c";
+
+            cell16.style.color =
+                "white";
+
+            cell16.style.fontWeight =
+                "bold";
+
+        }
+        else if(
+            currentStock <=
+            requiredStock
+        ){
+
+            cell16.style.backgroundColor =
+                "#f1c40f";
+
+            cell16.style.color =
+                "#000";
+
+            cell16.style.fontWeight =
+                "bold";
+
+        }
+        else{
+
+            cell16.style.backgroundColor =
+                "#d5f5e3";
+
+            cell16.style.color =
+                "#1e8449";
+
+            cell16.style.fontWeight =
+                "bold";
+
+        }
+
+
         row.appendChild(
-            createCell(
-                demandQuantity.toFixed(2)
-            )
+            cell16
         );
 
 
         // =================================================
-        // APPROVED QTY
+        // 17 DEMAND QUANTITY
         // =================================================
 
-        let approvedCell =
+        let cell17 =
             document.createElement(
                 "td"
             );
 
 
-        let approvedInput =
-            document.createElement(
-                "input"
-            );
-
-
-        approvedInput.type =
-            "number";
-
-        approvedInput.min =
-            "0";
-
-        approvedInput.value =
-            approvedQty;
-
-
-        approvedInput.className =
-            "approved-qty-input";
-
-        approvedInput.dataset.code =
-            code;
-
-
-        approvedInput.addEventListener(
-            "change",
-            function(){
-
-                if(
-                    !selectedItems[code]
-                ){
-
-                    selectedItems[code] = {};
-
-                }
-
-
-                selectedItems[code].approvedQty =
-                    Number(
-                        approvedInput.value || 0
-                    );
-
-            }
-        );
-
-
-        approvedCell.appendChild(
-            approvedInput
-        );
+        cell17.innerHTML =
+            demandQuantity.toFixed(2);
 
 
         row.appendChild(
-            approvedCell
+            cell17
         );
 
 
         // =================================================
-        // REMARKS
+        // 18 APPROVED QTY
         // =================================================
 
-        let remarksCell =
+        let packingQty =
+            Number(
+                item.packingQty ??
+                item.packing_qty ??
+                0
+            );
+
+
+        let approvedQty =
+            demandQuantity;
+
+
+        if(
+            packingQty > 0 &&
+            demandQuantity > 0
+        ){
+
+            approvedQty =
+                Math.ceil(
+                    demandQuantity /
+                    packingQty
+                ) *
+                packingQty;
+
+        }
+
+
+        let cell18 =
             document.createElement(
                 "td"
             );
 
 
-        let remarksInput =
-            document.createElement(
-                "input"
-            );
-
-
-        remarksInput.type =
-            "text";
-
-        remarksInput.value =
-            remarks;
-
-        remarksInput.className =
-            "remarks-input";
-
-        remarksInput.dataset.code =
-            code;
-
-
-        remarksInput.addEventListener(
-            "change",
-            function(){
-
-                if(
-                    !selectedItems[code]
-                ){
-
-                    selectedItems[code] = {};
-
-                }
-
-
-                selectedItems[code].remarks =
-                    remarksInput.value;
-
-            }
-        );
-
-
-        remarksCell.appendChild(
-            remarksInput
-        );
+        cell18.innerHTML =
+            approvedQty.toFixed(2);
 
 
         row.appendChild(
-            remarksCell
+            cell18
         );
 
 
         // =================================================
-        // ACTION
+        // 19 REMARKS
         // =================================================
 
-        let actionCell =
+        let cell19 =
             document.createElement(
                 "td"
             );
 
 
-        let selectButton =
+        cell19.innerHTML =
+            "-";
+
+
+        row.appendChild(
+            cell19
+        );
+
+
+        // =================================================
+        // LOAD SAVED EDIT
+        // =================================================
+
+        let savedEdit =
+            demandEdits[
+                String(item.code)
+            ];
+
+
+        if(savedEdit){
+
+            cell18.innerHTML =
+                Number(
+                    savedEdit.finalDemand ??
+                    approvedQty
+                ).toFixed(2);
+
+
+            cell19.innerHTML =
+                savedEdit.remarks ||
+                "-";
+
+        }
+
+
+        // =================================================
+        // 20 ACTION
+        // =================================================
+
+        let cell20 =
+            document.createElement(
+                "td"
+            );
+
+
+        let editButton =
             document.createElement(
                 "button"
             );
 
 
-        selectButton.type =
+        editButton.innerHTML =
+            "Edit Approved";
+
+
+        editButton.type =
             "button";
 
-        selectButton.innerHTML =
-            checkbox.checked ?
-            "☑ Selected" :
-            "Select";
 
-
-        selectButton.onclick =
+        editButton.onclick =
             function(){
 
-                checkbox.checked =
-                    !checkbox.checked;
+                let approved =
+                    prompt(
+                        "Enter Approved Qty:",
+                        cell18.innerHTML
+                    );
 
 
                 if(
-                    !selectedItems[code]
+                    approved === null
                 ){
 
-                    selectedItems[code] = {};
+                    return;
 
                 }
 
 
-                selectedItems[code].selected =
-                    checkbox.checked;
+                approved =
+                    Number(
+                        approved
+                    );
 
 
-                selectButton.innerHTML =
-                    checkbox.checked ?
-                    "☑ Selected" :
-                    "Select";
+                if(
+                    isNaN(approved) ||
+                    approved < 0
+                ){
+
+                    alert(
+                        "Please enter a valid Approved Qty!"
+                    );
+
+                    return;
+
+                }
+
+
+                let remarks =
+                    prompt(
+                        "Enter Remarks:",
+                        cell19.innerHTML === "-"
+                        ? ""
+                        : cell19.innerHTML
+                    );
+
+
+                if(
+                    remarks === null
+                ){
+
+                    return;
+
+                }
+
+
+                cell18.innerHTML =
+                    approved.toFixed(2);
+
+
+                cell19.innerHTML =
+                    remarks || "-";
+
+
+                demandEdits[
+                    String(item.code)
+                ] = {
+
+                    finalDemand:
+                        approved,
+
+                    remarks:
+                        remarks
+
+                };
+
+
+                localStorage.setItem(
+                    "demandEdits",
+                    JSON.stringify(
+                        demandEdits
+                    )
+                );
+
+
+                alert(
+                    "Approved Qty saved successfully!"
+                );
 
             };
 
 
-        actionCell.appendChild(
-            selectButton
+        cell20.appendChild(
+            editButton
         );
 
 
         row.appendChild(
-            actionCell
+            cell20
         );
 
 
-        body.appendChild(
+        // =================================================
+        // ADD ROW
+        // =================================================
+
+        demandBody.appendChild(
             row
         );
 
@@ -1491,35 +1731,10 @@ function showAllItems(){
 
 
     console.log(
-        "Monthly Demand Items:",
-        items.length
+        "✅ Monthly Demand Table:",
+        items.length,
+        "items"
     );
-
-}
-
-
-// =====================================================
-// CREATE TABLE CELL
-// =====================================================
-
-function createCell(value){
-
-    let cell =
-        document.createElement(
-            "td"
-        );
-
-
-    cell.textContent =
-        value === undefined ||
-        value === null
-        ?
-        "-"
-        :
-        value;
-
-
-    return cell;
 
 }
 
@@ -1530,66 +1745,22 @@ function createCell(value){
 
 function selectAllItems(){
 
+    let checkboxes =
+        document.querySelectorAll(
+            ".demandCheck"
+        );
+
+
     for(
         let i = 0;
-        i < items.length;
+        i < checkboxes.length;
         i++
     ){
 
-        let code =
-            String(
-                items[i].code || ""
-            ).trim();
-
-
-        if(
-            !selectedItems[code]
-        ){
-
-            selectedItems[code] = {};
-
-        }
-
-
-        selectedItems[code].selected =
+        checkboxes[i].checked =
             true;
 
     }
-
-
-    document
-        .querySelectorAll(
-            ".item-select"
-        )
-        .forEach(
-            function(box){
-
-                box.checked =
-                    true;
-
-            }
-        );
-
-
-    document
-        .querySelectorAll(
-            "td button"
-        )
-        .forEach(
-            function(button){
-
-                if(
-                    button.innerHTML ===
-                    "Select"
-                ){
-
-                    button.innerHTML =
-                        "☑ Selected";
-
-                }
-
-            }
-        );
 
 }
 
@@ -1600,394 +1771,22 @@ function selectAllItems(){
 
 function unselectAllItems(){
 
+    let checkboxes =
+        document.querySelectorAll(
+            ".demandCheck"
+        );
+
+
     for(
         let i = 0;
-        i < items.length;
+        i < checkboxes.length;
         i++
     ){
 
-        let code =
-            String(
-                items[i].code || ""
-            ).trim();
-
-
-        if(
-            !selectedItems[code]
-        ){
-
-            selectedItems[code] = {};
-
-        }
-
-
-        selectedItems[code].selected =
+        checkboxes[i].checked =
             false;
 
     }
-
-
-    document
-        .querySelectorAll(
-            ".item-select"
-        )
-        .forEach(
-            function(box){
-
-                box.checked =
-                    false;
-
-            }
-        );
-
-
-    document
-        .querySelectorAll(
-            "td button"
-        )
-        .forEach(
-            function(button){
-
-                if(
-                    button.innerHTML ===
-                    "☑ Selected"
-                ){
-
-                    button.innerHTML =
-                        "Select";
-
-                }
-
-            }
-        );
-
-}
-
-
-// =====================================================
-// ADD DEMAND
-// =====================================================
-
-function addDemand(){
-
-    let codeInput =
-        document.getElementById(
-            "itemCode"
-        );
-
-
-    let monthInput =
-        document.getElementById(
-            "month"
-        );
-
-
-    if(!codeInput){
-
-        alert(
-            "Item Code field نہیں ملا۔"
-        );
-
-        return;
-
-    }
-
-
-    let code =
-        codeInput.value.trim();
-
-
-    if(code === ""){
-
-        alert(
-            "Please enter Item Code."
-        );
-
-        return;
-
-    }
-
-
-    let item =
-        getItemByCode(code);
-
-
-    if(!item){
-
-        alert(
-            "Item Code نہیں ملا: " +
-            code
-        );
-
-        return;
-
-    }
-
-
-    let demandMonth =
-        monthInput ?
-        monthInput.value :
-        "";
-
-
-    if(
-        !demandMonth
-    ){
-
-        let today =
-            new Date();
-
-
-        demandMonth =
-            today.getFullYear() +
-            "-" +
-            String(
-                today.getMonth() + 1
-            )
-            .padStart(2,"0");
-
-    }
-
-
-    if(
-        !selectedItems[code]
-    ){
-
-        selectedItems[code] = {};
-
-    }
-
-
-    selectedItems[code].selected =
-        true;
-
-
-    selectedItems[code].demandMonth =
-        demandMonth;
-
-
-    showAllItems();
-
-
-    codeInput.value =
-        "";
-
-
-    alert(
-        "Item Demand میں add ہو گیا ہے۔"
-    );
-
-}
-
-
-// =====================================================
-// GET SELECTED ITEMS
-// =====================================================
-
-function getSelectedDemandItems(){
-
-    let result = [];
-
-
-    for(
-        let i = 0;
-        i < items.length;
-        i++
-    ){
-
-        let item =
-            items[i];
-
-
-        let code =
-            String(
-                item.code || ""
-            ).trim();
-
-
-        if(
-            !selectedItems[code] ||
-            !selectedItems[code].selected
-        ){
-
-            continue;
-
-        }
-
-
-        let average =
-            calculateAverageConsumption(
-                code
-            );
-
-
-        let requiredStock =
-            average * 3;
-
-
-        let currentStock =
-            getCurrentStock(item);
-
-
-        let demandQuantity =
-            calculateDemandQuantity(
-                requiredStock,
-                currentStock
-            );
-
-
-        let stockMonths =
-            calculateStockMonths(
-                currentStock,
-                average
-            );
-
-
-        let rates =
-            getRates(code);
-
-
-        let approvedInput =
-            document.querySelector(
-                '.approved-qty-input[data-code="' +
-                escapeSelector(code) +
-                '"]'
-            );
-
-
-        let remarksInput =
-            document.querySelector(
-                '.remarks-input[data-code="' +
-                escapeSelector(code) +
-                '"]'
-            );
-
-
-        let approvedQty =
-            approvedInput
-            ?
-            Number(
-                approvedInput.value || 0
-            )
-            :
-            demandQuantity;
-
-
-        let remarks =
-            remarksInput
-            ?
-            remarksInput.value
-            :
-            "";
-
-
-        result.push({
-
-            category:
-                item.category || "",
-
-            itemCode:
-                code,
-
-            itemName:
-                item.item_name ||
-                item.itemName ||
-                "",
-
-            specification:
-                item.specification ||
-                "",
-
-            source:
-                getItemSource(item),
-
-            supplier:
-                getItemSupplier(item),
-
-            latestPurchaseDate:
-                rates.latestDate,
-
-            firstRate:
-                rates.firstRate,
-
-            secondRate:
-                rates.secondRate,
-
-            latestRate:
-                rates.latestRate,
-
-            unit:
-                item.unit ||
-                item.uom ||
-                "",
-
-            packingQty:
-                getPackingQty(item),
-
-            packedUnit:
-                getPackedUnit(item),
-
-            average:
-                average,
-
-            stockMonths:
-                stockMonths,
-
-            stockLevel:
-                Number(
-                    item.minimum_stock ??
-                    item.minimumStock ??
-                    0
-                ),
-
-            requiredStock:
-                requiredStock,
-
-            currentStock:
-                currentStock,
-
-            demandQuantity:
-                demandQuantity,
-
-            approvedQty:
-                approvedQty,
-
-            remarks:
-                remarks
-
-        });
-
-    }
-
-
-    return result;
-
-}
-
-
-// =====================================================
-// ESCAPE SELECTOR
-// =====================================================
-
-function escapeSelector(value){
-
-    if(
-        window.CSS &&
-        CSS.escape
-    ){
-
-        return CSS.escape(
-            value
-        );
-
-    }
-
-
-    return String(value)
-        .replace(
-            /([!"#$%&'()*+,./:;<=>?@[\\\]^`{|}~])/g,
-            "\\$1"
-        );
 
 }
 
@@ -1996,18 +1795,40 @@ function escapeSelector(value){
 // GENERATE DEMAND
 // =====================================================
 
-async function generateDemand(){
+function generateDemand(){
 
-    let demandItems =
-        getSelectedDemandItems();
+    let checkboxes =
+        document.querySelectorAll(
+            ".demandCheck"
+        );
+
+
+    let selectedCount = 0;
+
+
+    for(
+        let i = 0;
+        i < checkboxes.length;
+        i++
+    ){
+
+        if(
+            checkboxes[i].checked
+        ){
+
+            selectedCount++;
+
+        }
+
+    }
 
 
     if(
-        demandItems.length === 0
+        selectedCount === 0
     ){
 
         alert(
-            "Please پہلے کم از کم ایک item Select کریں۔"
+            "Please select at least one item!"
         );
 
         return;
@@ -2015,33 +1836,203 @@ async function generateDemand(){
     }
 
 
-    let monthInput =
+    let demandMonth =
         document.getElementById(
             "month"
+        ).value;
+
+
+    if(
+        demandMonth === ""
+    ){
+
+        alert(
+            "Please select Demand Month!"
         );
+
+        return;
+
+    }
+
+
+    let confirmGenerate =
+        confirm(
+            "Generate Demand for " +
+            selectedCount +
+            " selected item(s)?"
+        );
+
+
+    if(
+        !confirmGenerate
+    ){
+
+        return;
+
+    }
+
+
+    saveGeneratedDemand();
+
+}
+
+
+// =====================================================
+// SAVE GENERATED DEMAND
+// SUPABASE
+// =====================================================
+
+async function saveGeneratedDemand(){
+
+    let checkboxes =
+        document.querySelectorAll(
+            ".demandCheck"
+        );
+
+
+    let selectedItems = [];
+
+
+    for(
+        let i = 0;
+        i < checkboxes.length;
+        i++
+    ){
+
+        if(
+            !checkboxes[i].checked
+        ){
+
+            continue;
+
+        }
+
+
+        let row =
+            checkboxes[i]
+            .closest("tr");
+
+
+        let cells =
+            row.querySelectorAll(
+                "td"
+            );
+
+
+        let demandItem = {
+
+            category:
+                cells[1].innerText,
+
+            itemCode:
+                cells[2].innerText,
+
+            itemName:
+                cells[3].innerText,
+
+            specification:
+                cells[4].innerText,
+
+            source:
+                cells[5].innerText,
+
+            supplier:
+                cells[6].innerText,
+
+            latestPurchaseDate:
+                cells[7].innerText,
+
+            firstRate:
+                cells[8].innerText,
+
+            secondRate:
+                cells[9].innerText,
+
+            latestRate:
+                cells[10].innerText,
+
+            unit:
+                cells[11].innerText,
+
+            packingQty:
+                cells[12].innerText,
+
+            packedUnit:
+                cells[13].innerText,
+
+            average:
+                cells[14].innerText,
+
+            stockMonth:
+                cells[15]
+                .querySelector("input")
+                .value,
+
+            currentStock:
+                cells[16].innerText,
+
+            demandQuantity:
+                cells[17].innerText,
+
+            approvedQty:
+                cells[18].innerText,
+
+            remarks:
+                cells[19].innerText
+
+        };
+
+
+        selectedItems.push(
+            demandItem
+        );
+
+    }
+
+
+    if(
+        selectedItems.length === 0
+    ){
+
+        alert(
+            "Please select at least one item!"
+        );
+
+        return;
+
+    }
+
+
+    let demandMonth =
+        document.getElementById(
+            "month"
+        ).value;
+
+
+    if(
+        demandMonth === ""
+    ){
+
+        alert(
+            "Please select Demand Month!"
+        );
+
+        return;
+
+    }
+
+
+    // =================================================
+    // DEMAND NUMBER
+    // =================================================
+
+    let demandNumber =
+        "DEM-" +
+        Date.now();
 
 
     let today =
         new Date();
-
-
-    let demandMonth =
-        monthInput &&
-        monthInput.value
-        ?
-        monthInput.value
-        :
-        today.getFullYear() +
-        "-" +
-        String(
-            today.getMonth() + 1
-        )
-        .padStart(2,"0");
-
-
-    let demandNo =
-        "DEM-" +
-        Date.now();
 
 
     let generateDate =
@@ -2051,13 +2042,13 @@ async function generateDemand(){
 
 
     // =================================================
-    // SUPABASE RECORD
+    // DEMAND RECORD
     // =================================================
 
     let demandRecord = {
 
         demand_no:
-            demandNo,
+            demandNumber,
 
         demand_month:
             demandMonth,
@@ -2069,10 +2060,10 @@ async function generateDemand(){
             generateDate,
 
         items:
-            demandItems,
+            selectedItems,
 
         demand_items:
-            demandItems,
+            selectedItems,
 
         status:
             "Generated"
@@ -2092,10 +2083,10 @@ async function generateDemand(){
         demandRecord
     );
 
-    console.log(
-        "====================================="
-    );
 
+    // =================================================
+    // SAVE TO SUPABASE
+    // =================================================
 
     let result =
         await supabaseRequest(
@@ -2132,6 +2123,84 @@ async function generateDemand(){
     );
 
 
+    // =================================================
+    // LOCAL DEMAND HISTORY BACKUP
+    // =================================================
+
+    let localDemandHistory =
+        JSON.parse(
+            localStorage.getItem(
+                "demandHistory"
+            )
+        ) || [];
+
+
+    localDemandHistory.unshift(
+        demandRecord
+    );
+
+
+    localStorage.setItem(
+        "demandHistory",
+        JSON.stringify(
+            localDemandHistory
+        )
+    );
+
+
+    // =================================================
+    // OTHER LOCAL DATA
+    // =================================================
+
+    localStorage.setItem(
+        "generatedDemandMonth",
+        demandMonth
+    );
+
+
+    localStorage.setItem(
+        "generatedDemandCount",
+        String(
+            selectedItems.length
+        )
+    );
+
+
+    // =================================================
+    // CLEAR APPROVED EDIT
+    // =================================================
+
+    for(
+        let i = 0;
+        i < selectedItems.length;
+        i++
+    ){
+
+        let code =
+            String(
+                selectedItems[i].itemCode
+            );
+
+
+        delete demandEdits[
+            code
+        ];
+
+    }
+
+
+    localStorage.setItem(
+        "demandEdits",
+        JSON.stringify(
+            demandEdits
+        )
+    );
+
+
+    // =================================================
+    // UPDATE MEMORY
+    // =================================================
+
     if(
         result.data &&
         result.data.length > 0
@@ -2152,74 +2221,155 @@ async function generateDemand(){
 
 
     // =================================================
-    // LOCAL STORAGE BACKUP
+    // MESSAGE
     // =================================================
-
-    localStorage.setItem(
-        "demandHistory",
-        JSON.stringify(
-            demandHistory
-        )
-    );
-
-
-    localStorage.setItem(
-        "generatedDemandMonth",
-        demandMonth
-    );
-
-
-    localStorage.setItem(
-        "generatedDemandCount",
-        String(
-            demandItems.length
-        )
-    );
-
 
     alert(
 
-        "✅ Monthly Demand Successfully Generated!\n\n" +
+        "Demand Generated Successfully!\n\n" +
 
         "Demand No: " +
-        demandNo +
+        demandNumber +
 
         "\nDemand Month: " +
         demandMonth +
 
-        "\nTotal Selected Items: " +
-        demandItems.length
+        "\nSelected Items: " +
+        selectedItems.length
 
     );
 
 
-    // =================================================
-    // UNSELECT AFTER GENERATE
-    // =================================================
+    console.log(
+        "====================================="
+    );
 
-    for(
-        let i = 0;
-        i < demandItems.length;
-        i++
+}
+
+
+// =====================================================
+// ADD DEMAND
+// =====================================================
+
+function addDemand(){
+
+    let code =
+        document.getElementById(
+            "itemCode"
+        ).value.trim();
+
+
+    let month =
+        document.getElementById(
+            "month"
+        ).value;
+
+
+    if(
+        code === ""
     ){
 
-        let code =
-            demandItems[i].itemCode;
+        alert(
+            "Please enter Item Code!"
+        );
 
-
-        if(
-            selectedItems[code]
-        ){
-
-            selectedItems[code].selected =
-                false;
-
-        }
+        return;
 
     }
 
 
-    showAllItems();
+    if(
+        month === ""
+    ){
+
+        alert(
+            "Please select Demand Month!"
+        );
+
+        return;
+
+    }
+
+
+    let item =
+        getItemByCode(
+            code
+        );
+
+
+    if(!item){
+
+        alert(
+            "Item Code not found!"
+        );
+
+        return;
+
+    }
+
+
+    // Table already contains all master items.
+    // Therefore no duplicate row is created.
+
+    alert(
+        "Item already exists in the Monthly Demand list."
+    );
+
+}
+
+
+// =====================================================
+// SHOW ITEM INFO
+// =====================================================
+
+function showItemInfo(){
+
+    let input =
+        document.getElementById(
+            "itemCode"
+        );
+
+
+    if(!input){
+
+        return;
+
+    }
+
+
+    let code =
+        input.value.trim();
+
+
+    if(
+        code === ""
+    ){
+
+        input.style.border = "";
+
+        return;
+
+    }
+
+
+    let item =
+        getItemByCode(
+            code
+        );
+
+
+    if(item){
+
+        input.style.border =
+            "2px solid #16a085";
+
+    }
+    else{
+
+        input.style.border =
+            "2px solid #e74c3c";
+
+    }
 
 }
 
@@ -2230,16 +2380,41 @@ async function generateDemand(){
 
 function printSelectedDemand(){
 
-    let demandItems =
-        getSelectedDemandItems();
+    let checkboxes =
+        document.querySelectorAll(
+            ".demandCheck"
+        );
+
+
+    let selectedRows = [];
+
+
+    for(
+        let i = 0;
+        i < checkboxes.length;
+        i++
+    ){
+
+        if(
+            checkboxes[i].checked
+        ){
+
+            selectedRows.push(
+                checkboxes[i]
+                .closest("tr")
+            );
+
+        }
+
+    }
 
 
     if(
-        demandItems.length === 0
+        selectedRows.length === 0
     ){
 
         alert(
-            "Please پہلے item select کریں۔"
+            "Please select at least one item to print!"
         );
 
         return;
@@ -2247,33 +2422,74 @@ function printSelectedDemand(){
     }
 
 
-    let monthInput =
-        document.getElementById(
-            "month"
+    let today =
+        new Date();
+
+
+    let printDate =
+        today.toLocaleDateString(
+            "en-GB"
         );
 
 
     let demandMonth =
-        monthInput &&
-        monthInput.value
-        ?
-        monthInput.value
-        :
+        document.getElementById(
+            "month"
+        ).value;
+
+
+    let formattedDemandMonth =
         "-";
+
+
+    if(demandMonth){
+
+        let parts =
+            demandMonth.split("-");
+
+
+        let monthNames = [
+
+            "January",
+            "February",
+            "March",
+            "April",
+            "May",
+            "June",
+            "July",
+            "August",
+            "September",
+            "October",
+            "November",
+            "December"
+
+        ];
+
+
+        formattedDemandMonth =
+            monthNames[
+                Number(
+                    parts[1]
+                ) - 1
+            ] +
+            " " +
+            parts[0];
+
+    }
 
 
     let printWindow =
         window.open(
             "",
             "",
-            "width=1500,height=900"
+            "width=1400,height=800"
         );
 
 
     if(!printWindow){
 
         alert(
-            "Please allow pop-ups for this website."
+            "Please allow pop-ups for printing."
         );
 
         return;
@@ -2281,15 +2497,11 @@ function printSelectedDemand(){
     }
 
 
-    let html = `
-
-<!DOCTYPE html>
+    let printContent = `
 
 <html>
 
 <head>
-
-<meta charset="UTF-8">
 
 <title>Monthly Demand</title>
 
@@ -2297,44 +2509,66 @@ function printSelectedDemand(){
 
 body{
     font-family:Arial,sans-serif;
-    padding:15px;
+    padding:20px;
 }
 
-h2,h1{
+h2,
+h1{
     text-align:center;
+}
+
+.info-section{
+    display:flex;
+    justify-content:space-between;
+    margin-top:15px;
 }
 
 table{
     width:100%;
     border-collapse:collapse;
-    font-size:9px;
+    margin-top:20px;
 }
 
 th{
     background:#12355b;
     color:white;
-    padding:5px;
+    padding:7px;
 }
 
 td{
     border:1px solid #999;
-    padding:4px;
-    text-align:center;
+    padding:7px;
 }
 
-.info{
-    margin:15px 0;
-    border:1px solid #999;
-    padding:10px;
+.current-stock-low{
+    background-color:#e74c3c !important;
+    color:white !important;
+    font-weight:bold;
+}
+
+.current-stock-yellow{
+    background-color:#f1c40f !important;
+    color:#000 !important;
+    font-weight:bold;
+}
+
+.current-stock-normal{
+    background-color:#d5f5e3 !important;
+    color:#1e8449 !important;
+    font-weight:bold;
+}
+
+.approval-section{
     display:flex;
     justify-content:space-between;
+    margin-top:40px;
 }
 
 @media print{
 
     @page{
         size:A4 landscape;
-        margin:7mm;
+        margin:10mm;
     }
 
 }
@@ -2353,16 +2587,16 @@ MECAS ENGINEERING PVT LIMITED SUNDAR
 MONTHLY DEMAND
 </h1>
 
-<div class="info">
+<div class="info-section">
 
 <span>
 <strong>Demand Month:</strong>
-${demandMonth}
+${formattedDemandMonth}
 </span>
 
 <span>
 <strong>Print Date:</strong>
-${new Date().toLocaleDateString("en-GB")}
+${printDate}
 </span>
 
 </div>
@@ -2387,7 +2621,7 @@ ${new Date().toLocaleDateString("en-GB")}
 <th>Packing Qty</th>
 <th>Packed Unit</th>
 <th>Consumption / Average</th>
-<th>Stock Months</th>
+<th>Stock Month</th>
 <th>Current Stock</th>
 <th>Demand Quantity</th>
 <th>Approved Qty</th>
@@ -2398,59 +2632,141 @@ ${new Date().toLocaleDateString("en-GB")}
 </thead>
 
 <tbody>
+
 `;
 
 
     for(
         let i = 0;
-        i < demandItems.length;
+        i < selectedRows.length;
         i++
     ){
 
-        let item =
-            demandItems[i];
+        let cells =
+            selectedRows[i]
+            .querySelectorAll("td");
 
 
-        html += `
+        printContent +=
+            "<tr>";
 
-<tr>
 
-<td>${item.category}</td>
-<td>${item.itemCode}</td>
-<td>${item.itemName}</td>
-<td>${item.specification}</td>
-<td>${item.source}</td>
-<td>${item.supplier}</td>
-<td>${item.latestPurchaseDate}</td>
-<td>${Number(item.firstRate).toFixed(2)}</td>
-<td>${Number(item.secondRate).toFixed(2)}</td>
-<td>${Number(item.latestRate).toFixed(2)}</td>
-<td>${item.unit}</td>
-<td>${item.packingQty}</td>
-<td>${item.packedUnit}</td>
-<td>${Number(item.average).toFixed(2)}</td>
-<td>${Number(item.stockMonths).toFixed(2)}</td>
-<td>${Number(item.currentStock).toFixed(2)}</td>
-<td>${Number(item.demandQuantity).toFixed(2)}</td>
-<td>${Number(item.approvedQty).toFixed(2)}</td>
-<td>${item.remarks}</td>
+        for(
+            let j = 1;
+            j <= 19;
+            j++
+        ){
 
-</tr>
+            let className = "";
 
-`;
+
+            if(
+                j === 16
+            ){
+
+                let currentStock =
+                    Number(
+                        cells[j].innerText
+                    );
+
+
+                let itemCode =
+                    cells[2].innerText;
+
+
+                let minimumStock =
+                    calculateMinimumStock(
+                        itemCode
+                    );
+
+
+                let average =
+                    Number(
+                        cells[14].innerText
+                    );
+
+
+                let stockMonth =
+                    Number(
+                        cells[15]
+                        .querySelector("input")
+                        .value
+                    );
+
+
+                let requiredStock =
+                    average *
+                    stockMonth;
+
+
+                if(
+                    currentStock <=
+                    minimumStock
+                ){
+
+                    className =
+                        "current-stock-low";
+
+                }
+                else if(
+                    currentStock <=
+                    requiredStock
+                ){
+
+                    className =
+                        "current-stock-yellow";
+
+                }
+                else{
+
+                    className =
+                        "current-stock-normal";
+
+                }
+
+            }
+
+
+            let value =
+                cells[j].innerHTML;
+
+
+            if(
+                j === 15
+            ){
+
+                value =
+                    cells[j]
+                    .querySelector("input")
+                    .value;
+
+            }
+
+
+            printContent +=
+
+                "<td class='" +
+                className +
+                "'>" +
+                value +
+                "</td>";
+
+        }
+
+
+        printContent +=
+            "</tr>";
 
     }
 
 
-    html += `
+    printContent += `
 
 </tbody>
 
 </table>
 
-<br><br>
-
-<div style="display:flex;justify-content:space-between;">
+<div class="approval-section">
 
 <span>
 Prepared By: __________________
@@ -2473,24 +2789,24 @@ Approved By: __________________
 `;
 
 
-    printWindow.document.open();
-
     printWindow.document.write(
-        html
+        printContent
     );
 
+
     printWindow.document.close();
+
+
+    printWindow.focus();
 
 
     setTimeout(
         function(){
 
-            printWindow.focus();
-
             printWindow.print();
 
         },
-        500
+        300
     );
 
 }
@@ -2519,3 +2835,4 @@ window.addEventListener(
 
     }
 );
+
