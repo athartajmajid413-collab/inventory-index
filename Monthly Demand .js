@@ -2984,7 +2984,142 @@ function exportDemandToExcel(){
         url
     );
 
+// =====================================================
+// EXPORT MONTHLY DEMAND TO EXCEL
+// =====================================================
 
+function exportDemandToExcel(){
+
+    let table =
+        document.querySelector("table");
+
+    if(!table){
+
+        alert(
+            "Monthly Demand table not found!"
+        );
+
+        return;
+
+    }
+
+
+    let rows =
+        table.querySelectorAll("tr");
+
+
+    if(rows.length === 0){
+
+        alert(
+            "No data available to export!"
+        );
+
+        return;
+
+    }
+
+
+    let csv = [];
+
+
+    for(
+        let i = 0;
+        i < rows.length;
+        i++
+    ){
+
+        let cells =
+            rows[i].querySelectorAll(
+                "th, td"
+            );
+
+
+        let row = [];
+
+
+        for(
+            let j = 0;
+            j < cells.length;
+            j++
+        ){
+
+            let value =
+                cells[j].innerText
+                .replace(/\n/g, " ")
+                .replace(/"/g, '""')
+                .trim();
+
+
+            row.push(
+                '"' + value + '"'
+            );
+
+        }
+
+
+        csv.push(
+            row.join(",")
+        );
+
+    }
+
+
+    let csvContent =
+        "\uFEFF" +
+        csv.join("\n");
+
+
+    let blob =
+        new Blob(
+            [csvContent],
+            {
+                type:
+                    "text/csv;charset=utf-8;"
+            }
+        );
+
+
+    let url =
+        URL.createObjectURL(
+            blob
+        );
+
+
+    let link =
+        document.createElement("a");
+
+
+    link.href =
+        url;
+
+
+    link.download =
+        "Monthly_Demand.csv";
+
+
+    document.body.appendChild(
+        link
+    );
+
+
+    link.click();
+
+
+    document.body.removeChild(
+        link
+    );
+
+
+    URL.revokeObjectURL(
+        url
+    );
+
+
+    alert(
+        "Monthly Demand exported to Excel successfully!"
+    );
+
+}
     alert(
         "Monthly Demand exported to Excel successfully!"
     );
