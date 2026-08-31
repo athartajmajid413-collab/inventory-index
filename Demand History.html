@@ -121,7 +121,12 @@
     >
         Cancel
     </button>
-
+<button
+    type="button"
+    onclick="exportDemandHistoryToExcel()"
+>
+    📊 Export Excel
+</button>
 </div>
 
 
@@ -159,7 +164,7 @@
     </tbody>
 
 </table>
-
+<script src="https://cdn.jsdelivr.net/npm/xlsx-js-style@1.2.0/dist/xlsx.bundle.js"></script>
 <script src="supabase.js"></script>
 <script src="Demand History.js"></script>
 
