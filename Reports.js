@@ -2361,3 +2361,550 @@ document.addEventListener(
 
     }
 );
+// =====================================================
+// EXCEL EXPORT
+// صرف Excel Export کے لیے نیا code
+// باقی Reports System میں کوئی تبدیلی نہیں
+// =====================================================
+
+
+// =====================================================
+// LOAD SHEETJS LIBRARY
+// =====================================================
+
+function loadExcelLibrary(){
+
+    return new Promise(function(resolve, reject){
+
+        // اگر پہلے سے موجود ہے
+        if(window.XLSX){
+
+            resolve();
+
+            return;
+
+        }
+
+
+        let script =
+            document.createElement("script");
+
+
+        script.src =
+            "https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js";
+
+
+        script.onload =
+            function(){
+
+                console.log(
+                    "✅ Excel Library Loaded"
+                );
+
+                resolve();
+
+            };
+
+
+        script.onerror =
+            function(){
+
+                console.error(
+                    "❌ Excel Library Could Not Load"
+                );
+
+                reject(
+                    new Error(
+                        "Excel library could not be loaded."
+                    )
+                );
+
+            };
+
+
+        document.head.appendChild(
+            script
+        );
+
+    });
+
+}
+
+
+// =====================================================
+// EXPORT CURRENT REPORT TO EXCEL
+// =====================================================
+
+async function exportReportToExcel(){
+
+    try{
+
+        // =============================================
+        // LOAD EXCEL LIBRARY
+        // =============================================
+
+        await loadExcelLibrary();
+
+
+        // =============================================
+        // CHECK REPORT
+        // =============================================
+
+        let reportBody =
+            document.getElementById(
+                "reportBody"
+            );
+
+
+        if(
+            !reportBody ||
+            reportBody.children.length === 0
+        ){
+
+            alert(
+                "پہلے Report Generate کریں، پھر Excel Export کریں۔"
+            );
+
+            return;
+
+        }
+
+
+        // =============================================
+        // REPORT TYPE
+        // =============================================
+
+        let reportType =
+            document.getElementById(
+                "reportType"
+            ).value;
+
+
+        let reportName =
+            "Store Report";
+
+
+        if(reportType == "stockIn"){
+
+            reportName =
+                "Stock In Report";
+
+        }
+
+        else if(reportType == "stockOut"){
+
+            reportName =
+                "Stock Out Report";
+
+        }
+
+        else if(reportType == "currentStock"){
+
+            reportName =
+                "Current Stock Report";
+
+        }
+
+        else if(reportType == "cost"){
+
+            reportName =
+                "Cost Report";
+
+        }
+
+        else if(reportType == "demand"){
+
+            reportName =
+                "Monthly Demand Report";
+
+        }
+
+        else if(reportType == "all"){
+
+            reportName =
+                "All Transactions Report";
+
+        }
+
+
+        // =============================================
+        // CREATE EXCEL DATA
+        // =============================================
+
+        let table =
+            document.querySelector(
+                "table"
+            );
+
+
+        if(!table){
+
+            alert(
+                "Report table نہیں ملی۔"
+            );
+
+            return;
+
+        }
+
+
+        // =============================================
+        // CLONE TABLE
+        // =============================================
+
+        let clonedTable =
+            table.cloneNode(true);
+
+
+        // =============================================
+        // REMOVE DELETE / ACTION COLUMN
+        // =============================================
+
+        let rows =
+            clonedTable.querySelectorAll(
+                "tr"
+            );
+
+
+        rows.forEach(function(row){
+
+            let cells =
+                row.querySelectorAll(
+                    "th, td"
+                );
+
+
+            if(cells.length > 0){
+
+                let lastCell =
+                    cells[cells.length - 1];
+
+
+                let text =
+                    (
+                        lastCell.innerText ||
+                        ""
+                    )
+                    .trim()
+                    .toLowerCase();
+
+
+                if(
+                    text == "action" ||
+                    lastCell.classList.contains(
+                        "deleteColumn"
+                    )
+                ){
+
+                    lastCell.remove();
+
+                }
+
+            }
+
+        });
+
+
+        // =============================================
+        // CONVERT TABLE TO WORKSHEET
+        // =============================================
+
+        let workbook =
+            XLSX.utils.book_new();
+
+
+        let worksheet =
+            XLSX.utils.table_to_sheet(
+                clonedTable
+            );
+
+
+        // =============================================
+        // COMPANY HEADER
+        // =============================================
+
+        let headerData = [
+
+            [
+                "MECAS ENGINEERING PVT LIMITED SUNDAR"
+            ],
+
+            [
+                "STORE MANAGEMENT SYSTEM"
+            ],
+
+            [
+                reportName
+            ],
+
+            [
+                "Report Date:",
+                new Date().toLocaleDateString()
+            ],
+
+            []
+
+        ];
+
+
+        // Existing table data
+        let tableData =
+            XLSX.utils.sheet_to_json(
+                worksheet,
+                {
+                    header:1
+                }
+            );
+
+
+        // Combine header + table
+        let finalData =
+            headerData.concat(
+                tableData
+            );
+
+
+        let finalWorksheet =
+            XLSX.utils.aoa_to_sheet(
+                finalData
+            );
+
+
+        // =============================================
+        // COLUMN WIDTHS
+        // =============================================
+
+        finalWorksheet["!cols"] = [
+
+            {
+                wch: 15
+            },
+
+            {
+                wch: 25
+            },
+
+            {
+                wch: 20
+            },
+
+            {
+                wch: 18
+            },
+
+            {
+                wch: 18
+            },
+
+            {
+                wch: 18
+            },
+
+            {
+                wch: 18
+            },
+
+            {
+                wch: 18
+            },
+
+            {
+                wch: 18
+            }
+
+        ];
+
+
+        // =============================================
+        // ADD SHEET
+        // =============================================
+
+        XLSX.utils.book_append_sheet(
+
+            workbook,
+
+            finalWorksheet,
+
+            "Report"
+
+        );
+
+
+        // =============================================
+        // FILE NAME
+        // =============================================
+
+        let today =
+            new Date();
+
+
+        let year =
+            today.getFullYear();
+
+
+        let month =
+            String(
+                today.getMonth() + 1
+            )
+            .padStart(
+                2,
+                "0"
+            );
+
+
+        let day =
+            String(
+                today.getDate()
+            )
+            .padStart(
+                2,
+                "0"
+            );
+
+
+        let fileName =
+            reportName
+                .replace(
+                    /\s+/g,
+                    "_"
+                ) +
+            "_" +
+            year +
+            "-" +
+            month +
+            "-" +
+            day +
+            ".xlsx";
+
+
+        // =============================================
+        // DOWNLOAD EXCEL
+        // =============================================
+
+        XLSX.writeFile(
+
+            workbook,
+
+            fileName
+
+        );
+
+
+        console.log(
+            "✅ Excel Export Successful:",
+            fileName
+        );
+
+
+        alert(
+            reportName +
+            " Excel file successfully export ہو گئی۔"
+        );
+
+    }
+
+    catch(error){
+
+        console.error(
+            "❌ Excel Export Error:",
+            error
+        );
+
+
+        alert(
+            "Excel Export میں مسئلہ آیا ہے۔\n\n" +
+            error.message
+        );
+
+    }
+
+}
+
+
+// =====================================================
+// ADD EXCEL BUTTON
+// =====================================================
+
+document.addEventListener(
+    "DOMContentLoaded",
+    function(){
+
+        let printButton =
+            document.querySelector(
+                'button[onclick="printReport()"]'
+            );
+
+
+        if(!printButton){
+
+            console.warn(
+                "Print button not found."
+            );
+
+            return;
+
+        }
+
+
+        // پہلے check کریں button پہلے سے موجود تو نہیں
+        if(
+            document.getElementById(
+                "excelExportButton"
+            )
+        ){
+
+            return;
+
+        }
+
+
+        let excelButton =
+            document.createElement(
+                "button"
+            );
+
+
+        excelButton.id =
+            "excelExportButton";
+
+
+        excelButton.type =
+            "button";
+
+
+        excelButton.innerHTML =
+            "📊 Export to Excel";
+
+
+        excelButton.onclick =
+            exportReportToExcel;
+
+
+        excelButton.style.marginLeft =
+            "10px";
+
+
+        excelButton.style.padding =
+            "8px 14px";
+
+
+        excelButton.style.cursor =
+            "pointer";
+
+
+        // Print button کے بعد Excel button
+        printButton.parentNode.insertBefore(
+
+            excelButton,
+
+            printButton.nextSibling
+
+        );
+
+
+        console.log(
+            "✅ Excel Export Button Added"
+        );
+
+    }
+);
