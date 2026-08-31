@@ -61,7 +61,7 @@ async function loadStockIssues(){
 
     let result =
         await supabaseRequest(
-            "stock_issues",
+            "stock_issue",
             "GET",
             null,
             "?select=*&order=id.asc"
@@ -315,7 +315,7 @@ async function getStockIssueQuantity(itemCode){
 
     let result =
         await supabaseRequest(
-            "stock_issues",
+            "stock_issue",
             "GET",
             null,
             "?select=id,quantity,item_code" +
@@ -625,7 +625,7 @@ async function stockIssue(){
 
         let result =
             await supabaseRequest(
-                "stock_issues",
+                "stock_issue",
                 "PATCH",
                 data,
                 "?id=eq." +
@@ -664,7 +664,7 @@ async function stockIssue(){
 
         let result =
             await supabaseRequest(
-                "stock_issues",
+                "stock_issue",
                 "POST",
                 data
             );
@@ -1063,7 +1063,7 @@ function addHistoryRow(record){
 
             let result =
                 await supabaseRequest(
-                    "stock_issues",
+                    "stock_issue",
                     "DELETE",
                     null,
                     "?id=eq." +
