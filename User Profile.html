@@ -1,0 +1,740 @@
+<!DOCTYPE html>
+
+<html lang="en">
+
+<head>
+
+```
+<meta charset="UTF-8">
+
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<title>User Profile - Store Management System</title>
+
+<style>
+
+    *{
+        box-sizing:border-box;
+    }
+
+    body{
+
+        margin:0;
+
+        min-height:100vh;
+
+        font-family:Arial,sans-serif;
+
+        background:#f2f5f9;
+
+    }
+
+
+    /* =================================
+       HEADER
+    ================================= */
+
+    .header{
+
+        background:#12355b;
+
+        color:white;
+
+        padding:18px 25px;
+
+        display:flex;
+
+        justify-content:space-between;
+
+        align-items:center;
+
+    }
+
+
+    .header h2{
+
+        margin:0;
+
+    }
+
+
+    .header button{
+
+        background:white;
+
+        color:#12355b;
+
+        border:none;
+
+        padding:9px 15px;
+
+        border-radius:7px;
+
+        cursor:pointer;
+
+        font-weight:bold;
+
+    }
+
+
+    .header button:hover{
+
+        background:#e8f1ff;
+
+    }
+
+
+    /* =================================
+       MAIN
+    ================================= */
+
+    .container{
+
+        width:850px;
+
+        max-width:94%;
+
+        margin:35px auto;
+
+    }
+
+
+    .company{
+
+        text-align:center;
+
+        color:#12355b;
+
+        font-size:22px;
+
+        font-weight:bold;
+
+        margin-bottom:8px;
+
+    }
+
+
+    .title{
+
+        text-align:center;
+
+        color:#12355b;
+
+        margin-bottom:25px;
+
+    }
+
+
+    /* =================================
+       PROFILE CARD
+    ================================= */
+
+    .profile-card{
+
+        background:white;
+
+        border-radius:15px;
+
+        padding:30px;
+
+        box-shadow:
+
+            0 5px 18px
+            rgba(0,0,0,.12);
+
+    }
+
+
+    .profile-icon{
+
+        width:90px;
+
+        height:90px;
+
+        margin:0 auto 20px;
+
+        border-radius:50%;
+
+        background:#12355b;
+
+        color:white;
+
+        display:flex;
+
+        justify-content:center;
+
+        align-items:center;
+
+        font-size:42px;
+
+    }
+
+
+    .profile-row{
+
+        display:grid;
+
+        grid-template-columns:200px 1fr;
+
+        border-bottom:1px solid #ddd;
+
+        padding:15px 5px;
+
+    }
+
+
+    .profile-label{
+
+        font-weight:bold;
+
+        color:#12355b;
+
+    }
+
+
+    .profile-value{
+
+        color:#333;
+
+    }
+
+
+    .role{
+
+        display:inline-block;
+
+        background:#e8f1ff;
+
+        color:#12355b;
+
+        padding:5px 12px;
+
+        border-radius:15px;
+
+        font-weight:bold;
+
+    }
+
+
+    /* =================================
+       PASSWORD CARD
+    ================================= */
+
+    .password-card{
+
+        background:white;
+
+        border-radius:15px;
+
+        padding:30px;
+
+        margin-top:25px;
+
+        box-shadow:
+
+            0 5px 18px
+            rgba(0,0,0,.12);
+
+    }
+
+
+    .password-card h2{
+
+        color:#12355b;
+
+        margin-top:0;
+
+    }
+
+
+    .password-note{
+
+        color:#666;
+
+        line-height:1.6;
+
+        margin-bottom:20px;
+
+    }
+
+
+    .input-group{
+
+        margin-bottom:15px;
+
+    }
+
+
+    .input-group label{
+
+        display:block;
+
+        font-weight:bold;
+
+        margin-bottom:7px;
+
+        color:#333;
+
+    }
+
+
+    .input-group input{
+
+        width:100%;
+
+        padding:12px;
+
+        border:1px solid #ccc;
+
+        border-radius:7px;
+
+        font-size:15px;
+
+        outline:none;
+
+    }
+
+
+    .input-group input:focus{
+
+        border-color:#1677ff;
+
+    }
+
+
+    .password-btn{
+
+        background:#12355b;
+
+        color:white;
+
+        border:none;
+
+        padding:12px 20px;
+
+        border-radius:7px;
+
+        cursor:pointer;
+
+        font-weight:bold;
+
+    }
+
+
+    .password-btn:hover{
+
+        background:#1677ff;
+
+    }
+
+
+    #passwordMessage{
+
+        margin-top:15px;
+
+        min-height:20px;
+
+        color:#e74c3c;
+
+        font-weight:bold;
+
+    }
+
+
+    /* =================================
+       BOTTOM BUTTONS
+    ================================= */
+
+    .actions{
+
+        display:flex;
+
+        gap:10px;
+
+        flex-wrap:wrap;
+
+        margin-top:25px;
+
+    }
+
+
+    .actions button{
+
+        border:none;
+
+        padding:12px 18px;
+
+        border-radius:7px;
+
+        cursor:pointer;
+
+        font-weight:bold;
+
+    }
+
+
+    .dashboard-btn{
+
+        background:#1677ff;
+
+        color:white;
+
+    }
+
+
+    .logout-btn{
+
+        background:#e74c3c;
+
+        color:white;
+
+    }
+
+
+    .actions button:hover{
+
+        opacity:.9;
+
+    }
+
+
+    /* =================================
+       SECURITY NOTE
+    ================================= */
+
+    .security-note{
+
+        margin-top:25px;
+
+        padding:15px;
+
+        background:#fff8e1;
+
+        border-left:5px solid #f39c12;
+
+        border-radius:7px;
+
+        color:#6d5200;
+
+        line-height:1.6;
+
+    }
+
+
+    /* =================================
+       MOBILE
+    ================================= */
+
+    @media(max-width:600px){
+
+        .header{
+
+            flex-direction:column;
+
+            gap:10px;
+
+            text-align:center;
+
+        }
+
+
+        .profile-row{
+
+            grid-template-columns:1fr;
+
+            gap:5px;
+
+        }
+
+
+        .container{
+
+            max-width:95%;
+
+        }
+
+    }
+
+</style>
+```
+
+</head>
+
+<body>
+
+<!-- =====================================
+     HEADER
+===================================== -->
+
+<div class="header">
+
+```
+<h2>
+    🏭 STORE MANAGEMENT SYSTEM
+</h2>
+
+
+<button
+    type="button"
+    onclick="backToDashboard()"
+>
+    🏠 Dashboard
+</button>
+```
+
+</div>
+
+<!-- =====================================
+     MAIN CONTAINER
+===================================== -->
+
+<div class="container">
+
+```
+<div class="company">
+
+    MECAS ENGINEERING PVT LIMITED SUNDAR
+
+</div>
+
+
+<h1 class="title">
+
+    👤 User Profile
+
+</h1>
+
+
+<!-- =================================
+     PROFILE INFORMATION
+================================== -->
+
+<div class="profile-card">
+
+
+    <div class="profile-icon">
+
+        👤
+
+    </div>
+
+
+    <div class="profile-row">
+
+        <div class="profile-label">
+            Username
+        </div>
+
+        <div
+            class="profile-value"
+            id="profileUsername"
+        >
+            Loading...
+        </div>
+
+    </div>
+
+
+    <div class="profile-row">
+
+        <div class="profile-label">
+            Full Name
+        </div>
+
+        <div
+            class="profile-value"
+            id="profileFullName"
+        >
+            Loading...
+        </div>
+
+    </div>
+
+
+    <div class="profile-row">
+
+        <div class="profile-label">
+            Email
+        </div>
+
+        <div
+            class="profile-value"
+            id="profileEmail"
+        >
+            Loading...
+        </div>
+
+    </div>
+
+
+    <div class="profile-row">
+
+        <div class="profile-label">
+            Role
+        </div>
+
+        <div class="profile-value">
+
+            <span
+                class="role"
+                id="profileRole"
+            >
+                Loading...
+            </span>
+
+        </div>
+
+    </div>
+
+
+    <div class="profile-row">
+
+        <div class="profile-label">
+            Registration Date
+        </div>
+
+        <div
+            class="profile-value"
+            id="profileCreated"
+        >
+            Loading...
+        </div>
+
+    </div>
+
+
+</div>
+
+
+<!-- =================================
+     PASSWORD
+================================== -->
+
+<div class="password-card">
+
+
+    <h2>
+
+        🔐 Change Password
+
+    </h2>
+
+
+    <div class="password-note">
+
+        Password یہاں دکھایا نہیں جائے گا۔
+        اگر آپ password تبدیل کرنا چاہتے ہیں تو
+        اپنا نیا password درج کریں۔
+        Supabase آپ کے registered Email پر
+        password reset / verification link بھیجے گا۔
+
+    </div>
+
+
+    <div class="input-group">
+
+        <label>
+            New Password
+        </label>
+
+        <input
+            type="password"
+            id="newPassword"
+            placeholder="Enter New Password"
+            autocomplete="new-password"
+        >
+
+    </div>
+
+
+    <div class="input-group">
+
+        <label>
+            Confirm New Password
+        </label>
+
+        <input
+            type="password"
+            id="confirmPassword"
+            placeholder="Confirm New Password"
+            autocomplete="new-password"
+        >
+
+    </div>
+
+
+    <button
+        type="button"
+        class="password-btn"
+        onclick="updatePassword()"
+    >
+        📧 Send Password Verification
+    </button>
+
+
+    <div
+        id="passwordMessage"
+    ></div>
+
+
+</div>
+
+
+<!-- =================================
+     SECURITY
+================================== -->
+
+<div class="security-note">
+
+    🔒 <strong>Security:</strong>
+    آپ کا اصل password اس page پر کبھی show نہیں ہوگا۔
+    Password change کے لیے registered email استعمال کیا جائے گا۔
+
+</div>
+
+
+<!-- =================================
+     ACTIONS
+================================== -->
+
+<div class="actions">
+
+
+    <button
+        type="button"
+        class="dashboard-btn"
+        onclick="backToDashboard()"
+    >
+
+        🏠 Back to Dashboard
+
+    </button>
+
+
+    <button
+        type="button"
+        class="logout-btn"
+        onclick="logoutUser()"
+    >
+
+        🚪 Logout
+
+    </button>
+
+
+</div>
+```
+
+</div>
+
+<!-- =====================================
+     JAVASCRIPT
+===================================== -->
+
+<script src="supabase.js"></script>
+
+<script src="User Profile.js"></script>
+
+</body>
+
+</html>
