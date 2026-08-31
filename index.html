@@ -1,676 +1,389 @@
 <!DOCTYPE html>
+
 <html lang="en">
 
 <head>
 
-    <meta charset="UTF-8">
+```
+<meta charset="UTF-8">
 
-    <meta name="viewport"
-          content="width=device-width, initial-scale=1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-    <title>
-        Store Management System - Login
-    </title>
+<title>Store Management System - Login</title>
 
+<style>
 
-    <style>
+    *{
+        box-sizing:border-box;
+    }
 
-        *{
-            box-sizing:border-box;
-        }
+    body{
 
+        margin:0;
 
-        body{
+        min-height:100vh;
 
-            margin:0;
+        font-family:Arial,sans-serif;
 
-            min-height:100vh;
+        background:linear-gradient(
+            135deg,
+            #12355b,
+            #1677ff
+        );
 
-            font-family:Arial,sans-serif;
+        display:flex;
 
-            background:linear-gradient(
-                135deg,
-                #12355b,
-                #1677ff
-            );
+        justify-content:center;
 
-            display:flex;
+        align-items:center;
 
-            justify-content:center;
+    }
 
-            align-items:center;
 
-            padding:20px;
+    .login-container{
 
-        }
+        width:400px;
 
+        max-width:92%;
 
-        .login-container{
+        background:white;
 
-            width:400px;
+        padding:35px;
 
-            max-width:100%;
+        border-radius:18px;
 
-            background:white;
+        box-shadow:
+            0 10px 30px
+            rgba(0,0,0,.25);
 
-            padding:35px;
+        text-align:center;
 
-            border-radius:18px;
+    }
 
-            box-shadow:
-                0 10px 30px
-                rgba(0,0,0,.25);
 
-            text-align:center;
+    .logo{
 
-        }
+        width:75px;
 
+        height:75px;
 
-        .logo{
+        margin:0 auto 15px;
 
-            width:75px;
+        background:#12355b;
 
-            height:75px;
+        color:white;
 
-            margin:0 auto 15px;
+        border-radius:50%;
 
-            background:#12355b;
+        display:flex;
 
-            color:white;
+        justify-content:center;
 
-            border-radius:50%;
+        align-items:center;
 
-            display:flex;
+        font-size:35px;
 
-            justify-content:center;
+    }
 
-            align-items:center;
 
-            font-size:35px;
+    h1{
 
-        }
+        margin:0;
 
+        color:#12355b;
 
-        h1{
+        font-size:24px;
 
-            margin:0;
+    }
 
-            color:#12355b;
 
-            font-size:24px;
+    .subtitle{
 
-        }
+        margin:8px 0 25px;
 
+        color:#777;
 
-        .subtitle{
+        font-size:14px;
 
-            margin:8px 0 25px;
+    }
 
-            color:#777;
 
-            font-size:14px;
+    .input-group{
 
-        }
+        text-align:left;
 
+        margin-bottom:17px;
 
-        .form-title{
+    }
 
-            color:#12355b;
 
-            font-size:20px;
+    .input-group label{
 
-            margin-bottom:20px;
+        display:block;
 
-        }
+        margin-bottom:7px;
 
+        color:#333;
 
-        .input-group{
+        font-weight:bold;
 
-            text-align:left;
+        font-size:14px;
 
-            margin-bottom:16px;
+    }
 
-        }
 
+    .input-group input{
 
-        .input-group label{
+        width:100%;
 
-            display:block;
+        padding:13px;
 
-            margin-bottom:7px;
+        border:1px solid #ccc;
 
-            color:#333;
+        border-radius:8px;
 
-            font-weight:bold;
+        font-size:15px;
 
-            font-size:14px;
+        outline:none;
 
-        }
+    }
 
 
-        .input-group input{
+    .input-group input:focus{
 
-            width:100%;
+        border-color:#1677ff;
 
-            padding:13px;
+        box-shadow:
+            0 0 0 2px
+            rgba(22,119,255,.15);
 
-            border:1px solid #ccc;
+    }
 
-            border-radius:8px;
 
-            font-size:15px;
+    button{
 
-            outline:none;
+        width:100%;
 
-        }
+        padding:13px;
 
+        border:none;
 
-        .input-group input:focus{
+        border-radius:8px;
 
-            border-color:#1677ff;
+        background:#12355b;
 
-            box-shadow:
-                0 0 0 2px
-                rgba(22,119,255,.15);
+        color:white;
 
-        }
+        font-size:16px;
 
+        font-weight:bold;
 
-        .password-box{
+        cursor:pointer;
 
-            position:relative;
+        margin-top:5px;
 
-        }
+    }
 
 
-        .password-box input{
+    button:hover{
 
-            padding-right:50px;
+        background:#1677ff;
 
-        }
+    }
 
 
-        .show-password{
+    .secondary-btn{
 
-            position:absolute;
+        background:#e8eef5;
 
-            right:10px;
+        color:#12355b;
 
-            top:50%;
+        margin-top:10px;
 
-            transform:translateY(-50%);
+    }
 
-            border:none;
 
-            background:none;
+    .secondary-btn:hover{
 
-            color:#12355b;
+        background:#d7e2ef;
 
-            cursor:pointer;
+    }
 
-            font-size:18px;
 
-            padding:5px;
+    .error{
 
-            margin:0;
+        color:#e74c3c;
 
-        }
+        font-size:14px;
 
+        margin-top:15px;
 
-        .main-btn{
+        min-height:20px;
 
-            width:100%;
+    }
 
-            padding:13px;
 
-            border:none;
+    .success{
 
-            border-radius:8px;
+        color:#168a45;
 
-            background:#12355b;
+        font-size:14px;
 
-            color:white;
+        margin-top:15px;
 
-            font-size:16px;
+        min-height:20px;
 
-            font-weight:bold;
+    }
 
-            cursor:pointer;
 
-            margin-top:5px;
+    .hidden{
 
-        }
+        display:none;
 
+    }
 
-        .main-btn:hover{
 
-            background:#1677ff;
+    .register-link{
 
-        }
+        margin-top:18px;
 
+        font-size:14px;
 
-        .switch-text{
+        color:#555;
 
-            margin-top:20px;
+    }
 
-            color:#777;
 
-            font-size:14px;
+    .register-link span{
 
-        }
+        color:#1677ff;
 
+        font-weight:bold;
 
-        .switch-btn{
+        cursor:pointer;
 
-            border:none;
+    }
 
-            background:none;
 
-            color:#1677ff;
+    .footer{
 
-            font-weight:bold;
+        margin-top:25px;
 
-            cursor:pointer;
+        color:#999;
 
-            font-size:14px;
+        font-size:12px;
 
-            padding:0;
+    }
 
-            margin:0;
 
-        }
+    .role-info{
 
+        background:#f2f5f9;
 
-        .switch-btn:hover{
+        padding:10px;
 
-            text-decoration:underline;
+        border-radius:8px;
 
-        }
+        margin-bottom:18px;
 
+        font-size:13px;
 
-        .message{
+        color:#555;
 
-            min-height:22px;
+    }
 
-            margin-top:15px;
-
-            font-size:14px;
-
-            font-weight:bold;
-
-        }
-
-
-        .success{
-
-            color:#1e8449;
-
-        }
-
-
-        .error{
-
-            color:#e74c3c;
-
-        }
-
-
-        .footer{
-
-            margin-top:25px;
-
-            color:#999;
-
-            font-size:12px;
-
-        }
-
-
-        .hidden{
-
-            display:none;
-
-        }
-
-
-        .loading{
-
-            opacity:.7;
-
-            pointer-events:none;
-
-        }
-
-
-        @media(max-width:450px){
-
-            .login-container{
-
-                padding:25px 20px;
-
-            }
-
-            h1{
-
-                font-size:21px;
-
-            }
-
-        }
-
-    </style>
+</style>
+```
 
 </head>
 
-
 <body>
-
 
 <div class="login-container">
 
-
-    <!-- ============================= -->
-    <!-- LOGO -->
-    <!-- ============================= -->
-
-    <div class="logo">
-        🏭
-    </div>
+```
+<div class="logo">
+    🏭
+</div>
 
 
-    <h1>
-        STORE MANAGEMENT SYSTEM
-    </h1>
+<h1>
+    STORE MANAGEMENT SYSTEM
+</h1>
 
 
-    <div class="subtitle">
-        Inventory & Store Control
-    </div>
+<div class="subtitle">
+    Inventory & Store Control
+</div>
 
 
+<!-- ================================= -->
+<!-- LOGIN FORM -->
+<!-- ================================= -->
 
-    <!-- ============================= -->
-    <!-- LOGIN FORM -->
-    <!-- ============================= -->
-
-    <div id="loginSection">
+<div id="loginSection">
 
 
-        <div class="form-title">
+    <form onsubmit="login(event)">
+
+
+        <div class="input-group">
+
+            <label>
+                Email
+            </label>
+
+            <input
+                type="email"
+                id="loginEmail"
+                placeholder="Enter Email"
+                autocomplete="username"
+                required
+            >
+
+        </div>
+
+
+        <div class="input-group">
+
+            <label>
+                Password
+            </label>
+
+            <input
+                type="password"
+                id="loginPassword"
+                placeholder="Enter Password"
+                autocomplete="current-password"
+                required
+            >
+
+        </div>
+
+
+        <button
+            type="submit"
+        >
             🔐 Login
-        </div>
-
-
-        <form id="loginForm">
-
-
-            <div class="input-group">
-
-                <label>
-                    Email
-                </label>
-
-                <input
-                    type="email"
-                    id="loginEmail"
-                    placeholder="Enter Email"
-                    autocomplete="email"
-                    required
-                >
-
-            </div>
-
-
-            <div class="input-group">
-
-                <label>
-                    Password
-                </label>
-
-
-                <div class="password-box">
-
-                    <input
-                        type="password"
-                        id="loginPassword"
-                        placeholder="Enter Password"
-                        autocomplete="current-password"
-                        required
-                    >
-
-
-                    <button
-                        type="button"
-                        class="show-password"
-                        onclick="togglePassword(
-                            'loginPassword',
-                            this
-                        )"
-                    >
-                        👁️
-                    </button>
-
-                </div>
-
-            </div>
-
-
-            <button
-                type="submit"
-                class="main-btn"
-                id="loginButton"
-            >
-                🔐 Login
-            </button>
-
-
-        </form>
+        </button>
 
 
         <div
-            id="loginMessage"
-            class="message"
+            id="loginError"
+            class="error"
         ></div>
 
 
-        <div class="switch-text">
+    </form>
 
-            Don't have an account?
 
-            <button
-                type="button"
-                class="switch-btn"
-                onclick="showRegister()"
-            >
-                Register
-            </button>
+    <div class="register-link">
 
-        </div>
+        Don't have an account?
 
-
-    </div>
-
-
-
-    <!-- ============================= -->
-    <!-- REGISTER FORM -->
-    <!-- ============================= -->
-
-    <div
-        id="registerSection"
-        class="hidden"
-    >
-
-
-        <div class="form-title">
-            📝 Register
-        </div>
-
-
-        <form id="registerForm">
-
-
-            <div class="input-group">
-
-                <label>
-                    Full Name
-                </label>
-
-                <input
-                    type="text"
-                    id="fullName"
-                    placeholder="Enter Full Name"
-                    autocomplete="name"
-                    required
-                >
-
-            </div>
-
-
-            <div class="input-group">
-
-                <label>
-                    Username
-                </label>
-
-                <input
-                    type="text"
-                    id="registerUsername"
-                    placeholder="Enter Username"
-                    autocomplete="username"
-                    required
-                >
-
-            </div>
-
-
-            <div class="input-group">
-
-                <label>
-                    Email
-                </label>
-
-                <input
-                    type="email"
-                    id="registerEmail"
-                    placeholder="Enter Email"
-                    autocomplete="email"
-                    required
-                >
-
-            </div>
-
-
-            <div class="input-group">
-
-                <label>
-                    Password
-                </label>
-
-
-                <div class="password-box">
-
-                    <input
-                        type="password"
-                        id="registerPassword"
-                        placeholder="Create Password"
-                        autocomplete="new-password"
-                        minlength="6"
-                        required
-                    >
-
-
-                    <button
-                        type="button"
-                        class="show-password"
-                        onclick="togglePassword(
-                            'registerPassword',
-                            this
-                        )"
-                    >
-                        👁️
-                    </button>
-
-                </div>
-
-            </div>
-
-
-            <div class="input-group">
-
-                <label>
-                    Confirm Password
-                </label>
-
-
-                <div class="password-box">
-
-                    <input
-                        type="password"
-                        id="confirmPassword"
-                        placeholder="Confirm Password"
-                        autocomplete="new-password"
-                        minlength="6"
-                        required
-                    >
-
-
-                    <button
-                        type="button"
-                        class="show-password"
-                        onclick="togglePassword(
-                            'confirmPassword',
-                            this
-                        )"
-                    >
-                        👁️
-                    </button>
-
-                </div>
-
-            </div>
-
-
-            <button
-                type="submit"
-                class="main-btn"
-                id="registerButton"
-            >
-                📝 Create Account
-            </button>
-
-
-        </form>
-
-
-        <div
-            id="registerMessage"
-            class="message"
-        ></div>
-
-
-        <div class="switch-text">
-
-            Already have an account?
-
-            <button
-                type="button"
-                class="switch-btn"
-                onclick="showLogin()"
-            >
-                Login
-            </button>
-
-        </div>
-
-
-    </div>
-
-
-
-    <div class="footer">
-
-        MECAS ENGINEERING PVT LIMITED SUNDAR
+        <span onclick="showRegister()">
+            Register
+        </span>
 
     </div>
 
@@ -678,130 +391,701 @@
 </div>
 
 
+<!-- ================================= -->
+<!-- REGISTER FORM -->
+<!-- ================================= -->
 
-<!-- ================================= -->
-<!-- SUPABASE -->
-<!-- ================================= -->
+<div
+    id="registerSection"
+    class="hidden"
+>
+
+
+    <div class="role-info">
+
+        New accounts are registered as
+        <strong>User</strong>.
+
+        Admin access can only be assigned
+        by an existing administrator.
+
+    </div>
+
+
+    <form onsubmit="registerUser(event)">
+
+
+        <div class="input-group">
+
+            <label>
+                Full Name
+            </label>
+
+            <input
+                type="text"
+                id="fullName"
+                placeholder="Enter Full Name"
+                required
+            >
+
+        </div>
+
+
+        <div class="input-group">
+
+            <label>
+                Username
+            </label>
+
+            <input
+                type="text"
+                id="registerUsername"
+                placeholder="Enter Username"
+                required
+            >
+
+        </div>
+
+
+        <div class="input-group">
+
+            <label>
+                Email
+            </label>
+
+            <input
+                type="email"
+                id="registerEmail"
+                placeholder="Enter Email"
+                autocomplete="email"
+                required
+            >
+
+        </div>
+
+
+        <div class="input-group">
+
+            <label>
+                Password
+            </label>
+
+            <input
+                type="password"
+                id="registerPassword"
+                placeholder="Minimum 6 characters"
+                autocomplete="new-password"
+                minlength="6"
+                required
+            >
+
+        </div>
+
+
+        <div class="input-group">
+
+            <label>
+                Confirm Password
+            </label>
+
+            <input
+                type="password"
+                id="confirmPassword"
+                placeholder="Confirm Password"
+                autocomplete="new-password"
+                minlength="6"
+                required
+            >
+
+        </div>
+
+
+        <button
+            type="submit"
+        >
+            📝 Create Account
+        </button>
+
+
+        <div
+            id="registerError"
+            class="error"
+        ></div>
+
+
+        <div
+            id="registerSuccess"
+            class="success"
+        ></div>
+
+
+    </form>
+
+
+    <button
+        type="button"
+        class="secondary-btn"
+        onclick="showLogin()"
+    >
+        ← Back to Login
+    </button>
+
+
+</div>
+
+
+<div class="footer">
+
+    MECAS ENGINEERING PVT LIMITED SUNDAR
+
+</div>
+```
+
+</div>
 
 <script>
 
-const SUPABASE_URL =
-    "https://tncmmkyrpzlkupdnkyqm.supabase.co";
+    // =====================================
+    // SUPABASE SETTINGS
+    // =====================================
+
+    const SUPABASE_URL =
+        "https://tncmmkyrpzlkupdnkyqm.supabase.co";
 
 
-const SUPABASE_KEY =
-    "sb_publishable_e6j_EkJescicSS3nEOnscg_INwxeukT";
+    const SUPABASE_KEY =
+        "sb_publishable_e6j_EkJescicSS3nEOnscg_inwxeukT";
 
 
-// =====================================
-// SUPABASE AUTH REQUEST
-// =====================================
+    // =====================================
+    // SUPABASE AUTH REQUEST
+    // =====================================
 
-async function supabaseAuthRequest(
-    endpoint,
-    method,
-    data
-){
+    async function supabaseAuthRequest(
+        endpoint,
+        data
+    ){
 
-    try{
+        try{
 
-        const response =
-            await fetch(
+            const response =
+                await fetch(
+                    SUPABASE_URL +
+                    endpoint,
+                    {
 
-                SUPABASE_URL +
-                "/auth/v1/" +
-                endpoint,
+                        method:"POST",
+
+                        headers:{
+
+                            "apikey":
+                                SUPABASE_KEY,
+
+                            "Content-Type":
+                                "application/json"
+
+                        },
+
+                        body:
+                            JSON.stringify(data)
+
+                    }
+                );
+
+
+            const result =
+                await response.json();
+
+
+            if(!response.ok){
+
+                return {
+
+                    success:false,
+
+                    error:result
+
+                };
+
+            }
+
+
+            return {
+
+                success:true,
+
+                data:result
+
+            };
+
+        }
+        catch(error){
+
+            return {
+
+                success:false,
+
+                error:{
+                    message:error.message
+                }
+
+            };
+
+        }
+
+    }
+
+
+    // =====================================
+    // SHOW REGISTER
+    // =====================================
+
+    function showRegister(){
+
+        document
+            .getElementById("loginSection")
+            .classList.add("hidden");
+
+
+        document
+            .getElementById("registerSection")
+            .classList.remove("hidden");
+
+
+        clearMessages();
+
+    }
+
+
+    // =====================================
+    // SHOW LOGIN
+    // =====================================
+
+    function showLogin(){
+
+        document
+            .getElementById("registerSection")
+            .classList.add("hidden");
+
+
+        document
+            .getElementById("loginSection")
+            .classList.remove("hidden");
+
+
+        clearMessages();
+
+    }
+
+
+    // =====================================
+    // CLEAR MESSAGES
+    // =====================================
+
+    function clearMessages(){
+
+        document
+            .getElementById("loginError")
+            .textContent = "";
+
+
+        document
+            .getElementById("registerError")
+            .textContent = "";
+
+
+        document
+            .getElementById("registerSuccess")
+            .textContent = "";
+
+    }
+
+
+    // =====================================
+    // LOGIN
+    // =====================================
+
+    async function login(event){
+
+        event.preventDefault();
+
+
+        const email =
+            document
+                .getElementById("loginEmail")
+                .value
+                .trim();
+
+
+        const password =
+            document
+                .getElementById("loginPassword")
+                .value;
+
+
+        const errorElement =
+            document
+                .getElementById("loginError");
+
+
+        errorElement.textContent =
+            "Checking login...";
+
+
+        const result =
+            await supabaseAuthRequest(
+
+                "/auth/v1/token?grant_type=password",
 
                 {
 
-                    method:method,
+                    email:email,
 
-                    headers:{
-
-                        "apikey":
-                            SUPABASE_KEY,
-
-                        "Content-Type":
-                            "application/json"
-
-                    },
-
-                    body:
-                        JSON.stringify(data)
+                    password:password
 
                 }
 
             );
 
 
-        const result =
-            await response.json();
+        console.log(
+            "Login Result:",
+            result
+        );
 
 
-        if(!response.ok){
+        if(!result.success){
 
-            return {
+            errorElement.textContent =
+                "❌ Email or Password is incorrect.";
 
-                success:false,
-
-                error:
-                    result
-
-            };
+            return;
 
         }
 
 
-        return {
-
-            success:true,
-
-            data:
-                result
-
-        };
+        const authUser =
+            result.data.user;
 
 
-    }
-    catch(error){
-
-        return {
-
-            success:false,
-
-            error:
-                error.message
-
-        };
-
-    }
-
-}
+        const accessToken =
+            result.data.access_token;
 
 
+        // =================================
+        // SAVE SESSION
+        // =================================
 
-// =====================================
-// SUPABASE DATABASE REQUEST
-// =====================================
+        localStorage.setItem(
+            "supabase_access_token",
+            accessToken
+        );
 
-async function supabaseDatabaseRequest(
-    table,
-    method,
-    data
-){
 
-    try{
+        localStorage.setItem(
+            "auth_user_id",
+            authUser.id
+        );
 
-        const response =
+
+        localStorage.setItem(
+            "logged_in",
+            "true"
+        );
+
+
+        // =================================
+        // GET USER PROFILE
+        // =================================
+
+        const profileResponse =
             await fetch(
 
                 SUPABASE_URL +
-                "/rest/v1/" +
-                table,
+                "/rest/v1/users?auth_user_id=eq." +
+                encodeURIComponent(authUser.id) +
+                "&select=*",
 
                 {
 
-                    method:method,
+                    method:"GET",
+
+                    headers:{
+
+                        "apikey":
+                            SUPABASE_KEY,
+
+                        "Authorization":
+                            "Bearer " +
+                            accessToken
+
+                    }
+
+                }
+
+            );
+
+
+        const profiles =
+            await profileResponse.json();
+
+
+        console.log(
+            "User Profile:",
+            profiles
+        );
+
+
+        if(
+            Array.isArray(profiles) &&
+            profiles.length > 0
+        ){
+
+            const profile =
+                profiles[0];
+
+
+            localStorage.setItem(
+                "logged_in_username",
+                profile.username || ""
+            );
+
+
+            localStorage.setItem(
+                "logged_in_name",
+                profile.full_name || ""
+            );
+
+
+            localStorage.setItem(
+                "logged_in_role",
+                profile.role || "User"
+            );
+
+        }
+        else{
+
+            localStorage.setItem(
+                "logged_in_role",
+                "User"
+            );
+
+        }
+
+
+        // =================================
+        // OPEN DASHBOARD
+        // =================================
+
+        window.location.href =
+            "Dashboard.html";
+
+    }
+
+
+    // =====================================
+    // REGISTER
+    // =====================================
+
+    async function registerUser(event){
+
+        event.preventDefault();
+
+
+        const fullName =
+            document
+                .getElementById("fullName")
+                .value
+                .trim();
+
+
+        const username =
+            document
+                .getElementById("registerUsername")
+                .value
+                .trim();
+
+
+        const email =
+            document
+                .getElementById("registerEmail")
+                .value
+                .trim();
+
+
+        const password =
+            document
+                .getElementById("registerPassword")
+                .value;
+
+
+        const confirmPassword =
+            document
+                .getElementById("confirmPassword")
+                .value;
+
+
+        const errorElement =
+            document
+                .getElementById("registerError");
+
+
+        const successElement =
+            document
+                .getElementById("registerSuccess");
+
+
+        errorElement.textContent = "";
+
+        successElement.textContent = "";
+
+
+        // =================================
+        // PASSWORD CHECK
+        // =================================
+
+        if(password !== confirmPassword){
+
+            errorElement.textContent =
+                "❌ Passwords do not match.";
+
+            return;
+
+        }
+
+
+        if(password.length < 6){
+
+            errorElement.textContent =
+                "❌ Password must contain at least 6 characters.";
+
+            return;
+
+        }
+
+
+        // =================================
+        // CHECK USERNAME
+        // =================================
+
+        const usernameCheck =
+            await fetch(
+
+                SUPABASE_URL +
+                "/rest/v1/users?username=eq." +
+                encodeURIComponent(username) +
+                "&select=id",
+
+                {
+
+                    headers:{
+
+                        "apikey":
+                            SUPABASE_KEY,
+
+                        "Authorization":
+                            "Bearer " +
+                            SUPABASE_KEY
+
+                    }
+
+                }
+
+            );
+
+
+        const existingUsers =
+            await usernameCheck.json();
+
+
+        if(
+            Array.isArray(existingUsers) &&
+            existingUsers.length > 0
+        ){
+
+            errorElement.textContent =
+                "❌ Username already exists.";
+
+            return;
+
+        }
+
+
+        // =================================
+        // CREATE AUTH USER
+        // =================================
+
+        const authResult =
+            await supabaseAuthRequest(
+
+                "/auth/v1/signup",
+
+                {
+
+                    email:email,
+
+                    password:password
+
+                }
+
+            );
+
+
+        console.log(
+            "Registration Result:",
+            authResult
+        );
+
+
+        if(!authResult.success){
+
+            console.error(
+                "Registration Error:",
+                authResult.error
+            );
+
+
+            const message =
+                authResult.error?.msg ||
+                authResult.error?.message ||
+                "Registration failed.";
+
+
+            errorElement.textContent =
+                "❌ " + message;
+
+            return;
+
+        }
+
+
+        const authUser =
+            authResult.data.user;
+
+
+        if(!authUser){
+
+            errorElement.textContent =
+                "❌ User account could not be created.";
+
+            return;
+
+        }
+
+
+        // =================================
+        // SAVE PROFILE
+        // =================================
+
+        const profileResponse =
+            await fetch(
+
+                SUPABASE_URL +
+                "/rest/v1/users",
+
+                {
+
+                    method:"POST",
 
                     headers:{
 
@@ -821,615 +1105,95 @@ async function supabaseDatabaseRequest(
                     },
 
                     body:
-                        JSON.stringify(data)
+                        JSON.stringify({
+
+                            username:
+                                username,
+
+                            full_name:
+                                fullName,
+
+                            email:
+                                email,
+
+                            role:
+                                "User",
+
+                            auth_user_id:
+                                authUser.id
+
+                        })
 
                 }
 
             );
 
 
-        const result =
-            await response.json();
+        const profileResult =
+            await profileResponse.json();
 
 
-        if(!response.ok){
-
-            return {
-
-                success:false,
-
-                error:
-                    result
-
-            };
-
-        }
-
-
-        return {
-
-            success:true,
-
-            data:
-                result
-
-        };
-
-    }
-    catch(error){
-
-        return {
-
-            success:false,
-
-            error:
-                error.message
-
-        };
-
-    }
-
-}
-
-
-
-// =====================================
-// SHOW LOGIN
-// =====================================
-
-function showLogin(){
-
-    document
-        .getElementById("loginSection")
-        .classList.remove("hidden");
-
-
-    document
-        .getElementById("registerSection")
-        .classList.add("hidden");
-
-
-    clearMessages();
-
-}
-
-
-
-// =====================================
-// SHOW REGISTER
-// =====================================
-
-function showRegister(){
-
-    document
-        .getElementById("loginSection")
-        .classList.add("hidden");
-
-
-    document
-        .getElementById("registerSection")
-        .classList.remove("hidden");
-
-
-    clearMessages();
-
-}
-
-
-
-// =====================================
-// CLEAR MESSAGES
-// =====================================
-
-function clearMessages(){
-
-    document
-        .getElementById("loginMessage")
-        .textContent = "";
-
-
-    document
-        .getElementById("registerMessage")
-        .textContent = "";
-
-}
-
-
-
-// =====================================
-// TOGGLE PASSWORD
-// =====================================
-
-function togglePassword(
-    inputId,
-    button
-){
-
-    const input =
-        document.getElementById(
-            inputId
+        console.log(
+            "Profile Result:",
+            profileResult
         );
 
 
-    if(input.type === "password"){
+        if(!profileResponse.ok){
 
-        input.type = "text";
-
-        button.textContent =
-            "🙈";
-
-    }
-    else{
-
-        input.type = "password";
-
-        button.textContent =
-            "👁️";
-
-    }
-
-}
-
-
-
-// =====================================
-// LOGIN
-// =====================================
-
-document
-    .getElementById("loginForm")
-    .addEventListener(
-        "submit",
-        async function(event){
-
-            event.preventDefault();
-
-
-            const email =
-                document
-                .getElementById("loginEmail")
-                .value
-                .trim();
-
-
-            const password =
-                document
-                .getElementById("loginPassword")
-                .value;
-
-
-            const button =
-                document
-                .getElementById("loginButton");
-
-
-            const message =
-                document
-                .getElementById("loginMessage");
-
-
-            message.textContent =
-                "Logging in...";
-
-
-            message.className =
-                "message";
-
-
-            button.classList.add(
-                "loading"
+            console.error(
+                "Profile Save Error:",
+                profileResult
             );
 
 
-            const result =
-                await supabaseAuthRequest(
+            errorElement.textContent =
+                "⚠️ Account created, but profile could not be saved.";
 
-                    "token?grant_type=password",
-
-                    "POST",
-
-                    {
-
-                        email:
-                            email,
-
-                        password:
-                            password
-
-                    }
-
-                );
-
-
-            button.classList.remove(
-                "loading"
-            );
-
-
-            if(!result.success){
-
-                console.error(
-                    "Login Error:",
-                    result.error
-                );
-
-
-                message.textContent =
-                    "❌ Email or Password is incorrect.";
-
-
-                message.className =
-                    "message error";
-
-
-                return;
-
-            }
-
-
-            // =================================
-            // SAVE SESSION
-            // =================================
-
-            localStorage.setItem(
-                "supabase_access_token",
-                result.data.access_token
-            );
-
-
-            localStorage.setItem(
-                "supabase_refresh_token",
-                result.data.refresh_token
-            );
-
-
-            localStorage.setItem(
-                "supabase_user_id",
-                result.data.user.id
-            );
-
-
-            localStorage.setItem(
-                "supabase_user_email",
-                result.data.user.email
-            );
-
-
-            message.textContent =
-                "✅ Login successful. Opening Dashboard...";
-
-
-            message.className =
-                "message success";
-
-
-            setTimeout(
-                function(){
-
-                    window.location.href =
-                        "Dashboard.html";
-
-                },
-                500
-            );
+            return;
 
         }
 
-    );
 
+        // =================================
+        // SUCCESS
+        // =================================
 
+        successElement.textContent =
+            "✅ Account created successfully. You can now Login.";
 
-// =====================================
-// REGISTER
-// =====================================
 
-document
-    .getElementById("registerForm")
-    .addEventListener(
-        "submit",
-        async function(event){
+        document
+            .getElementById("registerPassword")
+            .value = "";
 
-            event.preventDefault();
 
+        document
+            .getElementById("confirmPassword")
+            .value = "";
 
-            const fullName =
-                document
-                .getElementById("fullName")
-                .value
-                .trim();
 
+        document
+            .getElementById("loginEmail")
+            .value =
+            email;
 
-            const username =
-                document
-                .getElementById("registerUsername")
-                .value
-                .trim();
 
+        setTimeout(
 
-            const email =
-                document
-                .getElementById("registerEmail")
-                .value
-                .trim();
+            function(){
 
+                showLogin();
 
-            const password =
-                document
-                .getElementById("registerPassword")
-                .value;
+            },
 
+            1500
 
-            const confirmPassword =
-                document
-                .getElementById("confirmPassword")
-                .value;
+        );
 
-
-            const button =
-                document
-                .getElementById("registerButton");
-
-
-            const message =
-                document
-                .getElementById("registerMessage");
-
-
-
-            // =================================
-            // PASSWORD CHECK
-            // =================================
-
-            if(password !== confirmPassword){
-
-                message.textContent =
-                    "❌ Passwords do not match.";
-
-
-                message.className =
-                    "message error";
-
-
-                return;
-
-            }
-
-
-            if(password.length < 6){
-
-                message.textContent =
-                    "❌ Password must be at least 6 characters.";
-
-
-                message.className =
-                    "message error";
-
-
-                return;
-
-            }
-
-
-            message.textContent =
-                "Creating account...";
-
-
-            message.className =
-                "message";
-
-
-            button.classList.add(
-                "loading"
-            );
-
-
-
-            // =================================
-            // CREATE AUTH USER
-            // =================================
-
-            const authResult =
-                await supabaseAuthRequest(
-
-                    "signup",
-
-                    "POST",
-
-                    {
-
-                        email:
-                            email,
-
-                        password:
-                            password
-
-                    }
-
-                );
-
-
-            if(!authResult.success){
-
-                button.classList.remove(
-                    "loading"
-                );
-
-
-                console.error(
-                    "Registration Error:",
-                    authResult.error
-                );
-
-
-                let errorMessage =
-                    "❌ Registration failed.";
-
-
-                if(
-                    authResult.error &&
-                    authResult.error.msg
-                ){
-
-                    errorMessage =
-                        "❌ " +
-                        authResult.error.msg;
-
-                }
-
-
-                if(
-                    authResult.error &&
-                    authResult.error.message
-                ){
-
-                    errorMessage =
-                        "❌ " +
-                        authResult.error.message;
-
-                }
-
-
-                message.textContent =
-                    errorMessage;
-
-
-                message.className =
-                    "message error";
-
-
-                return;
-
-            }
-
-
-
-            // =================================
-            // GET AUTH USER ID
-            // =================================
-
-            const authUser =
-                authResult.data.user;
-
-
-            if(!authUser){
-
-                button.classList.remove(
-                    "loading"
-                );
-
-
-                message.textContent =
-                    "❌ User account could not be created.";
-
-
-                message.className =
-                    "message error";
-
-
-                return;
-
-            }
-
-
-
-            // =================================
-            // SAVE PROFILE
-            // =================================
-
-            const profileResult =
-                await supabaseDatabaseRequest(
-
-                    "users",
-
-                    "POST",
-
-                    {
-
-                        auth_user_id:
-                            authUser.id,
-
-                        username:
-                            username,
-
-                        full_name:
-                            fullName,
-
-                        email:
-                            email,
-
-                        role:
-                            "User"
-
-                    }
-
-                );
-
-
-            button.classList.remove(
-                "loading"
-            );
-
-
-
-            if(!profileResult.success){
-
-                console.error(
-                    "Profile Save Error:",
-                    profileResult.error
-                );
-
-
-                message.textContent =
-                    "⚠️ Account created, but profile data could not be saved.";
-
-
-                message.className =
-                    "message error";
-
-
-                return;
-
-            }
-
-
-
-            // =================================
-            // SUCCESS
-            // =================================
-
-            message.textContent =
-                "✅ Registration successful! Please login.";
-
-
-            message.className =
-                "message success";
-
-
-            document
-                .getElementById("registerForm")
-                .reset();
-
-
-            setTimeout(
-                function(){
-
-                    showLogin();
-
-                    document
-                        .getElementById("loginEmail")
-                        .value =
-                        email;
-
-                },
-                1500
-            );
-
-        }
-
-    );
+    }
 
 </script>
-
 
 </body>
 
