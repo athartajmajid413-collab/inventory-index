@@ -83,7 +83,58 @@ body{margin:0;font-family:Arial,sans-serif;background:#f2f5f9}
 </div>
 <div id="searchInfo" class="search-info">Overall Dashboard — No item selected</div>
 </div>
+<!-- =====================================
+     SELECTED ITEM ONLINE PICTURE
+===================================== -->
 
+<div id="itemPictureBox" style="
+    display:none;
+    background:white;
+    padding:20px;
+    border-radius:15px;
+    margin-bottom:25px;
+    box-shadow:0 5px 15px rgba(0,0,0,.10);
+    text-align:center;
+">
+
+    <h2 style="color:#12355b;margin-top:0;">
+        🖼️ Selected Item Picture
+    </h2>
+
+    <div id="itemPictureName"
+         style="
+            font-size:18px;
+            font-weight:bold;
+            color:#12355b;
+            margin-bottom:15px;
+         ">
+    </div>
+
+    <img id="itemOnlinePicture"
+         src=""
+         alt="Item Picture"
+         style="
+            max-width:350px;
+            max-height:280px;
+            width:auto;
+            height:auto;
+            object-fit:contain;
+            border-radius:12px;
+            border:1px solid #ddd;
+            padding:8px;
+            background:#fafafa;
+         "
+         onerror="handleItemPictureError()">
+
+    <div id="itemPictureStatus"
+         style="
+            margin-top:10px;
+            color:#777;
+            font-size:13px;
+         ">
+    </div>
+
+</div>
 <div class="dashboard-cards">
 
 <div class="card blue"><h3>📋 Master List</h3><div class="big-number" id="masterValue">-</div><div id="masterInfo" class="card-info"></div>
