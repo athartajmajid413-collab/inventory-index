@@ -1,361 +1,89 @@
 // =====================================
-// DASHBOARD DATA
-// SUPABASE VERSION
+// DASHBOARD DATA - SUPABASE VERSION
+// Month Selector + Correct Monthly Opening Stock
 // =====================================
 
 let items = [];
-
 let history = [];
-
 let demands = [];
-
 let demandHistory = [];
-
-let demandEdits =
-    JSON.parse(localStorage.getItem("demandEdits")) || {};
-
+let demandEdits = JSON.parse(localStorage.getItem("demandEdits")) || {};
 let selectedItem = null;
-
 let dashboardChart = null;
 
-
-// =====================================
-// LOAD DASHBOARD DATA FROM SUPABASE
-// =====================================
-
-async function loadDashboardFromSupabase(){
-
-    console.log("=====================================");
-    console.log("LOADING DASHBOARD DATA FROM SUPABASE");
-    console.log("=====================================");
-
-
-    // =================================
-    // MASTER ITEMS
-    // =================================
-
-    let itemsResult =
-        await supabaseRequest(
-            "items",
-            "GET",
-            null,
-            "?select=*"
-        );
-
-
-    if(itemsResult.success){
-
-        items =
-            itemsResult.data || [];
-
-        console.log(
-            "Supabase Items:",
-            items.length
-        );
-
-    }
-    else{
-
-        console.error(
-            "Items Load Error:",
-            itemsResult.error
-        );
-
-        items = [];
-
-    }
-
-
-    // =================================
-    // STOCK IN
-    // =================================
-
-    let stockInResult =
-        await supabaseRequest(
-            "stock_in",
-            "GET",
-            null,
-            "?select=*"
-        );
-
-
-    // =================================
-    // STOCK OUT
-    // =================================
-
-    let stockOutResult =
-        await supabaseRequest(
-            "stock_issue",
-            "GET",
-            null,
-            "?select=*"
-        );
-
-
-    // =================================
-    // COMBINE STOCK HISTORY
-    // =================================
-
-    history = [];
-
-
-    if(stockInResult.success){
-
-        let stockInData =
-            stockInResult.data || [];
-
-
-        for(let i = 0; i < stockInData.length; i++){
-
-            let record =
-                stockInData[i];
-
-
-            history.push({
-
-                id:
-                    record.id,
-
-                date:
-                    record.date,
-
-                time:
-                    record.time,
-
-                itemCode:
-                    record.item_code,
-
-                itemName:
-                    record.item_name,
-
-                unit:
-                    record.unit,
-
-                source:
-                    record.source,
-
-                supplier:
-                    record.supplier,
-
-                location:
-                    record.location,
-
-                department:
-                    record.department,
-
-                quantity:
-                    Number(record.quantity || 0),
-
-                unitCost:
-                    Number(record.unit_cost || 0),
-
-                totalCost:
-                    Number(record.total_cost || 0),
-
-                type:
-                    "Stock In"
-
-            });
-
-        }
-
-    }
-    else{
-
-        console.error(
-            "Stock In Load Error:",
-            stockInResult.error
-        );
-
-    }
-
-
-    if(stockOutResult.success){
-
-        let stockOutData =
-            stockOutResult.data || [];
-
-
-        for(let i = 0; i < stockOutData.length; i++){
-
-            let record =
-                stockOutData[i];
-
-
-            history.push({
-
-                id:
-                    record.id,
-
-                date:
-                    record.date,
-
-                time:
-                    record.time,
-
-                itemCode:
-                    record.item_code,
-
-                itemName:
-                    record.item_name,
-
-                unit:
-                    record.unit,
-
-                source:
-                    record.source,
-
-                supplier:
-                    record.supplier,
-
-                location:
-                    record.location,
-
-                department:
-                    record.department,
-
-                quantity:
-                    Number(record.quantity || 0),
-
-                unitCost:
-                    0,
-
-                totalCost:
-                    0,
-
-                type:
-                    "Stock Issue"
-
-            });
-
-        }
-
-    }
-    else{
-
-        console.error(
-            "Stock Out Load Error:",
-            stockOutResult.error
-        );
-
-    }
-
-
-    console.log(
-        "Stock In:",
-        stockInResult.success
-        ? stockInResult.data.length
-        : 0
-    );
-
-
-    console.log(
-        "Stock Out:",
-        stockOutResult.success
-        ? stockOutResult.data.length
-        : 0
-    );
-
-
-    // =================================
-    // DEMAND HISTORY
-    // =================================
-
-    let demandResult =
-        await supabaseRequest(
-            "demand_history",
-            "GET",
-            null,
-            "?select=*"
-        );
-
-
-    if(demandResult.success){
-
-        demandHistory =
-            demandResult.data || [];
-
-        console.log(
-            "Demand History:",
-            demandHistory.length
-        );
-
-    }
-    else{
-
-        console.error(
-            "Demand History Load Error:",
-            demandResult.error
-        );
-
-        demandHistory = [];
-
-    }
-
-
-    // =================================
-    // COST HISTORY
-    // =================================
-    // Dashboard calculation currently
-    // does not require cost_history.
-    // Cost is calculated from Stock In.
-
-
-    console.log(
-        "====================================="
-    );
-
-    console.log(
-        "DASHBOARD SUPABASE DATA LOADED"
-    );
-
-    console.log(
-        "Items:",
-        items.length
-    );
-
-    console.log(
-        "History:",
-        history.length
-    );
-
-    console.log(
-        "Demand History:",
-        demandHistory.length
-    );
-
-    console.log(
-        "=====================================");
-
-
-    // =================================
-    // LOAD SAVED ITEM
-    // =================================
-
-    loadSavedItem();
-
+// Selected dashboard month: YYYY-MM
+let selectedDashboardMonth =
+    localStorage.getItem("dashboardSelectedMonth") || getTodayMonthKey();
+
+function getTodayMonthKey(){
+    const d = new Date();
+    return d.getFullYear() + "-" +
+        String(d.getMonth()+1).padStart(2,"0");
 }
 
+function getSelectedMonthParts(){
+    const p = String(selectedDashboardMonth).split("-");
+    return {
+        year:Number(p[0]),
+        month:Number(p[1])-1
+    };
+}
 
-// =====================================
-// CURRENT MONTH
-// =====================================
+function getMonthName(key){
+    const p = String(key).split("-");
+    const d = new Date(
+        Number(p[0]),
+        Number(p[1])-1,
+        1
+    );
+
+    return d.toLocaleString("en-US",{
+        month:"long",
+        year:"numeric"
+    });
+}
+
+function setDashboardMonth(key){
+
+    if(!/^\d{4}-\d{2}$/.test(key)) return;
+
+    selectedDashboardMonth = key;
+
+    localStorage.setItem(
+        "dashboardSelectedMonth",
+        key
+    );
+
+    updateMonthUI();
+    updateDashboard();
+}
+
+function updateMonthUI(){
+
+    const picker =
+        document.getElementById("dashboardMonth");
+
+    const label =
+        document.getElementById("dashboardMonthName");
+
+    const title =
+        document.getElementById("stockTableTitle");
+
+    if(picker)
+        picker.value = selectedDashboardMonth;
+
+    if(label)
+        label.textContent =
+            getMonthName(selectedDashboardMonth);
+
+    if(title)
+        title.textContent =
+            getMonthName(selectedDashboardMonth) +
+            " Stock";
+}
 
 function getCurrentMonth(){
-
-    let today =
-        new Date();
-
-    return {
-
-        year:
-            today.getFullYear(),
-
-        month:
-            today.getMonth()
-
-    };
-
+    return getSelectedMonthParts();
 }
 
 
@@ -365,7 +93,7 @@ function getCurrentMonth(){
 
 function getRecordDate(record){
 
-    let dateValue =
+    let value =
         record.date ||
         record.transactionDate ||
         record.entryDate ||
@@ -376,453 +104,420 @@ function getRecordDate(record){
         record.month ||
         "";
 
-    if(!dateValue){
+    if(!value) return null;
 
-        return null;
+    let text = String(value).trim();
 
-    }
+    let s = text.split("/");
 
+    if(s.length === 3){
 
-    // =================================
-    // DD/MM/YYYY
-    // =================================
-
-    let text =
-        String(dateValue).trim();
-
-
-    let slashParts =
-        text.split("/");
-
-
-    if(slashParts.length === 3){
-
-        let day =
-            Number(slashParts[0]);
-
-        let month =
-            Number(slashParts[1]) - 1;
-
-        let year =
-            Number(slashParts[2]);
-
+        const day = Number(s[0]);
+        const month = Number(s[1])-1;
+        const year = Number(s[2]);
 
         if(
             !isNaN(day) &&
             !isNaN(month) &&
             !isNaN(year)
         ){
-
             return new Date(
                 year,
                 month,
                 day
             );
-
         }
-
     }
 
+    let d = text.split("-");
 
-    // =================================
-    // YYYY-MM-DD
-    // =================================
+    if(d.length >= 2){
 
-    let dashParts =
-        text.split("-");
-
-
-    if(
-        dashParts.length >= 2
-    ){
-
-        let year =
-            Number(dashParts[0]);
-
-        let month =
-            Number(dashParts[1]) - 1;
-
+        const year = Number(d[0]);
+        const month = Number(d[1])-1;
 
         if(
             !isNaN(year) &&
             !isNaN(month)
         ){
 
-            if(dashParts.length >= 3){
-
-                let day =
-                    Number(
-                        String(
-                            dashParts[2]
-                        ).substring(0,2)
-                    );
-
-
-                if(
-                    !isNaN(day) &&
-                    day > 0
-                ){
-
-                    return new Date(
-                        year,
-                        month,
-                        day
-                    );
-
-                }
-
-            }
-
+            const day =
+                d.length >= 3
+                ? Number(String(d[2]).substring(0,2))
+                : 1;
 
             return new Date(
                 year,
                 month,
-                1
+                day > 0 ? day : 1
             );
-
         }
-
     }
 
+    const date = new Date(value);
 
-    let date =
-        new Date(dateValue);
-
-
-    if(!isNaN(date.getTime())){
-
-        return date;
-
-    }
-
-
-    return null;
-
+    return isNaN(date.getTime())
+        ? null
+        : date;
 }
 
+function getRecordMonthKey(record){
 
-// =====================================
-// IS CURRENT MONTH
-// =====================================
+    const d = getRecordDate(record);
 
-function isCurrentMonth(record){
+    if(!d) return "";
 
-    let date =
-        getRecordDate(record);
-
-
-    if(!date){
-
-        return false;
-
-    }
-
-
-    let current =
-        getCurrentMonth();
-
-
-    return (
-
-        date.getFullYear() ===
-        current.year
-
-        &&
-
-        date.getMonth() ===
-        current.month
-
-    );
-
+    return d.getFullYear() +
+        "-" +
+        String(d.getMonth()+1).padStart(2,"0");
 }
 
+function isSelectedMonth(record){
 
-// =====================================
-// GET ITEM BY CODE
-// =====================================
+    return getRecordMonthKey(record) ===
+        selectedDashboardMonth;
+}
+
+function isBeforeSelectedMonth(record){
+
+    const d = getRecordDate(record);
+
+    if(!d) return false;
+
+    const m = getSelectedMonthParts();
+
+    return d.getFullYear() < m.year ||
+        (
+            d.getFullYear() === m.year &&
+            d.getMonth() < m.month
+        );
+}
 
 function getItemByCode(code){
 
-    for(
-        let i = 0;
-        i < items.length;
-        i++
-    ){
+    const c =
+        String(code || "").trim();
 
-        if(
-
-            String(
-                items[i].code ||
-                ""
-            ).trim()
-
-            ===
-
-            String(
-                code ||
-                ""
-            ).trim()
-
-        ){
-
-            return items[i];
-
-        }
-
-    }
-
-    return null;
-
+    return items.find(
+        x =>
+            String(x.code || "").trim() === c
+    ) || null;
 }
 
 
 // =====================================
-// STOCK IN - CURRENT MONTH
+// LOAD DATA FROM SUPABASE
 // =====================================
 
-function getCurrentMonthStockIn(itemCode){
+async function loadDashboardFromSupabase(){
 
-    let total = 0;
+    console.log(
+        "Loading Dashboard from Supabase..."
+    );
+
+    const itemsResult =
+        await supabaseRequest(
+            "items",
+            "GET",
+            null,
+            "?select=*"
+        );
+
+    items =
+        itemsResult.success
+        ? (itemsResult.data || [])
+        : [];
 
 
-    for(
-        let i = 0;
-        i < history.length;
-        i++
-    ){
+    const stockInResult =
+        await supabaseRequest(
+            "stock_in",
+            "GET",
+            null,
+            "?select=*"
+        );
 
-        let record =
-            history[i];
+
+    const stockOutResult =
+        await supabaseRequest(
+            "stock_issue",
+            "GET",
+            null,
+            "?select=*"
+        );
+
+
+    history = [];
+
+
+    // STOCK IN
+    if(stockInResult.success){
+
+        (stockInResult.data || [])
+        .forEach(r => {
+
+            history.push({
+
+                id:r.id,
+
+                date:r.date,
+
+                time:r.time,
+
+                itemCode:r.item_code,
+
+                itemName:r.item_name,
+
+                unit:r.unit,
+
+                source:r.source,
+
+                supplier:r.supplier,
+
+                location:r.location,
+
+                department:r.department,
+
+                quantity:
+                    Number(r.quantity || 0),
+
+                unitCost:
+                    Number(r.unit_cost || 0),
+
+                totalCost:
+                    Number(r.total_cost || 0),
+
+                type:"Stock In"
+            });
+
+        });
+
+    }
+
+
+    // STOCK OUT
+    if(stockOutResult.success){
+
+        (stockOutResult.data || [])
+        .forEach(r => {
+
+            history.push({
+
+                id:r.id,
+
+                date:r.date,
+
+                time:r.time,
+
+                itemCode:r.item_code,
+
+                itemName:r.item_name,
+
+                unit:r.unit,
+
+                source:r.source,
+
+                supplier:r.supplier,
+
+                location:r.location,
+
+                department:r.department,
+
+                quantity:
+                    Number(r.quantity || 0),
+
+                unitCost:0,
+
+                totalCost:0,
+
+                type:"Stock Issue"
+            });
+
+        });
+
+    }
+
+
+    // DEMAND HISTORY
+
+    const demandResult =
+        await supabaseRequest(
+            "demand_history",
+            "GET",
+            null,
+            "?select=*"
+        );
+
+    demandHistory =
+        demandResult.success
+        ? (demandResult.data || [])
+        : [];
+
+
+    updateMonthUI();
+
+    loadSavedItem();
+}
+
+
+// =====================================
+// MONTHLY STOCK CALCULATIONS
+// =====================================
+
+// Opening Stock:
+//
+// Master Opening Stock
+// +
+// Previous Stock In
+// -
+// Previous Stock Out
+//
+// = Selected Month Opening Stock
+
+function getMasterOpeningStock(item){
+
+    return Number(
+        item?.opening_stock ??
+        item?.openingStock ??
+        0
+    );
+}
+
+
+function getStockBeforeMonth(itemCode){
+
+    let totalIn = 0;
+    let totalOut = 0;
+
+    const code =
+        String(itemCode || "").trim();
+
+
+    history.forEach(r => {
+
+        if(
+            String(r.itemCode || "").trim()
+            !== code
+        ){
+            return;
+        }
 
 
         if(
+            !isBeforeSelectedMonth(r)
+        ){
+            return;
+        }
 
-            record.type ===
-            "Stock In"
 
-            &&
+        if(r.type === "Stock In"){
 
-            String(
-                record.itemCode ||
-                ""
-            ).trim()
+            totalIn +=
+                Number(r.quantity || 0);
 
-            ===
+        }
 
-            String(
-                itemCode ||
-                ""
-            ).trim()
 
-            &&
+        if(
+            r.type === "Stock Issue" ||
+            r.type === "Stock Out"
+        ){
 
-            isCurrentMonth(record)
+            totalOut +=
+                Number(r.quantity || 0);
 
+        }
+
+    });
+
+
+    return totalIn - totalOut;
+}
+
+
+function getMonthlyOpeningStock(item){
+
+    if(!item) return 0;
+
+
+    let opening =
+        getMasterOpeningStock(item) +
+        getStockBeforeMonth(item);
+
+
+    return Math.max(
+        opening,
+        0
+    );
+}
+
+
+// =====================================
+// SELECTED MONTH STOCK IN
+// =====================================
+
+function getSelectedMonthStockIn(itemCode){
+
+    let total = 0;
+
+    const code =
+        String(itemCode || "").trim();
+
+
+    history.forEach(r => {
+
+        if(
+            r.type === "Stock In" &&
+            String(r.itemCode || "").trim()
+                === code &&
+            isSelectedMonth(r)
         ){
 
             total +=
-                Number(
-                    record.quantity ||
-                    0
-                );
+                Number(r.quantity || 0);
 
         }
 
-    }
+    });
 
 
     return total;
-
 }
 
 
 // =====================================
-// STOCK OUT - CURRENT MONTH
+// SELECTED MONTH STOCK OUT
 // =====================================
 
-function getCurrentMonthStockOut(itemCode){
+function getSelectedMonthStockOut(itemCode){
 
     let total = 0;
 
+    const code =
+        String(itemCode || "").trim();
 
-    for(
-        let i = 0;
-        i < history.length;
-        i++
-    ){
 
-        let record =
-            history[i];
-
+    history.forEach(r => {
 
         if(
-
             (
-
-                record.type ===
-                "Stock Issue"
-
-                ||
-
-                record.type ===
-                "Stock Out"
-
-            )
-
-            &&
-
-            String(
-                record.itemCode ||
-                ""
-            ).trim()
-
-            ===
-
-            String(
-                itemCode ||
-                ""
-            ).trim()
-
-            &&
-
-            isCurrentMonth(record)
-
+                r.type === "Stock Issue" ||
+                r.type === "Stock Out"
+            ) &&
+            String(r.itemCode || "").trim()
+                === code &&
+            isSelectedMonth(r)
         ){
 
             total +=
-                Number(
-                    record.quantity ||
-                    0
-                );
+                Number(r.quantity || 0);
 
         }
 
-    }
+    });
 
 
     return total;
-
-}
-
-
-// =====================================
-// ALL STOCK IN
-// =====================================
-
-function getAllStockIn(itemCode){
-
-    let total = 0;
-
-
-    for(
-        let i = 0;
-        i < history.length;
-        i++
-    ){
-
-        let record =
-            history[i];
-
-
-        if(
-
-            record.type ===
-            "Stock In"
-
-            &&
-
-            String(
-                record.itemCode ||
-                ""
-            ).trim()
-
-            ===
-
-            String(
-                itemCode ||
-                ""
-            ).trim()
-
-        ){
-
-            total +=
-                Number(
-                    record.quantity ||
-                    0
-                );
-
-        }
-
-    }
-
-
-    return total;
-
-}
-
-
-// =====================================
-// ALL STOCK OUT
-// =====================================
-
-function getAllStockOut(itemCode){
-
-    let total = 0;
-
-
-    for(
-        let i = 0;
-        i < history.length;
-        i++
-    ){
-
-        let record =
-            history[i];
-
-
-        if(
-
-            (
-
-                record.type ===
-                "Stock Issue"
-
-                ||
-
-                record.type ===
-                "Stock Out"
-
-            )
-
-            &&
-
-            String(
-                record.itemCode ||
-                ""
-            ).trim()
-
-            ===
-
-            String(
-                itemCode ||
-                ""
-            ).trim()
-
-        ){
-
-            total +=
-                Number(
-                    record.quantity ||
-                    0
-                );
-
-        }
-
-    }
-
-
-    return total;
-
 }
 
 
@@ -832,243 +527,218 @@ function getAllStockOut(itemCode){
 
 function getCurrentStock(item){
 
-    if(!item){
-
-        return 0;
-
-    }
+    if(!item) return 0;
 
 
-    let openingStock =
-        Number(
-            item.opening_stock ??
-            item.openingStock ??
-            0
-        );
+    const opening =
+        getMonthlyOpeningStock(item);
+
+    const stockIn =
+        getSelectedMonthStockIn(item.code);
+
+    const stockOut =
+        getSelectedMonthStockOut(item.code);
 
 
-    let stockIn =
-        getAllStockIn(
-            item.code
-        );
-
-
-    let stockOut =
-        getAllStockOut(
-            item.code
-        );
-
-
-    let currentStock =
-        openingStock +
+    return Math.max(
+        opening +
         stockIn -
-        stockOut;
+        stockOut,
+        0
+    );
+}
 
 
-    if(currentStock < 0){
+// Backward compatible functions
 
-        currentStock = 0;
+function getCurrentMonthStockIn(itemCode){
 
-    }
+    return getSelectedMonthStockIn(itemCode);
 
+}
 
-    return currentStock;
+function getCurrentMonthStockOut(itemCode){
+
+    return getSelectedMonthStockOut(itemCode);
 
 }
 
 
 // =====================================
-// LATEST RATE - CURRENT MONTH
+// ALL STOCK
+// =====================================
+
+function getAllStockIn(itemCode){
+
+    let total = 0;
+
+    const code =
+        String(itemCode || "").trim();
+
+
+    history.forEach(r => {
+
+        if(
+            r.type === "Stock In" &&
+            String(r.itemCode || "").trim()
+                === code
+        ){
+
+            total +=
+                Number(r.quantity || 0);
+
+        }
+
+    });
+
+
+    return total;
+}
+
+
+function getAllStockOut(itemCode){
+
+    let total = 0;
+
+    const code =
+        String(itemCode || "").trim();
+
+
+    history.forEach(r => {
+
+        if(
+            (
+                r.type === "Stock Issue" ||
+                r.type === "Stock Out"
+            ) &&
+            String(r.itemCode || "").trim()
+                === code
+        ){
+
+            total +=
+                Number(r.quantity || 0);
+
+        }
+
+    });
+
+
+    return total;
+}
+
+
+// =====================================
+// LATEST RATE
 // =====================================
 
 function getLatestRate(itemCode){
 
-    let latestRecord =
-        null;
+    let latest = null;
 
 
-    for(
-        let i = 0;
-        i < history.length;
-        i++
-    ){
-
-        let record =
-            history[i];
-
+    history.forEach(r => {
 
         if(
-
-            record.type ===
-            "Stock In"
-
-            &&
-
-            String(
-                record.itemCode ||
-                ""
-            ).trim()
-
-            ===
-
-            String(
-                itemCode ||
-                ""
-            ).trim()
-
-            &&
-
-            isCurrentMonth(record)
-
+            r.type !== "Stock In" ||
+            String(r.itemCode || "").trim()
+                !== String(itemCode || "").trim() ||
+            !isSelectedMonth(r)
         ){
 
-            if(
-                latestRecord === null
-            ){
-
-                latestRecord =
-                    record;
-
-            }
-            else{
-
-                let currentDate =
-                    getRecordDate(
-                        record
-                    );
-
-
-                let latestDate =
-                    getRecordDate(
-                        latestRecord
-                    );
-
-
-                if(
-
-                    currentDate &&
-                    latestDate &&
-                    currentDate >= latestDate
-
-                ){
-
-                    latestRecord =
-                        record;
-
-                }
-
-            }
+            return;
 
         }
 
-    }
+
+        if(!latest){
+
+            latest = r;
+
+            return;
+
+        }
 
 
-    if(latestRecord){
+        const a = getRecordDate(r);
+        const b = getRecordDate(latest);
+
+
+        if(
+            a &&
+            b &&
+            a >= b
+        ){
+
+            latest = r;
+
+        }
+
+    });
+
+
+    if(latest){
 
         return Number(
-
-            latestRecord.unitCost ||
-            latestRecord.latestRate ||
-            latestRecord.rate ||
+            latest.unitCost ||
+            latest.latestRate ||
+            latest.rate ||
             0
-
         );
 
     }
 
 
-    let item =
-        getItemByCode(
-            itemCode
-        );
+    const item =
+        getItemByCode(itemCode);
 
 
-    if(item){
-
-        return Number(
-
+    return item
+        ? Number(
             item.latestRate ||
             item.unit_cost ||
             item.unitCost ||
             item.cost ||
             0
-
-        );
-
-    }
-
-
-    return 0;
-
+        )
+        : 0;
 }
 
 
 // =====================================
-// FIND DEMAND VALUE
+// DEMAND
 // =====================================
 
 function getDemandValue(record){
 
     return Number(
-
         record.finalDemand ??
-
         record.final_demand ??
-
         record.approvedQty ??
-
         record.approved_qty ??
-
         record.demandQty ??
-
         record.demand_qty ??
-
         record.demandQuantity ??
-
         record.demand_quantity ??
-
         record.quantity ??
-
         record.qty ??
-
         0
-
     );
-
 }
 
-
-// =====================================
-// DEMAND CODE
-// =====================================
 
 function getDemandCode(record){
 
     return String(
-
         record.itemCode ??
-
         record.item_code ??
-
         record.code ??
-
         record.itemID ??
-
         record.item_id ??
-
         record.itemId ??
-
         ""
-
     ).trim();
-
 }
 
-
-// =====================================
-// READ DEMAND LIST
-// =====================================
 
 function getDemandList(record){
 
@@ -1080,24 +750,13 @@ function getDemandList(record){
         [];
 
 
-    // =================================
-    // JSON STRING
-    // =================================
-
     if(typeof list === "string"){
 
         try{
 
-            list =
-                JSON.parse(list);
+            list = JSON.parse(list);
 
-        }
-        catch(error){
-
-            console.error(
-                "Demand JSON Error:",
-                error
-            );
+        }catch(e){
 
             list = [];
 
@@ -1106,25 +765,15 @@ function getDemandList(record){
     }
 
 
-    if(!Array.isArray(list)){
-
-        return [];
-
-    }
-
-
-    return list;
-
+    return Array.isArray(list)
+        ? list
+        : [];
 }
 
 
-// =====================================
-// CHECK DEMAND MONTH
-// =====================================
+function isDemandRecordSelectedMonth(record){
 
-function isDemandRecordCurrentMonth(record){
-
-    let month =
+    const month =
         String(
             record.demand_month ||
             record.demandMonth ||
@@ -1132,226 +781,114 @@ function isDemandRecordCurrentMonth(record){
         ).trim();
 
 
-    if(month){
-
-        let current =
-            getCurrentMonth();
+    if(month)
+        return month === selectedDashboardMonth;
 
 
-        let currentMonth =
-            current.year +
-            "-" +
-            String(
-                current.month + 1
-            ).padStart(2,"0");
-
-
-        return (
-            month ===
-            currentMonth
-        );
-
-    }
-
-
-    return isCurrentMonth(
-        record
-    );
-
+    return isSelectedMonth(record);
 }
 
 
-// =====================================
-// CURRENT MONTH DEMAND
-// =====================================
-
 function getCurrentMonthDemand(itemCode){
 
-    let code =
-        String(
-            itemCode ||
-            ""
-        ).trim();
-
+    const code =
+        String(itemCode || "").trim();
 
     let total = 0;
 
 
-    // =================================
-    // 1. OLD CURRENT DEMANDS
-    // =================================
-
-    for(
-        let i = 0;
-        i < demands.length;
-        i++
-    ){
-
-        let record =
-            demands[i];
-
+    for(const record of demands){
 
         if(
-            getDemandCode(record) !==
-            code
+            getDemandCode(record) !== code
         ){
-
             continue;
-
         }
 
 
-        let hasDate =
-            !!(
-
-                record.date ||
-                record.demandDate ||
-                record.month ||
-                record.demand_month ||
-                record.createdDate
-
-            );
-
-
         if(
-
-            !hasDate
-
-            ||
-
-            isCurrentMonth(record)
-
+            !record.date &&
+            !record.demandDate &&
+            !record.month &&
+            !record.demand_month &&
+            !record.createdDate
         ){
 
             total +=
-                getDemandValue(
-                    record
-                );
+                getDemandValue(record);
+
+        }
+        else if(
+            isSelectedMonth(record)
+        ){
+
+            total +=
+                getDemandValue(record);
 
         }
 
     }
 
 
-    // =================================
-    // 2. DEMAND EDITS
-    // =================================
+    // Current month manual edits
 
     if(
-
-        demandEdits &&
-
-        typeof demandEdits ===
-        "object"
-
+        selectedDashboardMonth ===
+        getTodayMonthKey() &&
+        demandEdits
     ){
 
-        let edit =
+        const edit =
             demandEdits[code];
 
 
         if(edit !== undefined){
 
-            if(
-                typeof edit ===
-                "object"
-            ){
-
-                total +=
-                    Number(
-
+            total +=
+                Number(
+                    typeof edit === "object"
+                    ?
+                    (
                         edit.finalDemand ??
-
                         edit.final_demand ??
-
                         edit.demandQty ??
-
                         edit.demand_qty ??
-
                         edit.demandQuantity ??
-
                         edit.demand_quantity ??
-
                         edit.quantity ??
-
                         edit.qty ??
-
                         0
-
-                    );
-
-            }
-            else{
-
-                total +=
-                    Number(
-                        edit || 0
-                    );
-
-            }
+                    )
+                    :
+                    edit
+                ) || 0;
 
         }
 
     }
 
 
-    // =================================
-    // 3. SUPABASE DEMAND HISTORY
-    // =================================
+    // Demand History
 
-    for(
-        let i = 0;
-        i < demandHistory.length;
-        i++
-    ){
-
-        let historyRecord =
-            demandHistory[i];
-
+    for(const hr of demandHistory){
 
         if(
-            !isDemandRecordCurrentMonth(
-                historyRecord
-            )
+            !isDemandRecordSelectedMonth(hr)
         ){
-
             continue;
-
         }
-
-
-        let list =
-            getDemandList(
-                historyRecord
-            );
 
 
         for(
-            let j = 0;
-            j < list.length;
-            j++
+            const di of getDemandList(hr)
         ){
 
-            let demandItem =
-                list[j];
-
-
             if(
-
-                getDemandCode(
-                    demandItem
-                )
-
-                ===
-
-                code
-
+                getDemandCode(di) === code
             ){
 
                 total +=
-                    getDemandValue(
-                        demandItem
-                    );
+                    getDemandValue(di);
 
             }
 
@@ -1361,57 +898,30 @@ function getCurrentMonthDemand(itemCode){
 
 
     return total;
-
 }
 
-
-// =====================================
-// OVERALL CURRENT MONTH DEMAND
-// =====================================
 
 function getOverallDemand(){
 
-    let total = 0;
-
-
-    for(
-        let i = 0;
-        i < items.length;
-        i++
-    ){
-
-        total +=
-            getCurrentMonthDemand(
-                items[i].code
-            );
-
-    }
-
-
-    return total;
+    return items.reduce(
+        (sum,item) =>
+            sum +
+            getCurrentMonthDemand(item.code),
+        0
+    );
 
 }
 
 
-// =====================================
-// PENDING FOR ITEM
-// =====================================
-
 function getPendingForItem(item){
 
-    let demand =
-        getCurrentMonthDemand(
-            item.code
-        );
+    const demand =
+        getCurrentMonthDemand(item.code);
 
+    const currentStock =
+        getCurrentStock(item);
 
-    let currentStock =
-        getCurrentStock(
-            item
-        );
-
-
-    let pending =
+    const pending =
         Math.max(
             demand -
             currentStock,
@@ -1421,58 +931,42 @@ function getPendingForItem(item){
 
     return {
 
-        demand:
-            demand,
+        demand:demand,
 
-        pendingDemand:
-            pending,
+        pendingDemand:pending,
 
-        pendingPO:
-            pending
+        pendingPO:pending
 
     };
-
 }
 
-
-// =====================================
-// OVERALL PENDING
-// =====================================
 
 function getOverallPending(){
 
-    let totalDemand =
-        getOverallDemand();
+    let demand = 0;
+    let stock = 0;
 
 
-    let totalStock = 0;
+    items.forEach(i => {
 
+        demand +=
+            getCurrentMonthDemand(i.code);
 
-    for(
-        let i = 0;
-        i < items.length;
-        i++
-    ){
+        stock +=
+            getCurrentStock(i);
 
-        totalStock +=
-            getCurrentStock(
-                items[i]
-            );
-
-    }
+    });
 
 
     return Math.max(
-        totalDemand -
-        totalStock,
+        demand - stock,
         0
     );
-
 }
 
 
 // =====================================
-// OVERALL COST
+// COST
 // =====================================
 
 function getOverallCost(){
@@ -1480,155 +974,96 @@ function getOverallCost(){
     let total = 0;
 
 
-    for(
-        let i = 0;
-        i < history.length;
-        i++
-    ){
-
-        let record =
-            history[i];
-
+    history.forEach(r => {
 
         if(
-            record.type ===
-            "Stock In"
+            r.type === "Stock In" &&
+            isSelectedMonth(r)
         ){
 
             total +=
-
-                Number(
-                    record.quantity ||
-                    0
-                )
-
-                *
-
-                Number(
-                    record.unitCost ||
-                    0
-                );
+                Number(r.quantity || 0) *
+                Number(r.unitCost || 0);
 
         }
 
-    }
+    });
 
 
     return total;
-
 }
 
-
-// =====================================
-// ITEM CURRENT COST
-// =====================================
 
 function getItemCurrentCost(item){
 
-    if(!item){
-
-        return 0;
-
-    }
-
-
-    let currentStock =
-        getCurrentStock(
-            item
-        );
-
-
-    let latestRate =
-        getLatestRate(
-            item.code
-        );
-
-
-    return (
-        currentStock *
-        latestRate
-    );
+    return getCurrentStock(item) *
+        getLatestRate(item.code);
 
 }
 
 
 // =====================================
-// SEARCH ITEM
+// SEARCH
 // =====================================
 
 function searchItem(){
 
-    let input =
+    const input =
         document.getElementById(
             "itemSearch"
         );
 
 
-    if(!input){
-
-        return;
-
-    }
+    if(!input) return;
 
 
-    let code =
+    const code =
         input.value.trim();
 
 
-    if(code === ""){
+    if(!code){
 
-        selectedItem =
-            null;
-
+        selectedItem = null;
 
         localStorage.removeItem(
             "dashboardSelectedItem"
         );
 
-
         updateDashboard();
 
         return;
-
     }
 
 
-    let found =
-        getItemByCode(
-            code
-        );
+    const found =
+        getItemByCode(code);
 
 
     if(found){
 
-        selectedItem =
-            found;
-
+        selectedItem = found;
 
         localStorage.setItem(
             "dashboardSelectedItem",
             found.code
         );
 
-
         updateDashboard();
 
     }
     else{
 
-        selectedItem =
-            null;
+        selectedItem = null;
 
-
-        let searchInfo =
+        const info =
             document.getElementById(
                 "searchInfo"
             );
 
 
-        if(searchInfo){
+        if(info){
 
-            searchInfo.innerHTML =
+            info.innerHTML =
                 "❌ Item not found: " +
                 code;
 
@@ -1652,21 +1087,17 @@ function searchItem(){
 
 function clearItemSearch(){
 
-    let input =
+    const input =
         document.getElementById(
             "itemSearch"
         );
 
 
-    if(input){
-
+    if(input)
         input.value = "";
 
-    }
 
-
-    selectedItem =
-        null;
+    selectedItem = null;
 
 
     localStorage.removeItem(
@@ -1675,7 +1106,6 @@ function clearItemSearch(){
 
 
     updateDashboard();
-
 }
 
 
@@ -1685,143 +1115,106 @@ function clearItemSearch(){
 
 function updateDashboard(){
 
-    let masterValue =
-        document.getElementById(
-            "masterValue"
-        );
+    const ids = [
+
+        "masterValue",
+        "masterInfo",
+
+        "stockInValue",
+        "stockInInfo",
+
+        "stockOutValue",
+        "stockOutInfo",
+
+        "costValue",
+        "costInfo",
+
+        "demandValue",
+        "demandInfo",
+
+        "pendingValue",
+        "pendingInfo"
+
+    ];
 
 
-    let masterInfo =
-        document.getElementById(
-            "masterInfo"
-        );
+    const el =
+        id => document.getElementById(id);
 
 
-    let stockInValue =
-        document.getElementById(
-            "stockInValue"
-        );
-
-
-    let stockInInfo =
-        document.getElementById(
-            "stockInInfo"
-        );
-
-
-    let stockOutValue =
-        document.getElementById(
-            "stockOutValue"
-        );
-
-
-    let stockOutInfo =
-        document.getElementById(
-            "stockOutInfo"
-        );
-
-
-    let costValue =
-        document.getElementById(
-            "costValue"
-        );
-
-
-    let costInfo =
-        document.getElementById(
-            "costInfo"
-        );
-
-
-    let demandValue =
-        document.getElementById(
-            "demandValue"
-        );
-
-
-    let demandInfo =
-        document.getElementById(
-            "demandInfo"
-        );
-
-
-    let pendingValue =
-        document.getElementById(
-            "pendingValue"
-        );
-
-
-    let pendingInfo =
-        document.getElementById(
-            "pendingInfo"
-        );
-
-
-    if(!masterValue){
-
+    if(!el("masterValue"))
         return;
 
-    }
+
+    updateMonthUI();
 
 
-    // =================================
-    // OVERALL MODE
-    // =================================
+    // OVERALL DASHBOARD
 
     if(!selectedItem){
 
-        document.getElementById(
-            "searchInfo"
-        ).innerHTML =
+        el("searchInfo").innerHTML =
             "Overall Dashboard — No item selected";
 
 
-        masterValue.innerHTML =
+        el("masterValue").innerHTML =
             "-";
 
 
-        masterInfo.innerHTML =
+        el("masterInfo").innerHTML =
             "Select an Item ID to view item details.";
 
 
-        stockInValue.innerHTML =
+        el("stockInValue").innerHTML =
             "-";
 
 
-        stockInInfo.innerHTML =
-            "Current Month Stock In";
+        el("stockInInfo").innerHTML =
+            "Stock In — " +
+            getMonthName(
+                selectedDashboardMonth
+            );
 
 
-        stockOutValue.innerHTML =
+        el("stockOutValue").innerHTML =
             "-";
 
 
-        stockOutInfo.innerHTML =
-            "Current Month Stock Out";
+        el("stockOutInfo").innerHTML =
+            "Stock Out — " +
+            getMonthName(
+                selectedDashboardMonth
+            );
 
 
-        costValue.innerHTML =
+        el("costValue").innerHTML =
             "Rs. " +
             getOverallCost().toFixed(2);
 
 
-        costInfo.innerHTML =
-            "Overall Stock In Cost";
+        el("costInfo").innerHTML =
+            "Stock In Cost — " +
+            getMonthName(
+                selectedDashboardMonth
+            );
 
 
-        demandValue.innerHTML =
+        el("demandValue").innerHTML =
             getOverallDemand().toFixed(2);
 
 
-        demandInfo.innerHTML =
-            "Current Month Demand";
+        el("demandInfo").innerHTML =
+            "Demand — " +
+            getMonthName(
+                selectedDashboardMonth
+            );
 
 
-        pendingValue.innerHTML =
+        el("pendingValue").innerHTML =
             getOverallPending().toFixed(2);
 
 
-        pendingInfo.innerHTML =
+        el("pendingInfo").innerHTML =
             "Pending Demand / PO";
 
 
@@ -1830,74 +1223,57 @@ function updateDashboard(){
         buildCurrentStockTable();
 
         return;
-
     }
 
 
-    // =================================
     // SELECTED ITEM
-    // =================================
 
-    let item =
+    const item =
         selectedItem;
 
 
-    let stockIn =
-        getCurrentMonthStockIn(
+    const opening =
+        getMonthlyOpeningStock(item);
+
+
+    const stockIn =
+        getSelectedMonthStockIn(
             item.code
         );
 
 
-    let stockOut =
-        getCurrentMonthStockOut(
+    const stockOut =
+        getSelectedMonthStockOut(
             item.code
         );
 
 
-    let currentStock =
-        getCurrentStock(
-            item
-        );
+    const current =
+        getCurrentStock(item);
 
 
-    let latestRate =
-        getLatestRate(
-            item.code
-        );
+    const rate =
+        getLatestRate(item.code);
 
 
-    let demand =
+    const demand =
         getCurrentMonthDemand(
             item.code
         );
 
 
-    let pending =
-        getPendingForItem(
-            item
-        );
+    const pending =
+        getPendingForItem(item);
 
 
-    let itemCost =
-        getItemCurrentCost(
-            item
-        );
+    const cost =
+        getItemCurrentCost(item);
 
 
-    // =================================
-    // SEARCH INFO
-    // =================================
-
-    document.getElementById(
-        "searchInfo"
-    ).innerHTML =
-
+    el("searchInfo").innerHTML =
         "✅ Selected: <b>" +
-
         item.code +
-
         "</b> — " +
-
         (
             item.item_name ||
             item.itemName ||
@@ -1905,171 +1281,92 @@ function updateDashboard(){
         );
 
 
-    // =================================
-    // MASTER
-    // =================================
-
-    masterValue.innerHTML =
-
+    el("masterValue").innerHTML =
         item.item_name ||
         item.itemName ||
         "-";
 
 
-    masterInfo.innerHTML =
-
+    el("masterInfo").innerHTML =
         "ID: " +
-
-        (
-            item.code ||
-            "-"
-        )
-
-        +
-
-        "<br>"
-
-        +
-
-        "Unit: " +
-
-        (
-            item.unit ||
-            "-"
-        )
-
-        +
-
-        "<br>"
-
-        +
-
-        "Current Stock: " +
-
-        currentStock;
+        (item.code || "-") +
+        "<br>Unit: " +
+        (item.unit || "-") +
+        "<br>Opening (" +
+        getMonthName(
+            selectedDashboardMonth
+        ) +
+        "): " +
+        opening.toFixed(2) +
+        "<br>Current Stock: " +
+        current.toFixed(2);
 
 
-    // =================================
-    // STOCK IN
-    // =================================
+    el("stockInValue").innerHTML =
+        stockIn.toFixed(2) +
+        " " +
+        (item.unit || "");
 
-    stockInValue.innerHTML =
 
-        stockIn.toFixed(2)
-
-        +
-
-        " "
-
-        +
-
-        (
-            item.unit ||
-            ""
+    el("stockInInfo").innerHTML =
+        "Stock In — " +
+        getMonthName(
+            selectedDashboardMonth
         );
 
 
-    stockInInfo.innerHTML =
-        "Current Month Stock In";
+    el("stockOutValue").innerHTML =
+        stockOut.toFixed(2) +
+        " " +
+        (item.unit || "");
 
 
-    // =================================
-    // STOCK OUT
-    // =================================
-
-    stockOutValue.innerHTML =
-
-        stockOut.toFixed(2)
-
-        +
-
-        " "
-
-        +
-
-        (
-            item.unit ||
-            ""
+    el("stockOutInfo").innerHTML =
+        "Stock Out — " +
+        getMonthName(
+            selectedDashboardMonth
         );
 
 
-    stockOutInfo.innerHTML =
-        "Current Month Stock Out";
-
-
-    // =================================
-    // COST
-    // =================================
-
-    costValue.innerHTML =
+    el("costValue").innerHTML =
         "Rs. " +
-        itemCost.toFixed(2);
+        cost.toFixed(2);
 
 
-    costInfo.innerHTML =
-        "Current Stock Cost";
-
-
-    // =================================
-    // DEMAND
-    // =================================
-
-    demandValue.innerHTML =
-
-        demand.toFixed(2)
-
-        +
-
-        " "
-
-        +
-
-        (
-            item.unit ||
-            ""
+    el("costInfo").innerHTML =
+        "Current Stock Cost — " +
+        getMonthName(
+            selectedDashboardMonth
         );
 
 
-    demandInfo.innerHTML =
-        "Current Month Demand";
+    el("demandValue").innerHTML =
+        demand.toFixed(2) +
+        " " +
+        (item.unit || "");
 
 
-    // =================================
-    // PENDING
-    // =================================
-
-    pendingValue.innerHTML =
-
-        pending.pendingDemand.toFixed(2)
-
-        +
-
-        " "
-
-        +
-
-        (
-            item.unit ||
-            ""
+    el("demandInfo").innerHTML =
+        "Demand — " +
+        getMonthName(
+            selectedDashboardMonth
         );
 
 
-    pendingInfo.innerHTML =
+    el("pendingValue").innerHTML =
+        pending.pendingDemand.toFixed(2) +
+        " " +
+        (item.unit || "");
+
+
+    el("pendingInfo").innerHTML =
         "Pending Demand / PO";
 
-
-    // =================================
-    // GRAPH
-    // =================================
 
     showDashboardGraph(
         item.code
     );
 
-
-    // =================================
-    // TABLE
-    // =================================
 
     buildCurrentStockTable();
 
@@ -2082,55 +1379,43 @@ function updateDashboard(){
 
 function clearSelectedCards(){
 
-    let ids = [
-
+    [
         "masterValue",
         "stockInValue",
         "stockOutValue",
-        "costValue",
         "demandValue",
         "pendingValue"
+    ]
+    .forEach(id => {
 
-    ];
+        const e =
+            document.getElementById(id);
 
+        if(e)
+            e.innerHTML = "-";
 
-    for(
-        let i = 0;
-        i < ids.length;
-        i++
-    ){
-
-        let element =
-            document.getElementById(
-                ids[i]
-            );
+    });
 
 
-        if(element){
-
-            element.innerHTML =
-                ids[i] ===
-                "costValue"
-                ? "Rs. 0.00"
-                : "-";
-
-        }
-
-    }
+    const c =
+        document.getElementById(
+            "costValue"
+        );
 
 
-    let masterInfo =
+    if(c)
+        c.innerHTML = "Rs. 0.00";
+
+
+    const m =
         document.getElementById(
             "masterInfo"
         );
 
 
-    if(masterInfo){
-
-        masterInfo.innerHTML =
+    if(m)
+        m.innerHTML =
             "❌ Item not found.";
-
-    }
 
 }
 
@@ -2141,222 +1426,144 @@ function clearSelectedCards(){
 
 function buildCurrentStockTable(){
 
-    let body =
+    const body =
         document.getElementById(
             "currentStockBody"
         );
 
 
-    if(!body){
-
+    if(!body)
         return;
-
-    }
 
 
     body.innerHTML = "";
 
 
-    for(
-        let i = 0;
-        i < items.length;
-        i++
-    ){
-
-        let item =
-            items[i];
-
+    items.forEach(item => {
 
         if(
-
-            selectedItem
-
-            &&
-
-            String(
-                item.code ||
-                ""
-            ).trim()
-
+            selectedItem &&
+            String(item.code || "").trim()
             !==
-
-            String(
-                selectedItem.code ||
-                ""
-            ).trim()
-
+            String(selectedItem.code || "").trim()
         ){
 
-            continue;
+            return;
 
         }
 
 
-        let stockIn =
-            getCurrentMonthStockIn(
+        const opening =
+            getMonthlyOpeningStock(item);
+
+
+        const stockIn =
+            getSelectedMonthStockIn(
                 item.code
             );
 
 
-        let stockOut =
-            getCurrentMonthStockOut(
+        const stockOut =
+            getSelectedMonthStockOut(
                 item.code
             );
 
 
-        let currentStock =
-            getCurrentStock(
-                item
-            );
+        const current =
+            getCurrentStock(item);
 
 
-        let latestRate =
-            getLatestRate(
-                item.code
-            );
+        const rate =
+            getLatestRate(item.code);
 
 
-        let demandQty =
+        const demand =
             getCurrentMonthDemand(
                 item.code
             );
 
 
-        let itemName =
+        const name =
             item.item_name ||
             item.itemName ||
             "-";
 
 
-        let row =
-            document.createElement(
-                "tr"
-            );
+        const row =
+            document.createElement("tr");
 
 
         row.innerHTML =
 
             "<td>" +
-
-            (
-                item.code ||
-                "-"
-            )
-
-            +
-
-            "</td>"
-
-            +
+            (item.code || "-") +
+            "</td>" +
 
             "<td>" +
-
-            itemName +
-
-            "</td>"
-
-            +
+            name +
+            "</td>" +
 
             "<td>" +
-
-            (
-                item.unit ||
-                "-"
-            )
-
-            +
-
-            "</td>"
-
-            +
+            (item.unit || "-") +
+            "</td>" +
 
             "<td>" +
-
-            stockIn.toFixed(2)
-
-            +
-
-            "</td>"
-
-            +
+            opening.toFixed(2) +
+            "</td>" +
 
             "<td>" +
+            stockIn.toFixed(2) +
+            "</td>" +
 
-            stockOut.toFixed(2)
-
-            +
-
-            "</td>"
-
-            +
+            "<td>" +
+            stockOut.toFixed(2) +
+            "</td>" +
 
             "<td class='current-stock-cell'>" +
-
-            currentStock.toFixed(2)
-
-            +
-
-            "</td>"
-
-            +
+            current.toFixed(2) +
+            "</td>" +
 
             "<td>Rs. " +
-
-            latestRate.toFixed(2)
-
-            +
-
-            "</td>"
-
-            +
+            rate.toFixed(2) +
+            "</td>" +
 
             "<td>" +
-
-            demandQty.toFixed(2)
-
-            +
-
+            demand.toFixed(2) +
             "</td>";
 
 
-        let stockCell =
+        const cell =
             row.querySelector(
                 ".current-stock-cell"
             );
 
 
-        if(currentStock <= 0){
+        if(current <= 0){
 
-            stockCell.className =
+            cell.className =
                 "current-stock-cell low";
 
         }
         else if(
-
-            demandQty > 0 &&
-
-            currentStock <=
-            demandQty
-
+            demand > 0 &&
+            current <= demand
         ){
 
-            stockCell.className =
+            cell.className =
                 "current-stock-cell warning";
 
         }
         else{
 
-            stockCell.className =
+            cell.className =
                 "current-stock-cell normal";
 
         }
 
 
-        body.appendChild(
-            row
-        );
+        body.appendChild(row);
 
-    }
+    });
 
 }
 
@@ -2367,29 +1574,24 @@ function buildCurrentStockTable(){
 
 function showDashboardGraph(itemCode){
 
-    let canvas =
+    const canvas =
         document.getElementById(
             "dashboardGraph"
         );
 
 
-    let graphInfo =
+    const info =
         document.getElementById(
             "graphInfo"
         );
 
 
-    if(!canvas){
-
+    if(!canvas)
         return;
 
-    }
 
-
-    let item =
-        getItemByCode(
-            itemCode
-        );
+    const item =
+        getItemByCode(itemCode);
 
 
     if(!item){
@@ -2401,96 +1603,72 @@ function showDashboardGraph(itemCode){
     }
 
 
-    let openingStock =
-        Number(
-
-            item.opening_stock ??
-
-            item.openingStock ??
-
-            0
-
-        );
+    const opening =
+        getMonthlyOpeningStock(item);
 
 
-    let stockIn =
-        getCurrentMonthStockIn(
+    const stockIn =
+        getSelectedMonthStockIn(
             item.code
         );
 
 
-    let stockOut =
-        getCurrentMonthStockOut(
+    const stockOut =
+        getSelectedMonthStockOut(
             item.code
         );
 
 
-    let currentStock =
-        getCurrentStock(
-            item
-        );
+    const current =
+        getCurrentStock(item);
 
 
-    graphInfo.innerHTML =
+    if(info){
 
-        "<b>" +
+        info.innerHTML =
+            "<b>" +
+            item.code +
+            " - " +
+            (
+                item.item_name ||
+                item.itemName ||
+                ""
+            ) +
+            "</b><br>" +
 
-        item.code +
+            getMonthName(
+                selectedDashboardMonth
+            ) +
 
-        " - " +
+            " — Opening: " +
+            opening.toFixed(2) +
 
-        (
+            " | In: " +
+            stockIn.toFixed(2) +
 
-            item.item_name ||
-            item.itemName ||
-            ""
+            " | Out: " +
+            stockOut.toFixed(2) +
 
-        )
+            " | Current: " +
+            current.toFixed(2);
 
-        +
-
-        "</b>"
-
-        +
-
-        "<br>"
-
-        +
-
-        "Opening: " +
-
-        openingStock +
-
-        " | Current Month In: " +
-
-        stockIn +
-
-        " | Current Month Out: " +
-
-        stockOut +
-
-        " | Current: " +
-
-        currentStock;
+    }
 
 
     if(dashboardChart){
 
         dashboardChart.destroy();
 
-        dashboardChart =
-            null;
+        dashboardChart = null;
 
     }
 
 
-    if(
-        typeof Chart ===
-        "undefined"
-    ){
+    if(typeof Chart === "undefined"){
 
-        graphInfo.innerHTML +=
-            "<br>Chart library not loaded.";
+        if(info)
+            info.innerHTML +=
+                "<br>Chart library not loaded.";
 
         return;
 
@@ -2498,121 +1676,88 @@ function showDashboardGraph(itemCode){
 
 
     dashboardChart =
-        new Chart(
+        new Chart(canvas,{
 
-            canvas,
+            type:"bar",
 
-            {
+            data:{
 
-                type:
-                    "bar",
+                labels:[
+                    "Opening Stock",
+                    "Stock In",
+                    "Stock Out",
+                    "Current Stock"
+                ],
 
-                data:{
+                datasets:[{
 
-                    labels:[
+                    label:
+                        (
+                            item.item_name ||
+                            item.itemName ||
+                            item.code
+                        ) +
+                        " — " +
+                        getMonthName(
+                            selectedDashboardMonth
+                        ),
 
-                        "Opening Stock",
-                        "Current Month In",
-                        "Current Month Out",
-                        "Current Stock"
-
+                    data:[
+                        opening,
+                        stockIn,
+                        stockOut,
+                        current
                     ],
 
-                    datasets:[
+                    borderWidth:1
 
-                        {
+                }]
 
-                            label:
+            },
 
-                                item.item_name ||
+            options:{
 
-                                item.itemName ||
+                responsive:true,
 
-                                item.code,
+                maintainAspectRatio:false,
 
-                            data:[
-
-                                openingStock,
-                                stockIn,
-                                stockOut,
-                                currentStock
-
-                            ],
-
-                            borderWidth:
-                                1
-
-                        }
-
-                    ]
-
+                plugins:{
+                    legend:{
+                        display:true
+                    }
                 },
 
-                options:{
-
-                    responsive:
-                        true,
-
-                    maintainAspectRatio:
-                        false,
-
-                    plugins:{
-
-                        legend:{
-
-                            display:
-                                true
-
-                        }
-
-                    },
-
-                    scales:{
-
-                        y:{
-
-                            beginAtZero:
-                                true
-
-                        }
-
+                scales:{
+                    y:{
+                        beginAtZero:true
                     }
-
                 }
 
             }
 
-        );
+        });
 
 }
 
 
-// =====================================
-// CLEAR GRAPH
-// =====================================
-
 function clearDashboardGraph(){
 
-    let graphInfo =
+    const info =
         document.getElementById(
             "graphInfo"
         );
 
 
-    if(graphInfo){
-
-        graphInfo.innerHTML =
+    if(info)
+        info.innerHTML =
             "Select an Item ID to see its graph.";
-
-    }
 
 
     if(dashboardChart){
 
         dashboardChart.destroy();
 
-        dashboardChart =
-            null;
+        dashboardChart = null;
 
     }
 
@@ -2620,7 +1765,7 @@ function clearDashboardGraph(){
 
 
 // =====================================
-// SAVE SELECTED ITEM
+// NAVIGATION
 // =====================================
 
 function saveSelectedItem(){
@@ -2643,32 +1788,19 @@ function saveSelectedItem(){
 
 
     return true;
-
 }
 
 
-// =====================================
-// MASTER VIEW
-// =====================================
-
 function openMasterView(){
 
-    if(selectedItem){
-
+    if(selectedItem)
         saveSelectedItem();
-
-    }
-
 
     window.location.href =
         "Master List .html";
 
 }
 
-
-// =====================================
-// MASTER NEW
-// =====================================
 
 function newMasterEntry(){
 
@@ -2678,17 +1810,10 @@ function newMasterEntry(){
 }
 
 
-// =====================================
-// STOCK IN VIEW
-// =====================================
-
 function openStockInView(){
 
-    if(!saveSelectedItem()){
-
+    if(!saveSelectedItem())
         return;
-
-    }
 
 
     localStorage.setItem(
@@ -2702,10 +1827,6 @@ function openStockInView(){
 
 }
 
-
-// =====================================
-// STOCK IN NEW
-// =====================================
 
 function newStockIn(){
 
@@ -2725,17 +1846,10 @@ function newStockIn(){
 }
 
 
-// =====================================
-// STOCK OUT VIEW
-// =====================================
-
 function openStockOutView(){
 
-    if(!saveSelectedItem()){
-
+    if(!saveSelectedItem())
         return;
-
-    }
 
 
     localStorage.setItem(
@@ -2749,10 +1863,6 @@ function openStockOutView(){
 
 }
 
-
-// =====================================
-// STOCK OUT NEW
-// =====================================
 
 function newStockOut(){
 
@@ -2771,10 +1881,6 @@ function newStockOut(){
 
 }
 
-
-// =====================================
-// COST VIEW
-// =====================================
 
 function openCostView(){
 
@@ -2801,10 +1907,6 @@ function openCostView(){
 }
 
 
-// =====================================
-// COST NEW
-// =====================================
-
 function newCostEntry(){
 
     if(selectedItem){
@@ -2823,17 +1925,10 @@ function newCostEntry(){
 }
 
 
-// =====================================
-// DEMAND VIEW
-// =====================================
-
 function openDemandView(){
 
-    if(!saveSelectedItem()){
-
+    if(!saveSelectedItem())
         return;
-
-    }
 
 
     localStorage.setItem(
@@ -2847,10 +1942,6 @@ function openDemandView(){
 
 }
 
-
-// =====================================
-// DEMAND NEW
-// =====================================
 
 function newDemandEntry(){
 
@@ -2870,21 +1961,22 @@ function newDemandEntry(){
 }
 
 
-// =====================================
-// GRAPH VIEW
-// =====================================
-
 function openGraph(){
 
-    if(!saveSelectedItem()){
-
+    if(!saveSelectedItem())
         return;
-
-    }
 
 
     window.location.href =
         "Graphs.html";
+
+}
+
+
+function openUserProfile(){
+
+    window.location.href =
+        "User Profile.html";
 
 }
 
@@ -2895,7 +1987,7 @@ function openGraph(){
 
 function loadSavedItem(){
 
-    let saved =
+    const saved =
         localStorage.getItem(
             "dashboardSelectedItem"
         );
@@ -2903,35 +1995,31 @@ function loadSavedItem(){
 
     if(saved){
 
-        let item =
-            getItemByCode(
-                saved
-            );
+        const item =
+            getItemByCode(saved);
 
 
         if(item){
 
-            selectedItem =
-                item;
+            selectedItem = item;
 
 
-            let searchBox =
+            const box =
                 document.getElementById(
                     "itemSearch"
                 );
 
 
-            if(searchBox){
-
-                searchBox.value =
+            if(box)
+                box.value =
                     item.code;
-
-            }
 
         }
 
     }
 
+
+    updateMonthUI();
 
     updateDashboard();
 
@@ -2939,7 +2027,7 @@ function loadSavedItem(){
 
 
 // =====================================
-// REFRESH DATA
+// REFRESH
 // =====================================
 
 async function refreshDashboardData(){
@@ -2950,12 +2038,34 @@ async function refreshDashboardData(){
 
 
 // =====================================
-// PAGE START
+// PAGE LOAD
 // =====================================
 
 document.addEventListener(
     "DOMContentLoaded",
-    function(){
+    () => {
+
+        updateMonthUI();
+
+
+        const picker =
+            document.getElementById(
+                "dashboardMonth"
+            );
+
+
+        if(picker){
+
+            picker.addEventListener(
+                "change",
+                () =>
+                    setDashboardMonth(
+                        picker.value
+                    )
+            );
+
+        }
+
 
         loadDashboardFromSupabase();
 
@@ -2964,12 +2074,12 @@ document.addEventListener(
 
 
 // =====================================
-// REFRESH WHEN PAGE BECOMES VISIBLE
+// AUTO REFRESH
 // =====================================
 
 document.addEventListener(
     "visibilitychange",
-    function(){
+    () => {
 
         if(
             document.visibilityState ===
@@ -2982,9 +2092,3 @@ document.addEventListener(
 
     }
 );
-function openUserProfile(){
-
-    window.location.href =
-        "User Profile.html";
-
-}
