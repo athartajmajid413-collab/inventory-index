@@ -1274,7 +1274,6 @@ function getLatestRate(itemCode){
 
 }
 
-
 // =====================================
 // DEMAND
 // =====================================
@@ -1282,52 +1281,31 @@ function getLatestRate(itemCode){
 function getDemandValue(record){
 
     return Number(
-
         record.finalDemand ??
-
         record.final_demand ??
-
         record.approvedQty ??
-
         record.approved_qty ??
-
         record.demandQty ??
-
         record.demand_qty ??
-
         record.demandQuantity ??
-
         record.demand_quantity ??
-
         record.quantity ??
-
         record.qty ??
-
         0
-
     ) || 0;
-
 }
 
 
 function getDemandCode(record){
 
     return String(
-
         record.itemCode ??
-
         record.item_code ??
-
         record.code ??
-
         record.itemID ??
-
         record.item_id ??
-
         record.itemId ??
-
         ""
-
     ).trim();
 
 }
@@ -1336,27 +1314,18 @@ function getDemandCode(record){
 function getDemandList(record){
 
     let list =
-
         record.demand_items ||
-
         record.demandItems ||
-
         record.items ||
-
         record.demands ||
-
         [];
 
 
-    if(
-        typeof list ===
-        "string"
-    ){
+    if(typeof list === "string"){
 
         try{
 
-            list =
-                JSON.parse(list);
+            list = JSON.parse(list);
 
         }
         catch(e){
@@ -1375,33 +1344,9 @@ function getDemandList(record){
 }
 
 
-function isDemandRecordSelectedMonth(record){
-
-    const month =
-        String(
-
-            record.demand_month ||
-
-            record.demandMonth ||
-
-            ""
-
-        ).trim();
-
-
-    if(month)
-        return (
-            month ===
-            selectedDashboardMonth
-        );
-
-
-    return isSelectedMonth(
-        record
-    );
-
-}
-
+// =====================================
+// SELECTED MONTH DEMAND
+// =====================================
 
 function getCurrentMonthDemand(itemCode){
 
@@ -1414,13 +1359,14 @@ function getCurrentMonthDemand(itemCode){
     let total = 0;
 
 
-    for(
-        const record of demands
-    ){
+    // ---------------------------------
+    // DEMANDS
+    // ---------------------------------
+
+    for(const record of demands){
 
         if(
-            getDemandCode(record)
-            !== code
+            getDemandCode(record) !== code
         ){
 
             continue;
@@ -1428,133 +1374,180 @@ function getCurrentMonthDemand(itemCode){
         }
 
 
-        if(
+        // IMPORTANT:
+        // Demand must have a month/date.
+        // Old records without a date/month
+        // will NOT be counted automatically.
 
-            !record.date &&
+        const month =
+            String(
+                record.demand_month ||
+                record.demandMonth ||
+                record.month ||
+                ""
+            ).trim();
 
-            !record.demandDate &&
 
-            !record.month &&
+        if(month){
 
-            !record.demand_month &&
+            if(
+                month ===
+                selectedDashboardMonth
+            ){
 
-            !record.createdDate
+                total +=
+                    getDemandValue(
+                        record
+                    );
 
-        ){
+            }
 
-            total +=
-                getDemandValue(
-                    record
-                );
+            continue;
 
         }
 
-        else if(
-            isSelectedMonth(
-                record
-            )
-        ){
 
-            total +=
-                getDemandValue(
-                    record
-                );
+        const date =
+            getRecordDate(
+                record
+            );
+
+
+        if(date){
+
+            if(
+                getRecordMonthKey(record) ===
+                selectedDashboardMonth
+            ){
+
+                total +=
+                    getDemandValue(
+                        record
+                    );
+
+            }
 
         }
 
     }
 
 
-    // Current month manual edits
+    // ---------------------------------
+    // CURRENT MONTH MANUAL EDIT
+    // ---------------------------------
+    //
+    // Only use demandEdits for the
+    // CURRENT month.
+    //
+    // Previous month demand will not
+    // appear in another month.
+    //
+    // ---------------------------------
 
     if(
-
         selectedDashboardMonth ===
         getTodayMonthKey()
-
-        &&
-
-        demandEdits
-
     ){
 
         const edit =
             demandEdits[code];
 
 
-        if(
-            edit !== undefined
-        ){
+        if(edit !== undefined){
 
-            total += Number(
+            const editValue =
 
-                typeof edit ===
-                "object"
+                typeof edit === "object"
 
                 ?
 
                 (
-
                     edit.finalDemand ??
-
                     edit.final_demand ??
-
                     edit.demandQty ??
-
                     edit.demand_qty ??
-
                     edit.demandQuantity ??
-
                     edit.demand_quantity ??
-
                     edit.quantity ??
-
                     edit.qty ??
-
                     0
-
                 )
 
                 :
 
-                edit
+                edit;
 
-            ) || 0;
+
+            total =
+                Number(
+                    editValue
+                ) || 0;
 
         }
 
     }
 
 
-    // Demand History
+    // ---------------------------------
+    // DEMAND HISTORY
+    // ---------------------------------
 
     for(
         const hr of demandHistory
     ){
 
-        if(
-            !isDemandRecordSelectedMonth(
-                hr
-            )
-        ){
+        const historyMonth =
+            String(
 
+                hr.demand_month ??
+
+                hr.demandMonth ??
+
+                ""
+
+            ).trim();
+
+
+        // If demand history has a month,
+        // ONLY that month is allowed.
+
+        if(historyMonth){
+
+            if(
+                historyMonth !==
+                selectedDashboardMonth
+            ){
+
+                continue;
+
+            }
+
+        }
+        else{
+
+            // No month = do NOT count it.
             continue;
 
         }
 
 
+        const list =
+            getDemandList(hr);
+
+
         for(
-            const di of
-            getDemandList(hr)
+            const di of list
         ){
 
             if(
-                getDemandCode(di)
-                === code
+                getDemandCode(di) ===
+                code
             ){
 
                 total +=
-                    getDemandValue(di);
+                    getDemandValue(
+                        di
+                    );
 
             }
 
@@ -1566,7 +1559,6 @@ function getCurrentMonthDemand(itemCode){
     return total;
 
 }
-
 
 function getOverallDemand(){
 
