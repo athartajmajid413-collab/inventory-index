@@ -1378,7 +1378,249 @@ function getItemCurrentCost(item){
     );
 
 }
+// =====================================
+// SELECTED ITEM ONLINE PICTURE
+// =====================================
 
+async function showSelectedItemPicture(item){
+
+    const box =
+        document.getElementById(
+            "itemPictureBox"
+        );
+
+    const image =
+        document.getElementById(
+            "itemOnlinePicture"
+        );
+
+    const name =
+        document.getElementById(
+            "itemPictureName"
+        );
+
+    const status =
+        document.getElementById(
+            "itemPictureStatus"
+        );
+
+
+    if(!box || !image)
+        return;
+
+
+    if(!item){
+
+        box.style.display = "none";
+
+        image.src = "";
+
+        return;
+
+    }
+
+
+    const itemName =
+        item.item_name ??
+        item.itemName ??
+        item.name ??
+        item.description ??
+        item.code ??
+        "";
+
+
+    box.style.display = "block";
+
+
+    if(name){
+
+        name.innerHTML =
+            "🔎 " +
+            String(itemName);
+
+    }
+
+
+    if(status){
+
+        status.innerHTML =
+            "Online picture searching...";
+
+    }
+
+
+    image.src = "";
+
+
+    // =================================
+    // ONLINE IMAGE SEARCH
+    // =================================
+
+    try{
+
+        const searchText =
+            encodeURIComponent(
+                String(itemName).trim()
+            );
+
+
+        const apiURL =
+            "https://api.duckduckgo.com/" +
+            "?q=" +
+            searchText +
+            "&format=json" +
+            "&no_html=1" +
+            "&skip_disambig=1";
+
+
+        const response =
+            await fetch(apiURL);
+
+
+        if(!response.ok){
+
+            throw new Error(
+                "Image search failed"
+            );
+
+        }
+
+
+        const data =
+            await response.json();
+
+
+        let imageURL =
+            data.Image || "";
+
+
+        // =================================
+        // RELATED TOPIC IMAGE
+        // =================================
+
+        if(!imageURL &&
+           data.RelatedTopics &&
+           Array.isArray(data.RelatedTopics)){
+
+            for(
+                const topic
+                of data.RelatedTopics
+            ){
+
+                if(
+                    topic &&
+                    topic.Icon &&
+                    topic.Icon.URL
+                ){
+
+                    imageURL =
+                        topic.Icon.URL;
+
+                    break;
+
+                }
+
+            }
+
+        }
+
+
+        if(imageURL){
+
+            image.src =
+                imageURL;
+
+
+            if(status){
+
+                status.innerHTML =
+                    "🌐 Online image";
+
+            }
+
+        }
+        else{
+
+            handleItemPictureError();
+
+        }
+
+    }
+    catch(error){
+
+        console.error(
+            "Item picture error:",
+            error
+        );
+
+
+        handleItemPictureError();
+
+    }
+
+}
+
+
+// =====================================
+// IMAGE ERROR
+// =====================================
+
+function handleItemPictureError(){
+
+    const image =
+        document.getElementById(
+            "itemOnlinePicture"
+        );
+
+    const status =
+        document.getElementById(
+            "itemPictureStatus"
+        );
+
+
+    if(image){
+
+        image.src =
+            "https://via.placeholder.com/350x250?text=No+Picture+Found";
+
+    }
+
+
+    if(status){
+
+        status.innerHTML =
+            "❌ Online picture not found for this item.";
+
+    }
+
+}
+
+
+// =====================================
+// HIDE ITEM PICTURE
+// =====================================
+
+function clearSelectedItemPicture(){
+
+    const box =
+        document.getElementById(
+            "itemPictureBox"
+        );
+
+    const image =
+        document.getElementById(
+            "itemOnlinePicture"
+        );
+
+
+    if(box)
+        box.style.display = "none";
+
+
+    if(image)
+        image.src = "";
+
+}
 
 // =====================================
 // SEARCH ITEM
@@ -1432,6 +1674,9 @@ function searchItem(){
             found.code
         );
 
+    showSelectedItemPicture(
+        found
+    );
 
         updateDashboard();
 
@@ -1490,7 +1735,7 @@ function clearItemSearch(){
         "dashboardSelectedItem"
     );
 
-
+clearSelectedItemPicture();
     updateDashboard();
 
 }
