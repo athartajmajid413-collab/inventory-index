@@ -1377,9 +1377,9 @@ function getItemCurrentCost(item){
 
     );
 
-}
 // =====================================
 // SELECTED ITEM ONLINE PICTURE
+// OIL PICTURE + DRUM FALLBACK
 // =====================================
 
 async function showSelectedItemPicture(item){
@@ -1444,12 +1444,30 @@ async function showSelectedItemPicture(item){
     if(status){
 
         status.innerHTML =
-            "Online picture searching...";
+            "🌐 Online picture searching...";
 
     }
 
 
     image.src = "";
+
+
+    // =================================
+    // CHECK IF ITEM IS OIL
+    // =================================
+
+    const lowerName =
+        String(itemName).toLowerCase();
+
+
+    const isOil =
+        lowerName.includes("oil") ||
+        lowerName.includes("lubricant") ||
+        lowerName.includes("hydraulic") ||
+        lowerName.includes("engine oil") ||
+        lowerName.includes("gear oil") ||
+        lowerName.includes("diesel oil") ||
+        lowerName.includes("motor oil");
 
 
     // =================================
@@ -1498,9 +1516,11 @@ async function showSelectedItemPicture(item){
         // RELATED TOPIC IMAGE
         // =================================
 
-        if(!imageURL &&
-           data.RelatedTopics &&
-           Array.isArray(data.RelatedTopics)){
+        if(
+            !imageURL &&
+            data.RelatedTopics &&
+            Array.isArray(data.RelatedTopics)
+        ){
 
             for(
                 const topic
@@ -1525,6 +1545,10 @@ async function showSelectedItemPicture(item){
         }
 
 
+        // =================================
+        // IMAGE FOUND
+        // =================================
+
         if(imageURL){
 
             image.src =
@@ -1538,10 +1562,23 @@ async function showSelectedItemPicture(item){
 
             }
 
+
+            image.onerror =
+                function(){
+
+                    handleItemPictureError(
+                        isOil
+                    );
+
+                };
+
         }
+
         else{
 
-            handleItemPictureError();
+            handleItemPictureError(
+                isOil
+            );
 
         }
 
@@ -1554,7 +1591,9 @@ async function showSelectedItemPicture(item){
         );
 
 
-        handleItemPictureError();
+        handleItemPictureError(
+            isOil
+        );
 
     }
 
@@ -1562,10 +1601,12 @@ async function showSelectedItemPicture(item){
 
 
 // =====================================
-// IMAGE ERROR
+// IMAGE ERROR / DRUM FALLBACK
 // =====================================
 
-function handleItemPictureError(){
+function handleItemPictureError(
+    isOil = false
+){
 
     const image =
         document.getElementById(
@@ -1578,18 +1619,233 @@ function handleItemPictureError(){
         );
 
 
-    if(image){
+    if(!image)
+        return;
+
+
+    // =================================
+    // OIL DRUM FALLBACK
+    // =================================
+
+    if(isOil){
+
+        const drumSVG = `
+
+        <svg
+            xmlns="http://www.w3.org/2000/svg"
+            width="500"
+            height="350"
+            viewBox="0 0 500 350"
+        >
+
+            <rect
+                width="500"
+                height="350"
+                fill="#f1f5f9"
+            />
+
+            <!-- Shadow -->
+
+            <ellipse
+                cx="250"
+                cy="305"
+                rx="125"
+                ry="18"
+                fill="#cbd5e1"
+            />
+
+            <!-- Drum -->
+
+            <ellipse
+                cx="250"
+                cy="75"
+                rx="105"
+                ry="28"
+                fill="#64748b"
+            />
+
+            <rect
+                x="145"
+                y="75"
+                width="210"
+                height="190"
+                fill="#94a3b8"
+            />
+
+            <ellipse
+                cx="250"
+                cy="265"
+                rx="105"
+                ry="28"
+                fill="#64748b"
+            />
+
+            <!-- Top -->
+
+            <ellipse
+                cx="250"
+                cy="75"
+                rx="105"
+                ry="28"
+                fill="#94a3b8"
+            />
+
+            <ellipse
+                cx="250"
+                cy="75"
+                rx="82"
+                ry="18"
+                fill="#cbd5e1"
+            />
+
+            <!-- Drum rings -->
+
+            <rect
+                x="145"
+                y="115"
+                width="210"
+                height="10"
+                fill="#475569"
+            />
+
+            <rect
+                x="145"
+                y="220"
+                width="210"
+                height="10"
+                fill="#475569"
+            />
+
+            <!-- Oil label -->
+
+            <rect
+                x="175"
+                y="145"
+                width="150"
+                height="55"
+                rx="8"
+                fill="#ffffff"
+            />
+
+            <text
+                x="250"
+                y="168"
+                text-anchor="middle"
+                font-size="18"
+                font-family="Arial"
+                font-weight="bold"
+                fill="#1e293b"
+            >
+                OIL
+            </text>
+
+            <text
+                x="250"
+                y="190"
+                text-anchor="middle"
+                font-size="13"
+                font-family="Arial"
+                fill="#475569"
+            >
+                DRUM
+            </text>
+
+            <!-- Cap -->
+
+            <circle
+                cx="250"
+                cy="75"
+                r="10"
+                fill="#334155"
+            />
+
+            <text
+                x="250"
+                y="325"
+                text-anchor="middle"
+                font-size="16"
+                font-family="Arial"
+                fill="#475569"
+            >
+                Oil Drum
+            </text>
+
+        </svg>
+
+        `;
+
 
         image.src =
-            "https://via.placeholder.com/350x250?text=No+Picture+Found";
+            "data:image/svg+xml;charset=UTF-8," +
+            encodeURIComponent(
+                drumSVG
+            );
+
+
+        if(status){
+
+            status.innerHTML =
+                "🛢️ Oil Drum picture";
+
+        }
 
     }
 
+    // =================================
+    // NORMAL ITEM FALLBACK
+    // =================================
 
-    if(status){
+    else{
 
-        status.innerHTML =
-            "❌ Online picture not found for this item.";
+        image.src =
+            "data:image/svg+xml;charset=UTF-8," +
+            encodeURIComponent(`
+
+            <svg
+                xmlns="http://www.w3.org/2000/svg"
+                width="500"
+                height="350"
+            >
+
+                <rect
+                    width="500"
+                    height="350"
+                    fill="#f1f5f9"
+                />
+
+                <text
+                    x="250"
+                    y="165"
+                    text-anchor="middle"
+                    font-size="28"
+                    font-family="Arial"
+                    fill="#64748b"
+                >
+                    No Picture Found
+                </text>
+
+                <text
+                    x="250"
+                    y="200"
+                    text-anchor="middle"
+                    font-size="16"
+                    font-family="Arial"
+                    fill="#94a3b8"
+                >
+                    Item Image
+                </text>
+
+            </svg>
+
+            `);
+
+
+        if(status){
+
+            status.innerHTML =
+                "❌ Online picture not found.";
+
+        }
 
     }
 
@@ -1621,7 +1877,6 @@ function clearSelectedItemPicture(){
         image.src = "";
 
 }
-
 // =====================================
 // SEARCH ITEM
 // =====================================
