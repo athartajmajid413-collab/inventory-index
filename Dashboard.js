@@ -1,727 +1,709 @@
 // =====================================
-// DASHBOARD DATA - SUPABASE VERSION
-// MECAS ENGINEERING PVT LIMITED SUNDAR
-//
-// IMPORTANT:
-// 1. All stock data comes from Supabase
-// 2. Demand comes ONLY from demand_history
-// 3. localStorage demand is NOT used
-// 4. Selected month Opening = previous closing
-// 5. Current = Opening + In - Out
+// DASHBOARD.JS - SUPABASE VERSION
+// Correct Monthly Stock + Demand History + Selected Item Picture
 // =====================================
 
 let items = [];
 let history = [];
 let demandHistory = [];
-
 let selectedItem = null;
 let dashboardChart = null;
 
 let selectedDashboardMonth =
-    localStorage.getItem("dashboardSelectedMonth") ||
-    getTodayMonthKey();
+    localStorage.getItem("dashboardSelectedMonth") || getTodayMonthKey();
 
 
-// =====================================
-// MONTH
-// =====================================
+// --------------------------------------------------
+// BASIC HELPERS
+// --------------------------------------------------
 
-function getTodayMonthKey(){
-
+function getTodayMonthKey() {
     const d = new Date();
 
     return d.getFullYear() +
         "-" +
-        String(d.getMonth() + 1).padStart(2,"0");
-
+        String(d.getMonth() + 1).padStart(2, "0");
 }
 
 
-function getSelectedMonthParts(){
+function getSelectedMonthParts() {
 
-    const p =
-        String(selectedDashboardMonth).split("-");
+    const p = String(selectedDashboardMonth).split("-");
 
     return {
-
-        year:Number(p[0]),
-
-        month:Number(p[1]) - 1
-
+        year: Number(p[0]),
+        month: Number(p[1]) - 1
     };
-
 }
 
 
-function getMonthName(key){
+function getMonthName(key) {
 
-    const p =
-        String(key).split("-");
+    const p = String(key).split("-");
 
-    const d =
-        new Date(
-            Number(p[0]),
-            Number(p[1]) - 1,
-            1
-        );
-
-    return d.toLocaleString(
-        "en-US",
-        {
-            month:"long",
-            year:"numeric"
-        }
+    const d = new Date(
+        Number(p[0]),
+        Number(p[1]) - 1,
+        1
     );
 
+    return d.toLocaleString("en-US", {
+        month: "long",
+        year: "numeric"
+    });
 }
 
 
-function setDashboardMonth(key){
+function safeNumber(value) {
 
-    if(!/^\d{4}-\d{2}$/.test(key))
+    const n = Number(value);
+
+    return Number.isFinite(n) ? n : 0;
+}
+
+
+function cleanCode(value) {
+
+    return String(value ?? "").trim();
+}
+
+
+function escapeHTML(value) {
+
+    return String(value ?? "")
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#039;");
+}
+
+
+// --------------------------------------------------
+// MONTH SELECTOR
+// --------------------------------------------------
+
+function setDashboardMonth(key) {
+
+    if (!/^\d{4}-\d{2}$/.test(String(key))) {
         return;
+    }
 
-    selectedDashboardMonth = key;
+    selectedDashboardMonth = String(key);
 
     localStorage.setItem(
         "dashboardSelectedMonth",
-        key
+        selectedDashboardMonth
     );
 
     updateMonthUI();
-
     updateDashboard();
-
 }
 
 
-function updateMonthUI(){
+function updateMonthUI() {
 
     const picker =
-        document.getElementById(
-            "dashboardMonth"
-        );
+        document.getElementById("dashboardMonth");
 
     const label =
-        document.getElementById(
-            "dashboardMonthName"
-        );
+        document.getElementById("dashboardMonthName");
 
     const title =
-        document.getElementById(
-            "stockTableTitle"
-        );
+        document.getElementById("stockTableTitle");
 
+    if (picker) {
+        picker.value = selectedDashboardMonth;
+    }
 
-    if(picker)
-        picker.value =
-            selectedDashboardMonth;
-
-
-    if(label)
+    if (label) {
         label.textContent =
-            getMonthName(
-                selectedDashboardMonth
-            );
+            getMonthName(selectedDashboardMonth);
+    }
 
-
-    if(title)
+    if (title) {
         title.textContent =
-            getMonthName(
-                selectedDashboardMonth
-            ) +
+            getMonthName(selectedDashboardMonth) +
             " Stock";
-
+    }
 }
 
 
-// =====================================
-// DATE HELPERS
-// =====================================
+// --------------------------------------------------
+// DATE PARSING
+// --------------------------------------------------
 
-function getRecordDate(record){
+function getRecordDate(record) {
+
+    if (!record) {
+        return null;
+    }
 
     let value =
-        record.date ||
-        record.transactionDate ||
-        record.entryDate ||
-        record.transaction_date ||
-        record.createdDate ||
+        record.date ??
+        record.transactionDate ??
+        record.entryDate ??
+        record.transaction_date ??
+        record.transaction_datetime ??
+        record.created_at ??
+        record.createdDate ??
+        record.demandDate ??
+        record.demand_date ??
+        record.demand_month ??
+        record.month ??
         "";
 
-    if(!value)
+    if (
+        value === null ||
+        value === undefined ||
+        String(value).trim() === ""
+    ) {
         return null;
+    }
+
+    let text = String(value).trim();
 
 
-    let text =
-        String(value).trim();
+    // YYYY-MM
 
+    if (/^\d{4}-\d{2}$/.test(text)) {
 
-    // DD/MM/YYYY
+        const [y, m] =
+            text.split("-").map(Number);
 
-    let s =
-        text.split("/");
-
-
-    if(s.length === 3){
-
-        const day =
-            Number(s[0]);
-
-        const month =
-            Number(s[1]) - 1;
-
-        const year =
-            Number(s[2]);
-
-
-        if(
-            !isNaN(day) &&
-            !isNaN(month) &&
-            !isNaN(year)
-        ){
-
-            return new Date(
-                year,
-                month,
-                day
-            );
-
-        }
-
+        return new Date(
+            y,
+            m - 1,
+            1
+        );
     }
 
 
     // YYYY-MM-DD
 
-    let d =
-        text.split("-");
+    if (/^\d{4}-\d{2}-\d{2}/.test(text)) {
 
+        const d = new Date(text);
 
-    if(d.length >= 2){
-
-        const year =
-            Number(d[0]);
-
-        const month =
-            Number(d[1]) - 1;
-
-
-        if(
-            !isNaN(year) &&
-            !isNaN(month)
-        ){
-
-            const day =
-                d.length >= 3
-                ?
-                Number(
-                    String(d[2])
-                    .substring(0,2)
-                )
-                :
-                1;
-
-
-            return new Date(
-                year,
-                month,
-                day > 0 ? day : 1
-            );
-
+        if (!Number.isNaN(d.getTime())) {
+            return d;
         }
 
+        const p =
+            text.substring(0, 10).split("-");
+
+        return new Date(
+            Number(p[0]),
+            Number(p[1]) - 1,
+            Number(p[2])
+        );
     }
 
 
-    const date =
-        new Date(value);
+    // DD/MM/YYYY
+
+    if (/^\d{1,2}\/\d{1,2}\/\d{4}/.test(text)) {
+
+        const p =
+            text.substring(0, 10).split("/");
+
+        return new Date(
+            Number(p[2]),
+            Number(p[1]) - 1,
+            Number(p[0])
+        );
+    }
 
 
-    return isNaN(date.getTime())
+    // DD-MM-YYYY
+
+    if (/^\d{1,2}-\d{1,2}-\d{4}/.test(text)) {
+
+        const p =
+            text.substring(0, 10).split("-");
+
+        return new Date(
+            Number(p[2]),
+            Number(p[1]) - 1,
+            Number(p[0])
+        );
+    }
+
+
+    const d = new Date(text);
+
+    return Number.isNaN(d.getTime())
         ? null
-        : date;
-
+        : d;
 }
 
 
-function getRecordMonthKey(record){
+function getRecordMonthKey(record) {
 
-    const d =
-        getRecordDate(record);
+    const d = getRecordDate(record);
 
-    if(!d)
+    if (!d) {
         return "";
+    }
 
     return d.getFullYear() +
         "-" +
-        String(
-            d.getMonth() + 1
-        ).padStart(2,"0");
-
+        String(d.getMonth() + 1).padStart(2, "0");
 }
 
 
-function isSelectedMonth(record){
+function isSelectedMonth(record) {
 
-    return getRecordMonthKey(record) ===
-        selectedDashboardMonth;
-
+    return (
+        getRecordMonthKey(record) ===
+        selectedDashboardMonth
+    );
 }
 
 
-function isBeforeSelectedMonth(record){
+function isBeforeSelectedMonth(record) {
 
-    const d =
-        getRecordDate(record);
+    const d = getRecordDate(record);
 
-    if(!d)
+    if (!d) {
         return false;
-
+    }
 
     const m =
         getSelectedMonthParts();
 
+    return (
+        d.getFullYear() < m.year ||
+        (
+            d.getFullYear() === m.year &&
+            d.getMonth() < m.month
+        )
+    );
+}
+
+
+// --------------------------------------------------
+// ITEM HELPERS
+// --------------------------------------------------
+
+function getItemCode(item) {
+
+    return cleanCode(
+        item?.code ??
+        item?.item_code ??
+        item?.itemCode ??
+        item?.item_id ??
+        item?.itemID
+    );
+}
+
+
+function getItemName(item) {
+
+    return String(
+        item?.item_name ??
+        item?.itemName ??
+        item?.name ??
+        item?.description ??
+        getItemCode(item) ??
+        ""
+    ).trim();
+}
+
+
+function getItemUnit(item) {
+
+    return String(
+        item?.unit ??
+        item?.uom ??
+        "-"
+    ).trim();
+}
+
+
+function getItemByCode(code) {
+
+    const c = cleanCode(code);
 
     return (
-
-        d.getFullYear() < m.year
-
-    ) ||
-
-    (
-
-        d.getFullYear() === m.year &&
-
-        d.getMonth() < m.month
-
+        items.find(
+            item =>
+                getItemCode(item) === c
+        ) || null
     );
-
 }
 
 
-// =====================================
-// ITEM
-// =====================================
+// --------------------------------------------------
+// SUPABASE LOAD
+// --------------------------------------------------
 
-function getItemByCode(code){
-
-    const c =
-        String(code || "").trim();
-
-
-    return items.find(
-        x =>
-            String(
-                x.code || ""
-            ).trim() === c
-    ) || null;
-
-}
-
-
-// =====================================
-// LOAD SUPABASE
-// =====================================
-
-async function loadDashboardFromSupabase(){
+async function loadDashboardFromSupabase() {
 
     console.log(
         "Loading Dashboard from Supabase..."
     );
 
+    try {
 
-    // ---------------------------------
-    // ITEMS
-    // ---------------------------------
+        if (
+            typeof supabaseRequest !==
+            "function"
+        ) {
 
-    const itemsResult =
-        await supabaseRequest(
-            "items",
-            "GET",
-            null,
-            "?select=*"
-        );
-
-
-    if(!itemsResult.success){
-
-        showSupabaseError(
-            "Items",
-            itemsResult.error
-        );
-
-        return;
-
-    }
+            throw new Error(
+                "supabaseRequest() is not available. Check that supabase.js is loaded before Dashboard.js."
+            );
+        }
 
 
-    items =
-        Array.isArray(
-            itemsResult.data
-        )
-        ?
-        itemsResult.data
-        :
-        [];
+        // -----------------------------------------
+        // ITEMS
+        // -----------------------------------------
+
+        const itemsResult =
+            await supabaseRequest(
+                "items",
+                "GET",
+                null,
+                "?select=*"
+            );
 
 
-    // ---------------------------------
-    // STOCK IN
-    // ---------------------------------
+        // -----------------------------------------
+        // STOCK IN
+        // -----------------------------------------
 
-    const stockInResult =
-        await supabaseRequest(
-            "stock_in",
-            "GET",
-            null,
-            "?select=*"
-        );
-
-
-    // ---------------------------------
-    // STOCK OUT
-    // ---------------------------------
-
-    const stockOutResult =
-        await supabaseRequest(
-            "stock_issue",
-            "GET",
-            null,
-            "?select=*"
-        );
+        const stockInResult =
+            await supabaseRequest(
+                "stock_in",
+                "GET",
+                null,
+                "?select=*"
+            );
 
 
-    if(
-        !stockInResult.success &&
-        !stockOutResult.success
-    ){
+        // -----------------------------------------
+        // STOCK OUT
+        // -----------------------------------------
 
-        showSupabaseError(
-            "Stock",
-            stockInResult.error ||
-            stockOutResult.error
-        );
-
-        return;
-
-    }
+        const stockOutResult =
+            await supabaseRequest(
+                "stock_issue",
+                "GET",
+                null,
+                "?select=*"
+            );
 
 
-    history = [];
+        // -----------------------------------------
+        // DEMAND HISTORY
+        // -----------------------------------------
+
+        const demandResult =
+            await supabaseRequest(
+                "demand_history",
+                "GET",
+                null,
+                "?select=*"
+            );
 
 
-    // ---------------------------------
-    // STOCK IN → HISTORY
-    // ---------------------------------
+        // -----------------------------------------
+        // SAVE ITEMS
+        // -----------------------------------------
 
-    if(stockInResult.success){
-
-        (
-            stockInResult.data || []
-        )
-        .forEach(r => {
-
-            history.push({
-
-                id:r.id,
-
-                date:r.date,
-
-                time:r.time,
-
-                itemCode:
-                    r.item_code,
-
-                itemName:
-                    r.item_name,
-
-                unit:
-                    r.unit,
-
-                source:
-                    r.source,
-
-                supplier:
-                    r.supplier,
-
-                location:
-                    r.location,
-
-                department:
-                    r.department,
-
-                quantity:
-                    Number(
-                        r.quantity || 0
-                    ),
-
-                unitCost:
-                    Number(
-                        r.unit_cost || 0
-                    ),
-
-                totalCost:
-                    Number(
-                        r.total_cost || 0
-                    ),
-
-                type:"Stock In"
-
-            });
-
-        });
-
-    }
+        items =
+            itemsResult?.success
+                ? (itemsResult.data || [])
+                : [];
 
 
-    // ---------------------------------
-    // STOCK OUT → HISTORY
-    // ---------------------------------
+        // -----------------------------------------
+        // BUILD HISTORY
+        // -----------------------------------------
 
-    if(stockOutResult.success){
+        history = [];
 
-        (
-            stockOutResult.data || []
-        )
-        .forEach(r => {
 
-            history.push({
+        // STOCK IN
 
-                id:r.id,
+        if (stockInResult?.success) {
 
-                date:r.date,
+            (
+                stockInResult.data || []
+            ).forEach(r => {
 
-                time:r.time,
+                history.push({
 
-                itemCode:
-                    r.item_code,
+                    id: r.id,
 
-                itemName:
-                    r.item_name,
+                    date: r.date,
 
-                unit:
-                    r.unit,
+                    time: r.time,
 
-                source:
-                    r.source,
+                    itemCode:
+                        r.item_code ??
+                        r.itemCode ??
+                        r.code,
 
-                supplier:
-                    r.supplier,
+                    itemName:
+                        r.item_name ??
+                        r.itemName,
 
-                location:
-                    r.location,
+                    unit: r.unit,
 
-                department:
-                    r.department,
+                    source: r.source,
 
-                quantity:
-                    Number(
-                        r.quantity || 0
-                    ),
+                    supplier: r.supplier,
 
-                unitCost:0,
+                    location: r.location,
 
-                totalCost:0,
+                    department: r.department,
 
-                type:"Stock Issue"
+                    quantity:
+                        safeNumber(r.quantity),
+
+                    unitCost:
+                        safeNumber(
+                            r.unit_cost ??
+                            r.unitCost ??
+                            r.latest_rate ??
+                            r.rate
+                        ),
+
+                    totalCost:
+                        safeNumber(
+                            r.total_cost ??
+                            r.totalCost
+                        ),
+
+                    type: "Stock In"
+
+                });
 
             });
 
-        });
-
-    }
+        }
 
 
-    // ---------------------------------
-    // DEMAND HISTORY
-    // ---------------------------------
+        // STOCK OUT
 
-    const demandResult =
-        await supabaseRequest(
-            "demand_history",
-            "GET",
-            null,
-            "?select=*"
-        );
+        if (stockOutResult?.success) {
+
+            (
+                stockOutResult.data || []
+            ).forEach(r => {
+
+                history.push({
+
+                    id: r.id,
+
+                    date: r.date,
+
+                    time: r.time,
+
+                    itemCode:
+                        r.item_code ??
+                        r.itemCode ??
+                        r.code,
+
+                    itemName:
+                        r.item_name ??
+                        r.itemName,
+
+                    unit: r.unit,
+
+                    source: r.source,
+
+                    supplier: r.supplier,
+
+                    location: r.location,
+
+                    department: r.department,
+
+                    quantity:
+                        safeNumber(r.quantity),
+
+                    unitCost: 0,
+
+                    totalCost: 0,
+
+                    type: "Stock Issue"
+
+                });
+
+            });
+
+        }
 
 
-    if(!demandResult.success){
-
-        console.error(
-            "Demand History Error:",
-            demandResult.error
-        );
-
-        demandHistory = [];
-
-    }
-    else{
+        // -----------------------------------------
+        // DEMAND HISTORY
+        // -----------------------------------------
 
         demandHistory =
-            Array.isArray(
-                demandResult.data
-            )
-            ?
-            demandResult.data
-            :
-            [];
-
-    }
+            demandResult?.success
+                ? (demandResult.data || [])
+                : [];
 
 
-    console.log(
-        "Items:",
-        items.length
-    );
+        console.log(
+            "Supabase Items:",
+            items.length
+        );
 
-    console.log(
-        "Stock records:",
-        history.length
-    );
+        console.log(
+            "Supabase Stock In:",
+            history.filter(
+                x => x.type === "Stock In"
+            ).length
+        );
 
-    console.log(
-        "Demand history:",
-        demandHistory.length
-    );
+        console.log(
+            "Supabase Stock Out:",
+            history.filter(
+                x => x.type === "Stock Issue"
+            ).length
+        );
 
-
-    updateMonthUI();
-
-    loadSavedItem();
-
-}
-
-
-// =====================================
-// SUPABASE ERROR
-// =====================================
-
-function showSupabaseError(
-    section,
-    error
-){
-
-    console.error(
-        "Supabase " +
-        section +
-        " Error:",
-        error
-    );
-
-
-    const info =
-        document.getElementById(
-            "searchInfo"
+        console.log(
+            "Supabase Demand History:",
+            demandHistory.length
         );
 
 
-    if(info){
+        const status =
+            document.getElementById(
+                "searchInfo"
+            );
 
-        info.innerHTML =
-            "❌ Supabase connection error." +
-            "<br>" +
-            section +
-            " data could not be loaded." +
-            "<br><small>" +
-            String(
-                error || ""
-            ) +
-            "</small>";
+
+        if (
+            status &&
+            !selectedItem
+        ) {
+
+            status.innerHTML =
+                "✅ Supabase connected — " +
+                items.length +
+                " items loaded.";
+
+        }
+
+
+        updateMonthUI();
+
+        loadSavedItem();
+
+
+    } catch (error) {
+
+        console.error(
+            "Dashboard Supabase Load Error:",
+            error
+        );
+
+
+        const status =
+            document.getElementById(
+                "searchInfo"
+            );
+
+
+        if (status) {
+
+            status.innerHTML =
+                "❌ Supabase data load error: " +
+                escapeHTML(
+                    error.message || error
+                );
+
+        }
+
+
+        clearSelectedCards();
+
+        buildCurrentStockTable();
 
     }
 
 }
 
 
-// =====================================
-// MASTER OPENING
-// =====================================
+// --------------------------------------------------
+// MONTHLY STOCK CALCULATIONS
+// --------------------------------------------------
+//
+// Opening of selected month:
+//
+// Master Opening Stock
+// + all Stock In before selected month
+// - all Stock Issue before selected month
+//
+// Current Stock:
+//
+// Opening
+// + selected month Stock In
+// - selected month Stock Issue
+//
+// --------------------------------------------------
 
-function getMasterOpeningStock(item){
+function getMasterOpeningStock(item) {
 
-    if(!item)
-        return 0;
-
-
-    return Number(
-
-        item.opening_stock ??
-
-        item.openingStock ??
-
-        0
-
-    ) || 0;
-
+    return safeNumber(
+        item?.opening_stock ??
+        item?.openingStock ??
+        item?.opening_qty ??
+        item?.opening_quantity
+    );
 }
 
 
-// =====================================
-// STOCK BEFORE SELECTED MONTH
-//
-// Previous Stock In - Previous Stock Out
-// =====================================
-
-function getStockBeforeMonth(itemCode){
+function getStockBeforeMonth(itemCode) {
 
     let totalIn = 0;
 
     let totalOut = 0;
 
-
     const code =
-        String(
-            itemCode || ""
-        ).trim();
+        cleanCode(itemCode);
 
 
     history.forEach(r => {
 
-        if(
-            String(
-                r.itemCode || ""
-            ).trim() !== code
-        ){
-
+        if (
+            cleanCode(r.itemCode) !==
+            code
+        ) {
             return;
-
         }
 
 
-        if(
+        if (
             !isBeforeSelectedMonth(r)
-        ){
-
+        ) {
             return;
-
         }
 
 
-        const qty =
-            Number(
-                r.quantity || 0
-            );
-
-
-        if(
+        if (
             r.type === "Stock In"
-        ){
+        ) {
 
-            totalIn += qty;
+            totalIn +=
+                safeNumber(r.quantity);
 
         }
 
 
-        else if(
-
+        if (
             r.type === "Stock Issue" ||
-
             r.type === "Stock Out"
+        ) {
 
-        ){
-
-            totalOut += qty;
+            totalOut +=
+                safeNumber(r.quantity);
 
         }
 
@@ -729,79 +711,53 @@ function getStockBeforeMonth(itemCode){
 
 
     return totalIn - totalOut;
-
 }
 
 
-// =====================================
-// MONTH OPENING
-//
-// Master Opening
-// +
-// ALL PREVIOUS IN
-// -
-// ALL PREVIOUS OUT
-// =====================================
+function getMonthlyOpeningStock(item) {
 
-function getMonthlyOpeningStock(item){
-
-    if(!item)
+    if (!item) {
         return 0;
-
-
-    const opening =
-        getMasterOpeningStock(item);
-
-
-    const movement =
-        getStockBeforeMonth(
-            item.code
-        );
+    }
 
 
     return Math.max(
-        opening + movement,
-        0
-    );
 
+        getMasterOpeningStock(item) +
+
+        getStockBeforeMonth(
+            getItemCode(item)
+        ),
+
+        0
+
+    );
 }
 
 
-// =====================================
-// SELECTED MONTH STOCK IN
-// =====================================
+function getSelectedMonthStockIn(itemCode) {
 
-function getSelectedMonthStockIn(
-    itemCode
-){
+    const code =
+        cleanCode(itemCode);
 
     let total = 0;
 
 
-    const code =
-        String(
-            itemCode || ""
-        ).trim();
-
-
     history.forEach(r => {
 
-        if(
+        if (
 
             r.type === "Stock In" &&
 
-            String(
-                r.itemCode || ""
-            ).trim() === code &&
+            cleanCode(r.itemCode) ===
+            code &&
 
             isSelectedMonth(r)
 
-        ){
+        ) {
 
             total +=
-                Number(
-                    r.quantity || 0
-                );
+                safeNumber(r.quantity);
 
         }
 
@@ -809,48 +765,35 @@ function getSelectedMonthStockIn(
 
 
     return total;
-
 }
 
 
-// =====================================
-// SELECTED MONTH STOCK OUT
-// =====================================
+function getSelectedMonthStockOut(itemCode) {
 
-function getSelectedMonthStockOut(
-    itemCode
-){
+    const code =
+        cleanCode(itemCode);
 
     let total = 0;
 
 
-    const code =
-        String(
-            itemCode || ""
-        ).trim();
-
-
     history.forEach(r => {
 
-        if(
+        if (
 
             (
                 r.type === "Stock Issue" ||
                 r.type === "Stock Out"
             ) &&
 
-            String(
-                r.itemCode || ""
-            ).trim() === code &&
+            cleanCode(r.itemCode) ===
+            code &&
 
             isSelectedMonth(r)
 
-        ){
+        ) {
 
             total +=
-                Number(
-                    r.quantity || 0
-                );
+                safeNumber(r.quantity);
 
         }
 
@@ -858,20 +801,14 @@ function getSelectedMonthStockOut(
 
 
     return total;
-
 }
 
 
-// =====================================
-// CURRENT STOCK
-//
-// Opening + In - Out
-// =====================================
+function getCurrentStock(item) {
 
-function getCurrentStock(item){
-
-    if(!item)
+    if (!item) {
         return 0;
+    }
 
 
     const opening =
@@ -880,248 +817,263 @@ function getCurrentStock(item){
 
     const stockIn =
         getSelectedMonthStockIn(
-            item.code
+            getItemCode(item)
         );
 
 
     const stockOut =
         getSelectedMonthStockOut(
-            item.code
+            getItemCode(item)
         );
 
 
     return Math.max(
-
         opening +
         stockIn -
         stockOut,
-
         0
+    );
+}
+
+
+// --------------------------------------------------
+// BACKWARD COMPATIBILITY
+// --------------------------------------------------
+
+function getCurrentMonthStockIn(itemCode) {
+
+    return getSelectedMonthStockIn(
+        itemCode
+    );
+}
+
+
+function getCurrentMonthStockOut(itemCode) {
+
+    return getSelectedMonthStockOut(
+        itemCode
+    );
+}
+
+
+function getAllStockIn(itemCode) {
+
+    const code =
+        cleanCode(itemCode);
+
+
+    return history
+        .filter(
+            r =>
+                r.type === "Stock In" &&
+                cleanCode(r.itemCode) ===
+                code
+        )
+        .reduce(
+            (
+                sum,
+                r
+            ) =>
+                sum +
+                safeNumber(r.quantity),
+            0
+        );
+}
+
+
+function getAllStockOut(itemCode) {
+
+    const code =
+        cleanCode(itemCode);
+
+
+    return history
+        .filter(
+
+            r =>
+
+                (
+                    r.type === "Stock Issue" ||
+                    r.type === "Stock Out"
+                ) &&
+
+                cleanCode(r.itemCode) ===
+                code
+
+        )
+        .reduce(
+            (
+                sum,
+                r
+            ) =>
+                sum +
+                safeNumber(r.quantity),
+            0
+        );
+}
+
+
+// --------------------------------------------------
+// LATEST RATE
+// --------------------------------------------------
+
+function getLatestRate(itemCode) {
+
+    const code =
+        cleanCode(itemCode);
+
+
+    const selectedMonthEntries =
+        history
+
+            .filter(
+
+                r =>
+
+                    r.type === "Stock In" &&
+
+                    cleanCode(
+                        r.itemCode
+                    ) === code &&
+
+                    isSelectedMonth(r)
+
+            )
+
+            .sort(
+                (a, b) => {
+
+                    const da =
+                        getRecordDate(a);
+
+                    const db =
+                        getRecordDate(b);
+
+                    return (
+                        db
+                            ? db.getTime()
+                            : 0
+                    ) -
+                    (
+                        da
+                            ? da.getTime()
+                            : 0
+                    );
+
+                }
+            );
+
+
+    if (
+        selectedMonthEntries.length
+    ) {
+
+        return safeNumber(
+
+            selectedMonthEntries[0]
+                .unitCost ??
+
+            selectedMonthEntries[0]
+                .latestRate ??
+
+            selectedMonthEntries[0]
+                .rate
+
+        );
+
+    }
+
+
+    // -----------------------------------------
+    // FALLBACK MASTER RATE
+    // -----------------------------------------
+
+    const item =
+        getItemByCode(code);
+
+
+    return safeNumber(
+
+        item?.latest_rate ??
+        item?.latestRate ??
+        item?.unit_cost ??
+        item?.unitCost ??
+        item?.cost ??
+        item?.rate
 
     );
 
 }
 
 
-// =====================================
-// LATEST RATE
-// =====================================
+// --------------------------------------------------
+// DEMAND HISTORY
+// --------------------------------------------------
+//
+// IMPORTANT:
+// Dashboard demand comes ONLY from Supabase
+// demand_history.
+//
+// LocalStorage demandEdits is NOT used.
+// --------------------------------------------------
 
-function getLatestRate(itemCode){
+function getDemandCode(record) {
 
-    let latest = null;
+    return cleanCode(
 
+        record?.item_code ??
+        record?.itemCode ??
+        record?.code ??
+        record?.item_id ??
+        record?.itemID ??
+        record?.itemId
 
-    const code =
-        String(
-            itemCode || ""
-        ).trim();
-
-
-    history.forEach(r => {
-
-        if(
-
-            r.type !== "Stock In" ||
-
-            String(
-                r.itemCode || ""
-            ).trim() !== code ||
-
-            !isSelectedMonth(r)
-
-        ){
-
-            return;
-
-        }
-
-
-        if(!latest){
-
-            latest = r;
-
-            return;
-
-        }
-
-
-        const a =
-            getRecordDate(r);
-
-
-        const b =
-            getRecordDate(latest);
-
-
-        if(
-
-            a &&
-            b &&
-            a >= b
-
-        ){
-
-            latest = r;
-
-        }
-
-    });
-
-
-    if(latest){
-
-        return Number(
-
-            latest.unitCost ||
-
-            latest.latestRate ||
-
-            latest.rate ||
-
-            0
-
-        ) || 0;
-
-    }
-
-
-    const item =
-        getItemByCode(
-            itemCode
-        );
-
-
-    if(!item)
-        return 0;
-
-
-    return Number(
-
-        item.latestRate ??
-
-        item.unit_cost ??
-
-        item.unitCost ??
-
-        item.cost ??
-
-        0
-
-    ) || 0;
-
+    );
 }
 
 
-// =====================================
-// DEMAND VALUE
-// =====================================
+function getDemandValue(record) {
 
-function getDemandValue(record){
+    return safeNumber(
 
-    if(!record)
-        return 0;
+        record?.final_demand ??
+        record?.finalDemand ??
+        record?.approved_qty ??
+        record?.approvedQty ??
+        record?.demand_qty ??
+        record?.demandQty ??
+        record?.demand_quantity ??
+        record?.demandQuantity ??
+        record?.quantity ??
+        record?.qty
 
-
-    return Number(
-
-        record.finalDemand ??
-
-        record.final_demand ??
-
-        record.approvedQty ??
-
-        record.approved_qty ??
-
-        record.demandQty ??
-
-        record.demand_qty ??
-
-        record.demandQuantity ??
-
-        record.demand_quantity ??
-
-        record.quantity ??
-
-        record.qty ??
-
-        0
-
-    ) || 0;
-
+    );
 }
 
 
-// =====================================
-// DEMAND CODE
-// =====================================
-
-function getDemandCode(record){
-
-    if(!record)
-        return "";
-
-
-    return String(
-
-        record.itemCode ??
-
-        record.item_code ??
-
-        record.code ??
-
-        record.itemID ??
-
-        record.item_id ??
-
-        record.itemId ??
-
-        record.item_code_id ??
-
-        ""
-
-    ).trim();
-
-}
-
-
-// =====================================
-// DEMAND ITEMS
-// =====================================
-
-function getDemandList(record){
-
-    if(!record)
-        return [];
-
+function getDemandList(record) {
 
     let list =
 
-        record.demand_items ??
-
-        record.demandItems ??
-
-        record.items ??
-
+        record?.demand_items ??
+        record?.demandItems ??
+        record?.items ??
+        record?.demands ??
         [];
 
 
-    if(typeof list === "string"){
+    if (
+        typeof list === "string"
+    ) {
 
-        try{
+        try {
 
             list =
                 JSON.parse(list);
 
-        }
-        catch(e){
+        } catch (e) {
 
-            console.error(
-                "Demand JSON error:",
-                e
-            );
-
-            return [];
+            list = [];
 
         }
 
@@ -1131,52 +1083,44 @@ function getDemandList(record){
     return Array.isArray(list)
         ? list
         : [];
-
 }
 
 
-// =====================================
-// DEMAND MONTH
-// =====================================
+function isDemandRecordSelectedMonth(
+    record
+) {
 
-function getDemandMonth(record){
+    const explicitMonth =
+        String(
 
-    if(!record)
-        return "";
+            record?.demand_month ??
+            record?.demandMonth ??
+            record?.month ??
+            ""
 
-
-    const value =
-
-        record.demand_month ??
-
-        record.demandMonth ??
-
-        "";
+        ).trim();
 
 
-    return String(
-        value || ""
-    ).trim();
+    if (explicitMonth) {
 
+        return (
+            explicitMonth ===
+            selectedDashboardMonth
+        );
+
+    }
+
+
+    return isSelectedMonth(record);
 }
 
-
-// =====================================
-// CURRENT MONTH DEMAND
-//
-// ONLY demand_history
-// NO localStorage demand
-// =====================================
 
 function getCurrentMonthDemand(
     itemCode
-){
+) {
 
     const code =
-        String(
-            itemCode || ""
-        ).trim();
-
+        cleanCode(itemCode);
 
     let total = 0;
 
@@ -1184,42 +1128,56 @@ function getCurrentMonthDemand(
     demandHistory.forEach(
         record => {
 
-            const month =
-                getDemandMonth(
+            // --------------------------------
+            // ROW LEVEL DEMAND
+            // --------------------------------
+
+            const rowCode =
+                getDemandCode(record);
+
+
+            if (
+
+                rowCode === code &&
+
+                isDemandRecordSelectedMonth(
                     record
-                );
+                )
 
+            ) {
 
-            // Demand must belong
-            // to selected month.
-
-            if(
-                month !==
-                selectedDashboardMonth
-            ){
-
-                return;
+                total +=
+                    getDemandValue(record);
 
             }
 
 
+            // --------------------------------
+            // NESTED DEMAND
+            // --------------------------------
+
             const list =
-                getDemandList(
-                    record
-                );
+                getDemandList(record);
 
 
             list.forEach(
-                di => {
+                detail => {
 
-                    if(
-                        getDemandCode(di)
-                        === code
-                    ){
+                    if (
+
+                        getDemandCode(
+                            detail
+                        ) === code &&
+
+                        isDemandRecordSelectedMonth(
+                            record
+                        )
+
+                    ) {
 
                         total +=
                             getDemandValue(
-                                di
+                                detail
                             );
 
                     }
@@ -1232,48 +1190,39 @@ function getCurrentMonthDemand(
 
 
     return total;
-
 }
 
 
-// =====================================
-// OVERALL DEMAND
-// =====================================
-
-function getOverallDemand(){
+function getOverallDemand() {
 
     return items.reduce(
 
-        (sum,item) =>
+        (
+            sum,
+            item
+        ) =>
 
             sum +
             getCurrentMonthDemand(
-                item.code
+                getItemCode(item)
             ),
 
         0
 
     );
-
 }
 
 
-// =====================================
-// PENDING
-// =====================================
-
-function getPendingForItem(item){
+function getPendingForItem(item) {
 
     const demand =
         getCurrentMonthDemand(
-            item.code
+            getItemCode(item)
         );
 
 
     const currentStock =
-        getCurrentStock(
-            item
-        );
+        getCurrentStock(item);
 
 
     const pending =
@@ -1286,564 +1235,453 @@ function getPendingForItem(item){
 
     return {
 
-        demand:demand,
+        demand: demand,
 
-        pendingDemand:pending,
+        pendingDemand:
+            pending,
 
-        pendingPO:pending
+        pendingPO:
+            pending
 
     };
-
 }
 
 
-function getOverallPending(){
+function getOverallPending() {
 
-    let demand = 0;
+    let totalDemand = 0;
 
-    let stock = 0;
+    let totalStock = 0;
 
 
     items.forEach(item => {
 
-        demand +=
+        totalDemand +=
             getCurrentMonthDemand(
-                item.code
+                getItemCode(item)
             );
 
 
-        stock +=
-            getCurrentStock(
-                item
-            );
+        totalStock +=
+            getCurrentStock(item);
 
     });
 
 
     return Math.max(
-        demand - stock,
+        totalDemand -
+        totalStock,
         0
     );
-
 }
 
 
-// =====================================
+// --------------------------------------------------
 // COST
-// =====================================
+// --------------------------------------------------
 
-function getOverallCost(){
+function getOverallCost() {
 
-    let total = 0;
+    return history
 
+        .filter(
 
-    history.forEach(r => {
+            r =>
 
-        if(
+                r.type === "Stock In" &&
+                isSelectedMonth(r)
 
-            r.type === "Stock In" &&
+        )
 
-            isSelectedMonth(r)
+        .reduce(
 
-        ){
+            (
+                sum,
+                r
+            ) =>
 
-            total +=
+                sum +
 
-                Number(
-                    r.quantity || 0
+                safeNumber(
+                    r.quantity
                 ) *
 
-                Number(
-                    r.unitCost || 0
-                );
+                safeNumber(
+                    r.unitCost
+                ),
 
-        }
+            0
 
-    });
-
-
-    return total;
-
+        );
 }
 
 
-function getItemCurrentCost(item){
+function getItemCurrentCost(item) {
 
     return (
 
         getCurrentStock(item) *
 
-        getLatestRate(item.code)
+        getLatestRate(
+            getItemCode(item)
+        )
 
     );
 
-// =====================================
-// SELECTED ITEM ONLINE PICTURE
-// OIL PICTURE + DRUM FALLBACK
-// =====================================
+}
 
-async function showSelectedItemPicture(item){
+
+// --------------------------------------------------
+// SELECTED ITEM PICTURE
+// --------------------------------------------------
+
+function getItemImageURL(item) {
+
+    return String(
+
+        item?.item_image_url ??
+        item?.itemImageUrl ??
+        item?.image_url ??
+        item?.imageUrl ??
+        item?.picture_url ??
+        item?.pictureUrl ??
+        ""
+
+    ).trim();
+}
+
+
+// --------------------------------------------------
+// OIL FALLBACK IMAGE
+// --------------------------------------------------
+
+const OIL_FALLBACK_IMAGE =
+    "https://www.valvolineglobal.com/4ac53b/globalassets/sitecore/asiaregion/images/products/industrialgear.png";
+
+
+function isOilTypeItem(item) {
+
+    const text =
+        getItemName(item)
+            .toLowerCase();
+
+
+    const words = [
+
+        "oil",
+
+        "lubricant",
+
+        "lubrication",
+
+        "grease",
+
+        "hydraulic",
+
+        "gear oil",
+
+        "engine oil",
+
+        "cutting oil",
+
+        "compressor oil",
+
+        "transformer oil",
+
+        "machine oil"
+
+    ];
+
+
+    return words.some(
+        word =>
+            text.includes(word)
+    );
+}
+
+
+function getFallbackImage(item) {
+
+    if (
+        isOilTypeItem(item)
+    ) {
+
+        return OIL_FALLBACK_IMAGE;
+
+    }
+
+
+    // -----------------------------------------
+    // LOCAL SVG FALLBACK
+    // -----------------------------------------
+
+    const svg =
+
+        '<svg xmlns="http://www.w3.org/2000/svg" width="500" height="320">' +
+
+        '<rect width="100%" height="100%" fill="#eef2f7"/>' +
+
+        '<rect x="150" y="60" width="200" height="190" rx="18" fill="#c9d2dc"/>' +
+
+        '<text x="250" y="145" text-anchor="middle" font-size="28" font-family="Arial" fill="#334155">ITEM</text>' +
+
+        '<text x="250" y="180" text-anchor="middle" font-size="18" font-family="Arial" fill="#64748b">No Picture</text>' +
+
+        '</svg>';
+
+
+    return (
+        "data:image/svg+xml;charset=UTF-8," +
+        encodeURIComponent(svg)
+    );
+
+}
+
+
+// --------------------------------------------------
+// IMAGE ERROR HANDLER
+// --------------------------------------------------
+
+function handleItemPictureError() {
+
+    const image =
+        document.getElementById(
+            "itemOnlinePicture"
+        );
+
+
+    const status =
+        document.getElementById(
+            "itemPictureStatus"
+        );
+
+
+    if (!image) {
+        return;
+    }
+
+
+    const currentFallback =
+        image.dataset.fallbackApplied === "1";
+
+
+    if (!currentFallback) {
+
+        image.dataset.fallbackApplied =
+            "1";
+
+
+        const item =
+            selectedItem;
+
+
+        // -----------------------------------------
+        // OIL FALLBACK
+        // -----------------------------------------
+
+        if (
+            item &&
+            isOilTypeItem(item)
+        ) {
+
+            image.src =
+                OIL_FALLBACK_IMAGE;
+
+
+            if (status) {
+
+                status.innerHTML =
+                    "🛢️ Representative oil drum picture";
+
+            }
+
+
+            return;
+
+        }
+
+
+        // -----------------------------------------
+        // NORMAL FALLBACK
+        // -----------------------------------------
+
+        image.src =
+            getFallbackImage(
+                item || {}
+            );
+
+
+        if (status) {
+
+            status.innerHTML =
+                "ℹ️ Picture not available — representative image";
+
+        }
+
+
+        return;
+
+    }
+
+
+    if (status) {
+
+        status.innerHTML =
+            "❌ Picture could not be loaded.";
+
+    }
+
+}
+
+
+// --------------------------------------------------
+// SHOW SELECTED ITEM PICTURE
+// --------------------------------------------------
+
+function showSelectedItemPicture(item) {
 
     const box =
         document.getElementById(
             "itemPictureBox"
         );
 
+
     const image =
         document.getElementById(
             "itemOnlinePicture"
         );
+
 
     const name =
         document.getElementById(
             "itemPictureName"
         );
 
+
     const status =
         document.getElementById(
             "itemPictureStatus"
         );
 
 
-    if(!box || !image)
+    if (
+        !box ||
+        !image
+    ) {
+
         return;
 
+    }
 
-    if(!item){
 
-        box.style.display = "none";
+    if (!item) {
+
+        box.style.display =
+            "none";
 
         image.src = "";
 
+        image.removeAttribute(
+            "data-fallback-applied"
+        );
+
         return;
 
     }
 
 
-    const itemName =
-        item.item_name ??
-        item.itemName ??
-        item.name ??
-        item.description ??
-        item.code ??
-        "";
+    selectedItem = item;
 
 
-    box.style.display = "block";
+    box.style.display =
+        "block";
 
 
-    if(name){
+    if (name) {
 
-        name.innerHTML =
+        name.textContent =
             "🔎 " +
-            String(itemName);
+            getItemName(item);
 
     }
 
 
-    if(status){
+    if (status) {
 
-        status.innerHTML =
-            "🌐 Online picture searching...";
-
-    }
-
-
-    image.src = "";
-
-
-    // =================================
-    // CHECK IF ITEM IS OIL
-    // =================================
-
-    const lowerName =
-        String(itemName).toLowerCase();
-
-
-    const isOil =
-        lowerName.includes("oil") ||
-        lowerName.includes("lubricant") ||
-        lowerName.includes("hydraulic") ||
-        lowerName.includes("engine oil") ||
-        lowerName.includes("gear oil") ||
-        lowerName.includes("diesel oil") ||
-        lowerName.includes("motor oil");
-
-
-    // =================================
-    // ONLINE IMAGE SEARCH
-    // =================================
-
-    try{
-
-        const searchText =
-            encodeURIComponent(
-                String(itemName).trim()
-            );
-
-
-        const apiURL =
-            "https://api.duckduckgo.com/" +
-            "?q=" +
-            searchText +
-            "&format=json" +
-            "&no_html=1" +
-            "&skip_disambig=1";
-
-
-        const response =
-            await fetch(apiURL);
-
-
-        if(!response.ok){
-
-            throw new Error(
-                "Image search failed"
-            );
-
-        }
-
-
-        const data =
-            await response.json();
-
-
-        let imageURL =
-            data.Image || "";
-
-
-        // =================================
-        // RELATED TOPIC IMAGE
-        // =================================
-
-        if(
-            !imageURL &&
-            data.RelatedTopics &&
-            Array.isArray(data.RelatedTopics)
-        ){
-
-            for(
-                const topic
-                of data.RelatedTopics
-            ){
-
-                if(
-                    topic &&
-                    topic.Icon &&
-                    topic.Icon.URL
-                ){
-
-                    imageURL =
-                        topic.Icon.URL;
-
-                    break;
-
-                }
-
-            }
-
-        }
-
-
-        // =================================
-        // IMAGE FOUND
-        // =================================
-
-        if(imageURL){
-
-            image.src =
-                imageURL;
-
-
-            if(status){
-
-                status.innerHTML =
-                    "🌐 Online image";
-
-            }
-
-
-            image.onerror =
-                function(){
-
-                    handleItemPictureError(
-                        isOil
-                    );
-
-                };
-
-        }
-
-        else{
-
-            handleItemPictureError(
-                isOil
-            );
-
-        }
-
-    }
-    catch(error){
-
-        console.error(
-            "Item picture error:",
-            error
-        );
-
-
-        handleItemPictureError(
-            isOil
-        );
+        status.textContent =
+            "Loading item picture...";
 
     }
 
-}
+
+    image.dataset.fallbackApplied =
+        "0";
 
 
-// =====================================
-// IMAGE ERROR / DRUM FALLBACK
-// =====================================
+    // -----------------------------------------
+    // JS ERROR HANDLER
+    // -----------------------------------------
 
-function handleItemPictureError(
-    isOil = false
-){
+    image.onerror =
+        function () {
 
-    const image =
-        document.getElementById(
-            "itemOnlinePicture"
-        );
+            handleItemPictureError();
 
-    const status =
-        document.getElementById(
-            "itemPictureStatus"
-        );
+        };
 
 
-    if(!image)
+    // -----------------------------------------
+    // SUPABASE IMAGE
+    // -----------------------------------------
+
+    const supabaseImage =
+        getItemImageURL(item);
+
+
+    if (supabaseImage) {
+
+        image.src =
+            supabaseImage;
+
+
+        if (status) {
+
+            status.textContent =
+                "🖼️ Item picture from Supabase";
+
+        }
+
+
         return;
 
-
-    // =================================
-    // OIL DRUM FALLBACK
-    // =================================
-
-    if(isOil){
-
-        const drumSVG = `
-
-        <svg
-            xmlns="http://www.w3.org/2000/svg"
-            width="500"
-            height="350"
-            viewBox="0 0 500 350"
-        >
-
-            <rect
-                width="500"
-                height="350"
-                fill="#f1f5f9"
-            />
-
-            <!-- Shadow -->
-
-            <ellipse
-                cx="250"
-                cy="305"
-                rx="125"
-                ry="18"
-                fill="#cbd5e1"
-            />
-
-            <!-- Drum -->
-
-            <ellipse
-                cx="250"
-                cy="75"
-                rx="105"
-                ry="28"
-                fill="#64748b"
-            />
-
-            <rect
-                x="145"
-                y="75"
-                width="210"
-                height="190"
-                fill="#94a3b8"
-            />
-
-            <ellipse
-                cx="250"
-                cy="265"
-                rx="105"
-                ry="28"
-                fill="#64748b"
-            />
-
-            <!-- Top -->
-
-            <ellipse
-                cx="250"
-                cy="75"
-                rx="105"
-                ry="28"
-                fill="#94a3b8"
-            />
-
-            <ellipse
-                cx="250"
-                cy="75"
-                rx="82"
-                ry="18"
-                fill="#cbd5e1"
-            />
-
-            <!-- Drum rings -->
-
-            <rect
-                x="145"
-                y="115"
-                width="210"
-                height="10"
-                fill="#475569"
-            />
-
-            <rect
-                x="145"
-                y="220"
-                width="210"
-                height="10"
-                fill="#475569"
-            />
-
-            <!-- Oil label -->
-
-            <rect
-                x="175"
-                y="145"
-                width="150"
-                height="55"
-                rx="8"
-                fill="#ffffff"
-            />
-
-            <text
-                x="250"
-                y="168"
-                text-anchor="middle"
-                font-size="18"
-                font-family="Arial"
-                font-weight="bold"
-                fill="#1e293b"
-            >
-                OIL
-            </text>
-
-            <text
-                x="250"
-                y="190"
-                text-anchor="middle"
-                font-size="13"
-                font-family="Arial"
-                fill="#475569"
-            >
-                DRUM
-            </text>
-
-            <!-- Cap -->
-
-            <circle
-                cx="250"
-                cy="75"
-                r="10"
-                fill="#334155"
-            />
-
-            <text
-                x="250"
-                y="325"
-                text-anchor="middle"
-                font-size="16"
-                font-family="Arial"
-                fill="#475569"
-            >
-                Oil Drum
-            </text>
-
-        </svg>
-
-        `;
-
-
-        image.src =
-            "data:image/svg+xml;charset=UTF-8," +
-            encodeURIComponent(
-                drumSVG
-            );
-
-
-        if(status){
-
-            status.innerHTML =
-                "🛢️ Oil Drum picture";
-
-        }
-
     }
 
-    // =================================
-    // NORMAL ITEM FALLBACK
-    // =================================
 
-    else{
+    // -----------------------------------------
+    // FALLBACK
+    // -----------------------------------------
 
-        image.src =
-            "data:image/svg+xml;charset=UTF-8," +
-            encodeURIComponent(`
-
-            <svg
-                xmlns="http://www.w3.org/2000/svg"
-                width="500"
-                height="350"
-            >
-
-                <rect
-                    width="500"
-                    height="350"
-                    fill="#f1f5f9"
-                />
-
-                <text
-                    x="250"
-                    y="165"
-                    text-anchor="middle"
-                    font-size="28"
-                    font-family="Arial"
-                    fill="#64748b"
-                >
-                    No Picture Found
-                </text>
-
-                <text
-                    x="250"
-                    y="200"
-                    text-anchor="middle"
-                    font-size="16"
-                    font-family="Arial"
-                    fill="#94a3b8"
-                >
-                    Item Image
-                </text>
-
-            </svg>
-
-            `);
+    const fallback =
+        getFallbackImage(item);
 
 
-        if(status){
+    image.src =
+        fallback;
 
-            status.innerHTML =
-                "❌ Online picture not found.";
+
+    if (status) {
+
+        if (
+            isOilTypeItem(item)
+        ) {
+
+            status.textContent =
+                "🛢️ Representative oil drum picture";
+
+        } else {
+
+            status.textContent =
+                "ℹ️ Representative item picture";
 
         }
 
@@ -1852,36 +1690,50 @@ function handleItemPictureError(
 }
 
 
-// =====================================
-// HIDE ITEM PICTURE
-// =====================================
+// --------------------------------------------------
+// CLEAR SELECTED ITEM PICTURE
+// --------------------------------------------------
 
-function clearSelectedItemPicture(){
+function clearSelectedItemPicture() {
 
     const box =
         document.getElementById(
             "itemPictureBox"
         );
 
+
     const image =
         document.getElementById(
             "itemOnlinePicture"
         );
 
 
-    if(box)
-        box.style.display = "none";
+    if (box) {
+
+        box.style.display =
+            "none";
+
+    }
 
 
-    if(image)
+    if (image) {
+
         image.src = "";
 
-}
-// =====================================
-// SEARCH ITEM
-// =====================================
+        image.removeAttribute(
+            "data-fallback-applied"
+        );
 
-function searchItem(){
+    }
+
+}
+
+
+// --------------------------------------------------
+// SEARCH
+// --------------------------------------------------
+
+function searchItem() {
 
     const input =
         document.getElementById(
@@ -1889,21 +1741,26 @@ function searchItem(){
         );
 
 
-    if(!input)
+    if (!input) {
         return;
+    }
 
 
     const code =
-        input.value.trim();
+        cleanCode(input.value);
 
 
-    if(!code){
+    if (!code) {
 
         selectedItem = null;
+
 
         localStorage.removeItem(
             "dashboardSelectedItem"
         );
+
+
+        clearSelectedItemPicture();
 
         updateDashboard();
 
@@ -1913,32 +1770,35 @@ function searchItem(){
 
 
     const found =
-        getItemByCode(
-            code
-        );
+        getItemByCode(code);
 
 
-    if(found){
+    if (found) {
 
         selectedItem =
             found;
 
 
         localStorage.setItem(
+
             "dashboardSelectedItem",
-            found.code
+
+            getItemCode(found)
+
         );
 
-    showSelectedItemPicture(
-        found
-    );
 
         updateDashboard();
 
-    }
-    else{
+        showSelectedItemPicture(
+            found
+        );
 
-        selectedItem = null;
+
+    } else {
+
+        selectedItem =
+            null;
 
 
         const info =
@@ -1947,14 +1807,16 @@ function searchItem(){
             );
 
 
-        if(info){
+        if (info) {
 
             info.innerHTML =
                 "❌ Item not found: " +
-                code;
+                escapeHTML(code);
 
         }
 
+
+        clearSelectedItemPicture();
 
         clearSelectedCards();
 
@@ -1967,11 +1829,7 @@ function searchItem(){
 }
 
 
-// =====================================
-// CLEAR SEARCH
-// =====================================
-
-function clearItemSearch(){
+function clearItemSearch() {
 
     const input =
         document.getElementById(
@@ -1979,8 +1837,11 @@ function clearItemSearch(){
         );
 
 
-    if(input)
+    if (input) {
+
         input.value = "";
+
+    }
 
 
     selectedItem = null;
@@ -1990,40 +1851,51 @@ function clearItemSearch(){
         "dashboardSelectedItem"
     );
 
-clearSelectedItemPicture();
+
+    clearSelectedItemPicture();
+
     updateDashboard();
 
 }
 
 
-// =====================================
-// UPDATE DASHBOARD
-// =====================================
+// --------------------------------------------------
+// DASHBOARD CARDS
+// --------------------------------------------------
 
-function updateDashboard(){
+function updateDashboard() {
 
     const el =
         id =>
             document.getElementById(id);
 
 
-    if(!el("masterValue"))
+    if (
+        !el("masterValue")
+    ) {
+
         return;
+
+    }
 
 
     updateMonthUI();
 
 
-    // =================================
-    // NO ITEM
-    // =================================
+    // =========================================
+    // OVERALL MODE
+    // =========================================
 
-    if(!selectedItem){
+    if (!selectedItem) {
 
-        if(el("searchInfo"))
+        if (
+            el("searchInfo")
+        ) {
 
             el("searchInfo").innerHTML =
                 "Overall Dashboard — No item selected";
+
+        }
 
 
         el("masterValue").innerHTML =
@@ -2058,7 +1930,8 @@ function updateDashboard(){
 
         el("costValue").innerHTML =
             "Rs. " +
-            getOverallCost().toFixed(2);
+            getOverallCost()
+                .toFixed(2);
 
 
         el("costInfo").innerHTML =
@@ -2069,7 +1942,8 @@ function updateDashboard(){
 
 
         el("demandValue").innerHTML =
-            getOverallDemand().toFixed(2);
+            getOverallDemand()
+                .toFixed(2);
 
 
         el("demandInfo").innerHTML =
@@ -2080,12 +1954,15 @@ function updateDashboard(){
 
 
         el("pendingValue").innerHTML =
-            getOverallPending().toFixed(2);
+            getOverallPending()
+                .toFixed(2);
 
 
         el("pendingInfo").innerHTML =
             "Pending Demand / PO";
 
+
+        clearSelectedItemPicture();
 
         clearDashboardGraph();
 
@@ -2096,12 +1973,24 @@ function updateDashboard(){
     }
 
 
-    // =================================
-    // SELECTED ITEM
-    // =================================
+    // =========================================
+    // ITEM MODE
+    // =========================================
 
     const item =
         selectedItem;
+
+
+    const code =
+        getItemCode(item);
+
+
+    const name =
+        getItemName(item);
+
+
+    const unit =
+        getItemUnit(item);
 
 
     const opening =
@@ -2112,13 +2001,13 @@ function updateDashboard(){
 
     const stockIn =
         getSelectedMonthStockIn(
-            item.code
+            code
         );
 
 
     const stockOut =
         getSelectedMonthStockOut(
-            item.code
+            code
         );
 
 
@@ -2130,13 +2019,13 @@ function updateDashboard(){
 
     const rate =
         getLatestRate(
-            item.code
+            code
         );
 
 
     const demand =
         getCurrentMonthDemand(
-            item.code
+            code
         );
 
 
@@ -2152,38 +2041,50 @@ function updateDashboard(){
         );
 
 
-    const name =
+    // -----------------------------------------
+    // SEARCH INFO
+    // -----------------------------------------
 
-        item.item_name ??
+    if (
+        el("searchInfo")
+    ) {
 
-        item.itemName ??
+        el("searchInfo").innerHTML =
 
-        "-";
+            "✅ Selected: <b>" +
+
+            escapeHTML(code) +
+
+            "</b> — " +
+
+            escapeHTML(name);
+
+    }
 
 
-    el("searchInfo").innerHTML =
-        "✅ Selected: <b>" +
-        item.code +
-        "</b> — " +
-        name;
-
+    // -----------------------------------------
+    // MASTER CARD
+    // -----------------------------------------
 
     el("masterValue").innerHTML =
-        name;
+        escapeHTML(name);
 
 
     el("masterInfo").innerHTML =
 
         "ID: " +
-        (item.code || "-") +
+        escapeHTML(code) +
 
         "<br>Unit: " +
-        (item.unit || "-") +
+        escapeHTML(unit) +
 
         "<br>Opening (" +
-        getMonthName(
-            selectedDashboardMonth
+        escapeHTML(
+            getMonthName(
+                selectedDashboardMonth
+            )
         ) +
+
         "): " +
         opening.toFixed(2) +
 
@@ -2191,31 +2092,53 @@ function updateDashboard(){
         current.toFixed(2);
 
 
+    // -----------------------------------------
+    // STOCK IN CARD
+    // -----------------------------------------
+
     el("stockInValue").innerHTML =
+
         stockIn.toFixed(2) +
         " " +
-        (item.unit || "");
+        escapeHTML(unit);
 
 
     el("stockInInfo").innerHTML =
+
         "Stock In — " +
-        getMonthName(
-            selectedDashboardMonth
+
+        escapeHTML(
+            getMonthName(
+                selectedDashboardMonth
+            )
         );
 
 
+    // -----------------------------------------
+    // STOCK OUT CARD
+    // -----------------------------------------
+
     el("stockOutValue").innerHTML =
+
         stockOut.toFixed(2) +
         " " +
-        (item.unit || "");
+        escapeHTML(unit);
 
 
     el("stockOutInfo").innerHTML =
+
         "Stock Out — " +
-        getMonthName(
-            selectedDashboardMonth
+
+        escapeHTML(
+            getMonthName(
+                selectedDashboardMonth
+            )
         );
 
+
+    // -----------------------------------------
+    // COST CARD
+    // -----------------------------------------
 
     el("costValue").innerHTML =
         "Rs. " +
@@ -2223,50 +2146,85 @@ function updateDashboard(){
 
 
     el("costInfo").innerHTML =
+
         "Current Stock Cost — " +
-        getMonthName(
-            selectedDashboardMonth
+
+        escapeHTML(
+            getMonthName(
+                selectedDashboardMonth
+            )
         );
 
 
+    // -----------------------------------------
+    // DEMAND CARD
+    // -----------------------------------------
+
     el("demandValue").innerHTML =
+
         demand.toFixed(2) +
         " " +
-        (item.unit || "");
+        escapeHTML(unit);
 
 
     el("demandInfo").innerHTML =
+
         "Demand — " +
-        getMonthName(
-            selectedDashboardMonth
+
+        escapeHTML(
+            getMonthName(
+                selectedDashboardMonth
+            )
         );
 
 
+    // -----------------------------------------
+    // PENDING CARD
+    // -----------------------------------------
+
     el("pendingValue").innerHTML =
+
         pending.pendingDemand.toFixed(2) +
         " " +
-        (item.unit || "");
+        escapeHTML(unit);
 
 
     el("pendingInfo").innerHTML =
         "Pending Demand / PO";
 
 
-    showDashboardGraph(
-        item.code
+    // -----------------------------------------
+    // PICTURE
+    // -----------------------------------------
+
+    showSelectedItemPicture(
+        item
     );
 
+
+    // -----------------------------------------
+    // GRAPH
+    // -----------------------------------------
+
+    showDashboardGraph(
+        code
+    );
+
+
+    // -----------------------------------------
+    // TABLE
+    // -----------------------------------------
 
     buildCurrentStockTable();
 
 }
 
 
-// =====================================
-// CLEAR CARDS
-// =====================================
+// --------------------------------------------------
+// CLEAR SELECTED CARDS
+// --------------------------------------------------
 
-function clearSelectedCards(){
+function clearSelectedCards() {
 
     [
 
@@ -2280,17 +2238,22 @@ function clearSelectedCards(){
 
         "pendingValue"
 
-    ]
-    .forEach(id => {
+    ].forEach(
 
-        const e =
-            document.getElementById(id);
+        id => {
 
+            const e =
+                document.getElementById(id);
 
-        if(e)
-            e.innerHTML = "-";
+            if (e) {
 
-    });
+                e.innerHTML = "-";
+
+            }
+
+        }
+
+    );
 
 
     const cost =
@@ -2299,29 +2262,35 @@ function clearSelectedCards(){
         );
 
 
-    if(cost)
+    if (cost) {
+
         cost.innerHTML =
             "Rs. 0.00";
 
+    }
 
-    const info =
+
+    const masterInfo =
         document.getElementById(
             "masterInfo"
         );
 
 
-    if(info)
-        info.innerHTML =
+    if (masterInfo) {
+
+        masterInfo.innerHTML =
             "❌ Item not found.";
+
+    }
 
 }
 
 
-// =====================================
+// --------------------------------------------------
 // CURRENT STOCK TABLE
-// =====================================
+// --------------------------------------------------
 
-function buildCurrentStockTable(){
+function buildCurrentStockTable() {
 
     const body =
         document.getElementById(
@@ -2329,8 +2298,9 @@ function buildCurrentStockTable(){
         );
 
 
-    if(!body)
+    if (!body) {
         return;
+    }
 
 
     body.innerHTML = "";
@@ -2338,23 +2308,34 @@ function buildCurrentStockTable(){
 
     items.forEach(item => {
 
-        if(
+        // -----------------------------------------
+        // SHOW ONLY SELECTED ITEM WHEN SEARCHED
+        // -----------------------------------------
+
+        if (
 
             selectedItem &&
 
-            String(
-                item.code || ""
-            ).trim() !==
+            getItemCode(item) !==
+            getItemCode(selectedItem)
 
-            String(
-                selectedItem.code || ""
-            ).trim()
-
-        ){
+        ) {
 
             return;
 
         }
+
+
+        const code =
+            getItemCode(item);
+
+
+        const name =
+            getItemName(item);
+
+
+        const unit =
+            getItemUnit(item);
 
 
         const opening =
@@ -2365,13 +2346,13 @@ function buildCurrentStockTable(){
 
         const stockIn =
             getSelectedMonthStockIn(
-                item.code
+                code
             );
 
 
         const stockOut =
             getSelectedMonthStockOut(
-                item.code
+                code
             );
 
 
@@ -2383,23 +2364,14 @@ function buildCurrentStockTable(){
 
         const rate =
             getLatestRate(
-                item.code
+                code
             );
 
 
         const demand =
             getCurrentMonthDemand(
-                item.code
+                code
             );
-
-
-        const name =
-
-            item.item_name ??
-
-            item.itemName ??
-
-            "-";
 
 
         const row =
@@ -2411,15 +2383,21 @@ function buildCurrentStockTable(){
         row.innerHTML =
 
             "<td>" +
-            (item.code || "-") +
+            escapeHTML(
+                code || "-"
+            ) +
             "</td>" +
 
             "<td>" +
-            name +
+            escapeHTML(
+                name || "-"
+            ) +
             "</td>" +
 
             "<td>" +
-            (item.unit || "-") +
+            escapeHTML(
+                unit || "-"
+            ) +
             "</td>" +
 
             "<td>" +
@@ -2435,10 +2413,13 @@ function buildCurrentStockTable(){
             "</td>" +
 
             "<td class='current-stock-cell'>" +
+
             current.toFixed(2) +
+
             "</td>" +
 
-            "<td>Rs. " +
+            "<td>" +
+            "Rs. " +
             rate.toFixed(2) +
             "</td>" +
 
@@ -2453,30 +2434,48 @@ function buildCurrentStockTable(){
             );
 
 
-        if(current <= 0){
+        if (cell) {
 
-            cell.className =
-                "current-stock-cell low";
+            // ---------------------------------
+            // RED = ZERO
+            // ---------------------------------
 
-        }
+            if (
+                current <= 0
+            ) {
 
-        else if(
+                cell.className =
+                    "current-stock-cell low";
 
-            demand > 0 &&
+            }
 
-            current <= demand
+            // ---------------------------------
+            // YELLOW = DEMAND REACHED
+            // ---------------------------------
 
-        ){
+            else if (
 
-            cell.className =
-                "current-stock-cell warning";
+                demand > 0 &&
 
-        }
+                current <= demand
 
-        else{
+            ) {
 
-            cell.className =
-                "current-stock-cell normal";
+                cell.className =
+                    "current-stock-cell warning";
+
+            }
+
+            // ---------------------------------
+            // NORMAL
+            // ---------------------------------
+
+            else {
+
+                cell.className =
+                    "current-stock-cell normal";
+
+            }
 
         }
 
@@ -2488,13 +2487,13 @@ function buildCurrentStockTable(){
 }
 
 
-// =====================================
+// --------------------------------------------------
 // GRAPH
-// =====================================
+// --------------------------------------------------
 
 function showDashboardGraph(
     itemCode
-){
+) {
 
     const canvas =
         document.getElementById(
@@ -2508,8 +2507,9 @@ function showDashboardGraph(
         );
 
 
-    if(!canvas)
+    if (!canvas) {
         return;
+    }
 
 
     const item =
@@ -2518,7 +2518,7 @@ function showDashboardGraph(
         );
 
 
-    if(!item){
+    if (!item) {
 
         clearDashboardGraph();
 
@@ -2535,13 +2535,13 @@ function showDashboardGraph(
 
     const stockIn =
         getSelectedMonthStockIn(
-            item.code
+            getItemCode(item)
         );
 
 
     const stockOut =
         getSelectedMonthStockOut(
-            item.code
+            getItemCode(item)
         );
 
 
@@ -2551,40 +2551,50 @@ function showDashboardGraph(
         );
 
 
-    if(info){
+    if (info) {
 
         info.innerHTML =
 
             "<b>" +
-            item.code +
-            " - " +
-            (
-                item.item_name ??
-                item.itemName ??
-                ""
+
+            escapeHTML(
+                getItemCode(item)
             ) +
+
+            " - " +
+
+            escapeHTML(
+                getItemName(item)
+            ) +
+
             "</b><br>" +
 
-            getMonthName(
-                selectedDashboardMonth
+            escapeHTML(
+                getMonthName(
+                    selectedDashboardMonth
+                )
             ) +
 
             " — Opening: " +
+
             opening.toFixed(2) +
 
             " | In: " +
+
             stockIn.toFixed(2) +
 
             " | Out: " +
+
             stockOut.toFixed(2) +
 
             " | Current: " +
+
             current.toFixed(2);
 
     }
 
 
-    if(dashboardChart){
+    if (dashboardChart) {
 
         dashboardChart.destroy();
 
@@ -2593,14 +2603,17 @@ function showDashboardGraph(
     }
 
 
-    if(
+    if (
         typeof Chart ===
         "undefined"
-    ){
+    ) {
 
-        if(info)
+        if (info) {
+
             info.innerHTML +=
                 "<br>Chart library not loaded.";
+
+        }
 
         return;
 
@@ -2609,14 +2622,17 @@ function showDashboardGraph(
 
     dashboardChart =
         new Chart(
+
             canvas,
+
             {
 
-                type:"bar",
+                type: "bar",
 
-                data:{
 
-                    labels:[
+                data: {
+
+                    labels: [
 
                         "Opening Stock",
 
@@ -2628,61 +2644,64 @@ function showDashboardGraph(
 
                     ],
 
-                    datasets:[{
 
-                        label:
+                    datasets: [
 
-                            (
-                                item.item_name ??
-                                item.itemName ??
-                                item.code
-                            ) +
+                        {
 
-                            " — " +
+                            label:
 
-                            getMonthName(
-                                selectedDashboardMonth
-                            ),
+                                getItemName(item) +
+                                " — " +
+                                getMonthName(
+                                    selectedDashboardMonth
+                                ),
 
-                        data:[
+                            data: [
 
-                            opening,
+                                opening,
 
-                            stockIn,
+                                stockIn,
 
-                            stockOut,
+                                stockOut,
 
-                            current
+                                current
 
-                        ],
+                            ],
 
-                        borderWidth:1
+                            borderWidth: 1
 
-                    }]
+                        }
+
+                    ]
 
                 },
 
-                options:{
 
-                    responsive:true,
+                options: {
 
-                    maintainAspectRatio:false,
+                    responsive: true,
 
-                    plugins:{
+                    maintainAspectRatio:
+                        false,
 
-                        legend:{
 
-                            display:true
+                    plugins: {
+
+                        legend: {
+
+                            display: true
 
                         }
 
                     },
 
-                    scales:{
 
-                        y:{
+                    scales: {
 
-                            beginAtZero:true
+                        y: {
+
+                            beginAtZero: true
 
                         }
 
@@ -2691,12 +2710,13 @@ function showDashboardGraph(
                 }
 
             }
+
         );
 
 }
 
 
-function clearDashboardGraph(){
+function clearDashboardGraph() {
 
     const info =
         document.getElementById(
@@ -2704,12 +2724,15 @@ function clearDashboardGraph(){
         );
 
 
-    if(info)
+    if (info) {
+
         info.innerHTML =
             "Select an Item ID to see its graph.";
 
+    }
 
-    if(dashboardChart){
+
+    if (dashboardChart) {
 
         dashboardChart.destroy();
 
@@ -2720,13 +2743,13 @@ function clearDashboardGraph(){
 }
 
 
-// =====================================
+// --------------------------------------------------
 // NAVIGATION
-// =====================================
+// --------------------------------------------------
 
-function saveSelectedItem(){
+function saveSelectedItem() {
 
-    if(!selectedItem){
+    if (!selectedItem) {
 
         alert(
             "Please enter a valid Item ID first."
@@ -2738,8 +2761,13 @@ function saveSelectedItem(){
 
 
     localStorage.setItem(
+
         "dashboardSelectedItem",
-        selectedItem.code
+
+        getItemCode(
+            selectedItem
+        )
+
     );
 
 
@@ -2748,11 +2776,14 @@ function saveSelectedItem(){
 }
 
 
-function openMasterView(){
+function openMasterView() {
 
-    if(selectedItem)
+    if (selectedItem) {
+
         saveSelectedItem();
 
+    }
+
 
     window.location.href =
         "Master List .html";
@@ -2760,7 +2791,7 @@ function openMasterView(){
 }
 
 
-function newMasterEntry(){
+function newMasterEntry() {
 
     window.location.href =
         "Master List .html";
@@ -2768,10 +2799,11 @@ function newMasterEntry(){
 }
 
 
-function openStockInView(){
+function openStockInView() {
 
-    if(!saveSelectedItem())
+    if (!saveSelectedItem()) {
         return;
+    }
 
 
     localStorage.setItem(
@@ -2786,13 +2818,18 @@ function openStockInView(){
 }
 
 
-function newStockIn(){
+function newStockIn() {
 
-    if(selectedItem){
+    if (selectedItem) {
 
         localStorage.setItem(
+
             "stockInSelectedItem",
-            selectedItem.code
+
+            getItemCode(
+                selectedItem
+            )
+
         );
 
     }
@@ -2804,10 +2841,11 @@ function newStockIn(){
 }
 
 
-function openStockOutView(){
+function openStockOutView() {
 
-    if(!saveSelectedItem())
+    if (!saveSelectedItem()) {
         return;
+    }
 
 
     localStorage.setItem(
@@ -2822,13 +2860,18 @@ function openStockOutView(){
 }
 
 
-function newStockOut(){
+function newStockOut() {
 
-    if(selectedItem){
+    if (selectedItem) {
 
         localStorage.setItem(
+
             "stockOutSelectedItem",
-            selectedItem.code
+
+            getItemCode(
+                selectedItem
+            )
+
         );
 
     }
@@ -2840,17 +2883,21 @@ function newStockOut(){
 }
 
 
-function openCostView(){
+function openCostView() {
 
-    if(selectedItem){
+    if (selectedItem) {
 
         localStorage.setItem(
+
             "dashboardSelectedItem",
-            selectedItem.code
+
+            getItemCode(
+                selectedItem
+            )
+
         );
 
-    }
-    else{
+    } else {
 
         localStorage.removeItem(
             "dashboardSelectedItem"
@@ -2865,13 +2912,18 @@ function openCostView(){
 }
 
 
-function newCostEntry(){
+function newCostEntry() {
 
-    if(selectedItem){
+    if (selectedItem) {
 
         localStorage.setItem(
+
             "costSelectedItem",
-            selectedItem.code
+
+            getItemCode(
+                selectedItem
+            )
+
         );
 
     }
@@ -2883,15 +2935,21 @@ function newCostEntry(){
 }
 
 
-function openDemandView(){
+function openDemandView() {
 
-    if(!saveSelectedItem())
+    if (!saveSelectedItem()) {
         return;
+    }
 
 
     localStorage.setItem(
+
         "demandViewItem",
-        selectedItem.code
+
+        getItemCode(
+            selectedItem
+        )
+
     );
 
 
@@ -2901,13 +2959,18 @@ function openDemandView(){
 }
 
 
-function newDemandEntry(){
+function newDemandEntry() {
 
-    if(selectedItem){
+    if (selectedItem) {
 
         localStorage.setItem(
+
             "demandSelectedItem",
-            selectedItem.code
+
+            getItemCode(
+                selectedItem
+            )
+
         );
 
     }
@@ -2919,10 +2982,11 @@ function newDemandEntry(){
 }
 
 
-function openGraph(){
+function openGraph() {
 
-    if(!saveSelectedItem())
+    if (!saveSelectedItem()) {
         return;
+    }
 
 
     window.location.href =
@@ -2931,7 +2995,7 @@ function openGraph(){
 }
 
 
-function openUserProfile(){
+function openUserProfile() {
 
     window.location.href =
         "User Profile.html";
@@ -2939,11 +3003,11 @@ function openUserProfile(){
 }
 
 
-// =====================================
-// LOAD SAVED ITEM
-// =====================================
+// --------------------------------------------------
+// SAVED ITEM
+// --------------------------------------------------
 
-function loadSavedItem(){
+function loadSavedItem() {
 
     const saved =
         localStorage.getItem(
@@ -2951,15 +3015,13 @@ function loadSavedItem(){
         );
 
 
-    if(saved){
+    if (saved) {
 
         const item =
-            getItemByCode(
-                saved
-            );
+            getItemByCode(saved);
 
 
-        if(item){
+        if (item) {
 
             selectedItem =
                 item;
@@ -2971,9 +3033,12 @@ function loadSavedItem(){
                 );
 
 
-            if(box)
+            if (box) {
+
                 box.value =
-                    item.code;
+                    getItemCode(item);
+
+            }
 
         }
 
@@ -2987,24 +3052,24 @@ function loadSavedItem(){
 }
 
 
-// =====================================
+// --------------------------------------------------
 // REFRESH
-// =====================================
+// --------------------------------------------------
 
-async function refreshDashboardData(){
+async function refreshDashboardData() {
 
     await loadDashboardFromSupabase();
 
 }
 
 
-// =====================================
-// PAGE LOAD
-// =====================================
+// --------------------------------------------------
+// START
+// --------------------------------------------------
 
 document.addEventListener(
     "DOMContentLoaded",
-    () => {
+    function () {
 
         updateMonthUI();
 
@@ -3015,11 +3080,11 @@ document.addEventListener(
             );
 
 
-        if(picker){
+        if (picker) {
 
             picker.addEventListener(
                 "change",
-                () => {
+                function () {
 
                     setDashboardMonth(
                         picker.value
@@ -3037,22 +3102,41 @@ document.addEventListener(
 );
 
 
-// =====================================
-// AUTO REFRESH
-// =====================================
+// --------------------------------------------------
+// VISIBILITY REFRESH
+// --------------------------------------------------
 
 document.addEventListener(
     "visibilitychange",
-    () => {
+    function () {
 
-        if(
+        if (
             document.visibilityState ===
             "visible"
-        ){
+        ) {
 
             refreshDashboardData();
 
         }
 
     }
+);
+
+
+// --------------------------------------------------
+// GLOBAL ERROR SAFETY
+// --------------------------------------------------
+//
+// Dashboard.html may have:
+// onerror="handleItemPictureError()"
+//
+// Therefore function is attached to window.
+// --------------------------------------------------
+
+window.handleItemPictureError =
+    handleItemPictureError;
+
+
+console.log(
+    "✅ Dashboard.js loaded successfully."
 );
