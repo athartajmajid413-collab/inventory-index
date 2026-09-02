@@ -110,10 +110,10 @@ body{margin:0;font-family:Arial,sans-serif;background:#f2f5f9}
          ">
     </div>
 
-    <img id="itemOnlinePicture"
-         src=""
-         alt="Item Picture"
-         style="
+    <img
+    id="itemOnlinePicture"
+    src=""
+    alt="Item Picture"
             max-width:350px;
             max-height:280px;
             width:auto;
@@ -124,7 +124,7 @@ body{margin:0;font-family:Arial,sans-serif;background:#f2f5f9}
             padding:8px;
             background:#fafafa;
          "
-         onerror="handleItemPictureError()">
+       onerror="if(window.handleItemPictureError){window.handleItemPictureError();}">
 
     <div id="itemPictureStatus"
          style="
