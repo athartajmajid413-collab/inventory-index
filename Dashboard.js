@@ -634,20 +634,6 @@ async function loadDashboardFromSupabase() {
 // --------------------------------------------------
 // MONTHLY STOCK CALCULATIONS
 // --------------------------------------------------
-//
-// Opening of selected month:
-//
-// Master Opening Stock
-// + all Stock In before selected month
-// - all Stock Issue before selected month
-//
-// Current Stock:
-//
-// Opening
-// + selected month Stock In
-// - selected month Stock Issue
-//
-// --------------------------------------------------
 
 function getMasterOpeningStock(item) {
 
@@ -912,20 +898,16 @@ function getAllStockOut(itemCode) {
         );
 }
 
+
 // --------------------------------------------------
 // LATEST RATE
 // --------------------------------------------------
 //
-// IMPORTANT:
-// Latest Rate comes from Demand History.
-// Monthly Demand saves latestRate inside
-// demand_history.items / demand_history.demand_items.
-//
 // Priority:
-// 1. Latest Demand History rate for selected month
-// 2. Latest Demand History rate overall
-// 3. Existing Stock In rate fallback
-// 4. Master item rate fallback
+// 1. Demand History selected month
+// 2. Latest Demand History overall
+// 3. Selected month Stock In
+// 4. Master item rate
 // --------------------------------------------------
 
 function getLatestRate(itemCode) {
@@ -940,7 +922,7 @@ function getLatestRate(itemCode) {
 
 
     // =========================================
-    // 1. GET RATE FROM DEMAND HISTORY
+    // DEMAND HISTORY
     // =========================================
 
     const demandRecords =
@@ -949,9 +931,7 @@ function getLatestRate(itemCode) {
             : [];
 
 
-    // -----------------------------------------
-    // Sort newest Demand History first
-    // -----------------------------------------
+    // Newest demand record first
 
     demandRecords.sort((a, b) => {
 
@@ -996,7 +976,7 @@ function getLatestRate(itemCode) {
 
 
     // -----------------------------------------
-    // Helper: find item rate inside demand row
+    // FIND RATE INSIDE DEMAND RECORD
     // -----------------------------------------
 
     function findDemandRate(record) {
@@ -1060,7 +1040,7 @@ function getLatestRate(itemCode) {
 
 
     // =========================================
-    // 1A. SELECTED MONTH DEMAND
+    // SELECTED MONTH DEMAND
     // =========================================
 
     for (
@@ -1094,8 +1074,7 @@ function getLatestRate(itemCode) {
 
 
     // =========================================
-    // 1B. IF SELECTED MONTH HAS NO DEMAND,
-    //     GET MOST RECENT DEMAND HISTORY
+    // MOST RECENT DEMAND HISTORY
     // =========================================
 
     for (
@@ -1118,7 +1097,7 @@ function getLatestRate(itemCode) {
 
 
     // =========================================
-    // 2. EXISTING STOCK IN FALLBACK
+    // STOCK IN FALLBACK
     // =========================================
 
     const selectedMonthEntries =
@@ -1189,30 +1168,8 @@ function getLatestRate(itemCode) {
 
 
     // =========================================
-    // 3. MASTER ITEM FALLBACK
+    // MASTER ITEM FALLBACK
     // =========================================
-
-    const item =
-        getItemByCode(code);
-
-
-    return safeNumber(
-
-        item?.latest_rate ??
-        item?.latestRate ??
-        item?.unit_cost ??
-        item?.unitCost ??
-        item?.cost ??
-        item?.rate
-
-    );
-
-}
-
-
-    // -----------------------------------------
-    // FALLBACK MASTER RATE
-    // -----------------------------------------
 
     const item =
         getItemByCode(code);
@@ -1234,13 +1191,6 @@ function getLatestRate(itemCode) {
 
 // --------------------------------------------------
 // DEMAND HISTORY
-// --------------------------------------------------
-//
-// IMPORTANT:
-// Dashboard demand comes ONLY from Supabase
-// demand_history.
-//
-// LocalStorage demandEdits is NOT used.
 // --------------------------------------------------
 
 function getDemandCode(record) {
@@ -1637,10 +1587,6 @@ function getFallbackImage(item) {
     }
 
 
-    // -----------------------------------------
-    // LOCAL SVG FALLBACK
-    // -----------------------------------------
-
     const svg =
 
         '<svg xmlns="http://www.w3.org/2000/svg" width="500" height="320">' +
@@ -1701,10 +1647,6 @@ function handleItemPictureError() {
             selectedItem;
 
 
-        // -----------------------------------------
-        // OIL FALLBACK
-        // -----------------------------------------
-
         if (
             item &&
             isOilTypeItem(item)
@@ -1726,10 +1668,6 @@ function handleItemPictureError() {
 
         }
 
-
-        // -----------------------------------------
-        // NORMAL FALLBACK
-        // -----------------------------------------
 
         image.src =
             getFallbackImage(
@@ -1844,10 +1782,6 @@ function showSelectedItemPicture(item) {
         "0";
 
 
-    // -----------------------------------------
-    // JS ERROR HANDLER
-    // -----------------------------------------
-
     image.onerror =
         function () {
 
@@ -1855,10 +1789,6 @@ function showSelectedItemPicture(item) {
 
         };
 
-
-    // -----------------------------------------
-    // SUPABASE IMAGE
-    // -----------------------------------------
 
     const supabaseImage =
         getItemImageURL(item);
@@ -1882,10 +1812,6 @@ function showSelectedItemPicture(item) {
 
     }
 
-
-    // -----------------------------------------
-    // FALLBACK
-    // -----------------------------------------
 
     const fallback =
         getFallbackImage(item);
@@ -2267,10 +2193,6 @@ function updateDashboard() {
         );
 
 
-    // -----------------------------------------
-    // SEARCH INFO
-    // -----------------------------------------
-
     if (
         el("searchInfo")
     ) {
@@ -2287,10 +2209,6 @@ function updateDashboard() {
 
     }
 
-
-    // -----------------------------------------
-    // MASTER CARD
-    // -----------------------------------------
 
     el("masterValue").innerHTML =
         escapeHTML(name);
@@ -2318,10 +2236,6 @@ function updateDashboard() {
         current.toFixed(2);
 
 
-    // -----------------------------------------
-    // STOCK IN CARD
-    // -----------------------------------------
-
     el("stockInValue").innerHTML =
 
         stockIn.toFixed(2) +
@@ -2339,10 +2253,6 @@ function updateDashboard() {
             )
         );
 
-
-    // -----------------------------------------
-    // STOCK OUT CARD
-    // -----------------------------------------
 
     el("stockOutValue").innerHTML =
 
@@ -2362,10 +2272,6 @@ function updateDashboard() {
         );
 
 
-    // -----------------------------------------
-    // COST CARD
-    // -----------------------------------------
-
     el("costValue").innerHTML =
         "Rs. " +
         cost.toFixed(2);
@@ -2381,10 +2287,6 @@ function updateDashboard() {
             )
         );
 
-
-    // -----------------------------------------
-    // DEMAND CARD
-    // -----------------------------------------
 
     el("demandValue").innerHTML =
 
@@ -2404,10 +2306,6 @@ function updateDashboard() {
         );
 
 
-    // -----------------------------------------
-    // PENDING CARD
-    // -----------------------------------------
-
     el("pendingValue").innerHTML =
 
         pending.pendingDemand.toFixed(2) +
@@ -2419,27 +2317,15 @@ function updateDashboard() {
         "Pending Demand / PO";
 
 
-    // -----------------------------------------
-    // PICTURE
-    // -----------------------------------------
-
     showSelectedItemPicture(
         item
     );
 
 
-    // -----------------------------------------
-    // GRAPH
-    // -----------------------------------------
-
     showDashboardGraph(
         code
     );
 
-
-    // -----------------------------------------
-    // TABLE
-    // -----------------------------------------
 
     buildCurrentStockTable();
 
@@ -2533,10 +2419,6 @@ function buildCurrentStockTable() {
 
 
     items.forEach(item => {
-
-        // -----------------------------------------
-        // SHOW ONLY SELECTED ITEM WHEN SEARCHED
-        // -----------------------------------------
 
         if (
 
@@ -2662,10 +2544,6 @@ function buildCurrentStockTable() {
 
         if (cell) {
 
-            // ---------------------------------
-            // RED = ZERO
-            // ---------------------------------
-
             if (
                 current <= 0
             ) {
@@ -2674,10 +2552,6 @@ function buildCurrentStockTable() {
                     "current-stock-cell low";
 
             }
-
-            // ---------------------------------
-            // YELLOW = DEMAND REACHED
-            // ---------------------------------
 
             else if (
 
@@ -2691,10 +2565,6 @@ function buildCurrentStockTable() {
                     "current-stock-cell warning";
 
             }
-
-            // ---------------------------------
-            // NORMAL
-            // ---------------------------------
 
             else {
 
@@ -3351,12 +3221,6 @@ document.addEventListener(
 
 // --------------------------------------------------
 // GLOBAL ERROR SAFETY
-// --------------------------------------------------
-//
-// Dashboard.html may have:
-// onerror="handleItemPictureError()"
-//
-// Therefore function is attached to window.
 // --------------------------------------------------
 
 window.handleItemPictureError =
