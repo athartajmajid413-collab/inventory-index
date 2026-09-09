@@ -1298,83 +1298,83 @@ function isDemandRecordSelectedMonth(
 }
 
 
-function getCurrentMonthDemand(
-    itemCode
-) {
+function getCurrentMonthDemand(itemCode) {
 
-    const code =
-        cleanCode(itemCode);
+    const code = cleanCode(itemCode);
 
-    let total = 0;
+    if (!code) {
+        return 0;
+    }
 
+    let liveDemandEdits = {};
 
-    demandHistory.forEach(
-        record => {
+    try {
 
-            // --------------------------------
-            // ROW LEVEL DEMAND
-            // --------------------------------
+        const saved =
+            localStorage.getItem("demandEdits");
 
-            const rowCode =
-                getDemandCode(record);
+        if (saved) {
 
+            const parsed =
+                JSON.parse(saved);
 
             if (
-
-                rowCode === code &&
-
-                isDemandRecordSelectedMonth(
-                    record
-                )
-
+                parsed &&
+                typeof parsed === "object" &&
+                !Array.isArray(parsed)
             ) {
 
-                total +=
-                    getDemandValue(record);
+                liveDemandEdits = parsed;
 
             }
 
-
-            // --------------------------------
-            // NESTED DEMAND
-            // --------------------------------
-
-            const list =
-                getDemandList(record);
-
-
-            list.forEach(
-                detail => {
-
-                    if (
-
-                        getDemandCode(
-                            detail
-                        ) === code &&
-
-                        isDemandRecordSelectedMonth(
-                            record
-                        )
-
-                    ) {
-
-                        total +=
-                            getDemandValue(
-                                detail
-                            );
-
-                    }
-
-                }
-            );
-
         }
+
+    }
+    catch (error) {
+
+        console.warn(
+            "Could not read current Monthly Demand edits:",
+            error
+        );
+
+        return 0;
+
+    }
+
+
+    const edit =
+        liveDemandEdits[code];
+
+
+    if (
+        !edit ||
+        typeof edit !== "object"
+    ) {
+
+        return 0;
+
+    }
+
+
+    const demand =
+        edit.finalDemand ??
+        edit.final_demand ??
+        edit.demandQuantity ??
+        edit.demand_quantity ??
+        edit.demandQty ??
+        edit.demand_qty ??
+        edit.approvedQty ??
+        edit.approved_qty ??
+        0;
+
+
+    return Math.max(
+        safeNumber(demand),
+        0
     );
 
-
-    return total;
 }
-
 
 function getOverallDemand() {
 
