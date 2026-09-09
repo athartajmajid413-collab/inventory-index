@@ -1,6 +1,9 @@
+```javascript
 // =====================================
 // DASHBOARD.JS - SUPABASE VERSION
-// Correct Monthly Stock + Demand History + Selected Item Picture
+// Correct Monthly Stock + LIVE Monthly Demand
+// Demand is calculated live from Monthly Demand logic
+// Current Balance color depends ONLY on stock balance
 // =====================================
 
 let items = [];
@@ -898,6 +901,11 @@ function getAllStockOut(itemCode) {
         );
 }
 
+
+// --------------------------------------------------
+// LATEST RATE
+// --------------------------------------------------
+
 function getLatestRate(itemCode) {
 
     const code = cleanCode(itemCode);
@@ -917,7 +925,6 @@ function getLatestRate(itemCode) {
             : [];
 
 
-    // پہلے Selected Month کی Demand History چیک کریں
     const selectedMonthRecords =
         records
             .filter(record =>
@@ -949,10 +956,6 @@ function getLatestRate(itemCode) {
             });
 
 
-    // =========================================
-    // FIND RATE FROM DEMAND HISTORY
-    // =========================================
-
     function findDemandRate(record) {
 
         const list =
@@ -983,7 +986,6 @@ function getLatestRate(itemCode) {
             }
 
 
-            // Monthly Demand کا Latest Rate
             const rate =
 
                 detail?.latestRate ??
@@ -1031,9 +1033,7 @@ function getLatestRate(itemCode) {
     }
 
 
-    // =========================================
-    // 1-A. SELECTED MONTH DEMAND
-    // =========================================
+    // SELECTED MONTH DEMAND
 
     for (
         const record of selectedMonthRecords
@@ -1052,9 +1052,7 @@ function getLatestRate(itemCode) {
     }
 
 
-    // =========================================
-    // 1-B. MOST RECENT DEMAND HISTORY
-    // =========================================
+    // MOST RECENT DEMAND HISTORY
 
     const sortedRecords =
         [...records].sort((a, b) => {
@@ -1100,9 +1098,7 @@ function getLatestRate(itemCode) {
     }
 
 
-    // =========================================
-    // 2. STOCK IN FALLBACK
-    // =========================================
+    // STOCK IN FALLBACK
 
     const stockEntries =
         history
@@ -1173,9 +1169,7 @@ function getLatestRate(itemCode) {
     }
 
 
-    // =========================================
-    // 3. MASTER ITEM FALLBACK
-    // =========================================
+    // MASTER ITEM FALLBACK
 
     const item =
         getItemByCode(code);
@@ -1196,7 +1190,7 @@ function getLatestRate(itemCode) {
 
 
 // --------------------------------------------------
-// DEMAND HISTORY
+// DEMAND HISTORY HELPERS
 // --------------------------------------------------
 
 function getDemandCode(record) {
@@ -1298,20 +1292,28 @@ function isDemandRecordSelectedMonth(
 }
 
 
-function getCurrentMonthDemand(itemCode) {
+// --------------------------------------------------
+// LIVE MONTHLY DEMAND
+// --------------------------------------------------
+// IMPORTANT:
+// This follows the CURRENT Monthly Demand calculation.
+// It does NOT wait for Edit Approved.
+// It does NOT read demand_history for Demand Qty.
+// --------------------------------------------------
 
-    const code = cleanCode(itemCode);
+function getLiveMonthlyDemandStockMonths(itemCode) {
 
-    if (!code) {
-        return 0;
-    }
+    const code =
+        cleanCode(itemCode);
 
-    let liveDemandEdits = {};
+    let stockMonths = {};
 
     try {
 
         const saved =
-            localStorage.getItem("demandEdits");
+            localStorage.getItem(
+                "stockMonths"
+            );
 
         if (saved) {
 
@@ -1324,57 +1326,301 @@ function getCurrentMonthDemand(itemCode) {
                 !Array.isArray(parsed)
             ) {
 
-                liveDemandEdits = parsed;
+                stockMonths = parsed;
 
             }
 
         }
 
-    }
-    catch (error) {
+    } catch (error) {
 
         console.warn(
-            "Could not read current Monthly Demand edits:",
+            "Could not read stockMonths:",
             error
         );
 
-        return 0;
-
     }
 
 
-    const edit =
-        liveDemandEdits[code];
+    let value =
+        stockMonths[code];
 
 
     if (
-        !edit ||
-        typeof edit !== "object"
+        value === undefined ||
+        value === null ||
+        value === ""
     ) {
 
-        return 0;
+        value = 3;
 
     }
 
 
-    const demand =
-        edit.finalDemand ??
-        edit.final_demand ??
-        edit.demandQuantity ??
-        edit.demand_quantity ??
-        edit.demandQty ??
-        edit.demand_qty ??
-        edit.approvedQty ??
-        edit.approved_qty ??
-        0;
+    return safeNumber(value) || 3;
+
+}
 
 
-    return Math.max(
-        safeNumber(demand),
-        0
+// --------------------------------------------------
+// LIVE AVERAGE CONSUMPTION
+// Same logic as Monthly Demand.js
+// --------------------------------------------------
+
+function getLiveAverageConsumption(itemCode) {
+
+    const code =
+        cleanCode(itemCode);
+
+    if (!code) {
+        return 0;
+    }
+
+
+    const monthlyTotals = {};
+
+
+    history.forEach(record => {
+
+        if (
+            record.type !== "Stock Issue"
+        ) {
+
+            return;
+
+        }
+
+
+        if (
+            cleanCode(record.itemCode) !==
+            code
+        ) {
+
+            return;
+
+        }
+
+
+        const date =
+            getRecordDate(record);
+
+
+        if (!date) {
+            return;
+        }
+
+
+        const monthKey =
+            date.getFullYear() +
+            "-" +
+            String(
+                date.getMonth() + 1
+            ).padStart(2, "0");
+
+
+        if (
+            !monthlyTotals[monthKey]
+        ) {
+
+            monthlyTotals[monthKey] = 0;
+
+        }
+
+
+        monthlyTotals[monthKey] +=
+            safeNumber(
+                record.quantity
+            );
+
+    });
+
+
+    const months =
+        Object.keys(
+            monthlyTotals
+        );
+
+
+    if (!months.length) {
+        return 0;
+    }
+
+
+    const total =
+        months.reduce(
+            (
+                sum,
+                month
+            ) =>
+                sum +
+                safeNumber(
+                    monthlyTotals[month]
+                ),
+            0
+        );
+
+
+    return (
+        total /
+        months.length
     );
 
 }
+
+
+// --------------------------------------------------
+// LIVE MONTHLY DEMAND CURRENT STOCK
+// IMPORTANT:
+// Monthly Demand uses TOTAL CURRENT STOCK,
+// not Dashboard selected-month stock.
+// --------------------------------------------------
+
+function getLiveMonthlyDemandCurrentStock(item) {
+
+    if (!item) {
+        return 0;
+    }
+
+
+    const code =
+        getItemCode(item);
+
+
+    const opening =
+        getMasterOpeningStock(item);
+
+
+    let totalIn = 0;
+
+    let totalOut = 0;
+
+
+    history.forEach(record => {
+
+        if (
+            cleanCode(record.itemCode) !==
+            code
+        ) {
+
+            return;
+
+        }
+
+
+        if (
+            record.type === "Stock In"
+        ) {
+
+            totalIn +=
+                safeNumber(
+                    record.quantity
+                );
+
+        }
+
+
+        if (
+            record.type === "Stock Issue" ||
+            record.type === "Stock Out"
+        ) {
+
+            totalOut +=
+                safeNumber(
+                    record.quantity
+                );
+
+        }
+
+    });
+
+
+    return Math.max(
+
+        opening +
+        totalIn -
+        totalOut,
+
+        0
+
+    );
+
+}
+
+
+// --------------------------------------------------
+// LIVE DEMAND QUANTITY
+// --------------------------------------------------
+
+function getLiveMonthlyDemandQuantity(itemCode) {
+
+    const code =
+        cleanCode(itemCode);
+
+    if (!code) {
+        return 0;
+    }
+
+
+    const item =
+        getItemByCode(code);
+
+
+    if (!item) {
+        return 0;
+    }
+
+
+    const averageConsumption =
+        getLiveAverageConsumption(
+            code
+        );
+
+
+    const stockMonths =
+        getLiveMonthlyDemandStockMonths(
+            code
+        );
+
+
+    const currentStock =
+        getLiveMonthlyDemandCurrentStock(
+            item
+        );
+
+
+    let demandQuantity =
+        averageConsumption *
+        stockMonths -
+        currentStock;
+
+
+    if (
+        demandQuantity < 0
+    ) {
+
+        demandQuantity = 0;
+
+    }
+
+
+    return demandQuantity;
+
+}
+
+
+// --------------------------------------------------
+// CURRENT DASHBOARD DEMAND
+// LIVE — NO EDIT APPROVED REQUIRED
+// --------------------------------------------------
+
+function getCurrentMonthDemand(itemCode) {
+
+    return getLiveMonthlyDemandQuantity(
+        itemCode
+    );
+
+}
+
 
 function getOverallDemand() {
 
@@ -1393,6 +1639,7 @@ function getOverallDemand() {
         0
 
     );
+
 }
 
 
@@ -1427,6 +1674,7 @@ function getPendingForItem(item) {
             pending
 
     };
+
 }
 
 
@@ -1456,6 +1704,7 @@ function getOverallPending() {
         totalStock,
         0
     );
+
 }
 
 
@@ -1496,6 +1745,7 @@ function getOverallCost() {
             0
 
         );
+
 }
 
 
@@ -1531,6 +1781,7 @@ function getItemImageURL(item) {
         ""
 
     ).trim();
+
 }
 
 
@@ -1580,6 +1831,7 @@ function isOilTypeItem(item) {
         word =>
             text.includes(word)
     );
+
 }
 
 
@@ -2106,10 +2358,7 @@ function updateDashboard() {
 
 
         el("demandInfo").innerHTML =
-            "Demand — " +
-            getMonthName(
-                selectedDashboardMonth
-            );
+            "Live Monthly Demand";
 
 
         el("pendingValue").innerHTML =
@@ -2303,14 +2552,7 @@ function updateDashboard() {
 
 
     el("demandInfo").innerHTML =
-
-        "Demand — " +
-
-        escapeHTML(
-            getMonthName(
-                selectedDashboardMonth
-            )
-        );
+        "Live Monthly Demand";
 
 
     el("pendingValue").innerHTML =
@@ -2549,6 +2791,12 @@ function buildCurrentStockTable() {
             );
 
 
+        // =========================================
+        // CURRENT BALANCE COLOR
+        // ONLY STOCK BALANCE
+        // DEMAND HAS NO EFFECT ON COLOR
+        // =========================================
+
         if (cell) {
 
             if (
@@ -2557,19 +2805,6 @@ function buildCurrentStockTable() {
 
                 cell.className =
                     "current-stock-cell low";
-
-            }
-
-            else if (
-
-                demand > 0 &&
-
-                current <= demand
-
-            ) {
-
-                cell.className =
-                    "current-stock-cell warning";
 
             }
 
@@ -3237,3 +3472,4 @@ window.handleItemPictureError =
 console.log(
     "✅ Dashboard.js loaded successfully."
 );
+```
