@@ -1066,40 +1066,6 @@ function getLatestRate(itemCode) {
 }
 
     // =========================================
-    // SELECTED MONTH DEMAND
-    // =========================================
-
-    for (
-        const record of demandRecords
-    ) {
-
-        if (
-            !isDemandRecordSelectedMonth(
-                record
-            )
-        ) {
-
-            continue;
-
-        }
-
-
-        const rate =
-            findDemandRate(record);
-
-
-        if (
-            rate !== null
-        ) {
-
-            return rate;
-
-        }
-
-    }
-
-
-    // =========================================
     // MOST RECENT DEMAND HISTORY
     // =========================================
 
