@@ -898,118 +898,86 @@ function getAllStockOut(itemCode) {
         );
 }
 
-
-// --------------------------------------------------
-// LATEST RATE
-// --------------------------------------------------
-//
-// Priority:
-// 1. Demand History selected month
-// 2. Latest Demand History overall
-// 3. Selected month Stock In
-// 4. Master item rate
-// --------------------------------------------------
-
 function getLatestRate(itemCode) {
 
-    const code =
-        cleanCode(itemCode);
-
+    const code = cleanCode(itemCode);
 
     if (!code) {
         return 0;
     }
 
-
     // =========================================
-    // DEMAND HISTORY
+    // 1. MONTHLY DEMAND HISTORY
     // =========================================
 
-    const demandRecords =
-        Array.isArray(demandHistory)
-            ? [...demandHistory]
-            : [];
+    const records = Array.isArray(demandHistory)
+        ? demandHistory
+        : [];
 
+    // Newest records first
+    const sortedRecords = [...records].sort((a, b) => {
 
-    // Newest demand record first
-
-    demandRecords.sort((a, b) => {
-
-        const idA =
-            safeNumber(a?.id);
-
-        const idB =
-            safeNumber(b?.id);
-
+        const idA = safeNumber(a?.id);
+        const idB = safeNumber(b?.id);
 
         if (idA !== idB) {
-
             return idB - idA;
-
         }
 
-
-        const dateA =
-            getRecordDate(a);
-
-        const dateB =
-            getRecordDate(b);
-
+        const dateA = getRecordDate(a);
+        const dateB = getRecordDate(b);
 
         return (
-
-            dateB
-                ? dateB.getTime()
-                : 0
-
-        ) -
-
-        (
-
-            dateA
-                ? dateA.getTime()
-                : 0
-
+            (dateB ? dateB.getTime() : 0) -
+            (dateA ? dateA.getTime() : 0)
         );
 
     });
 
 
-    // -----------------------------------------
-    // FIND RATE INSIDE DEMAND RECORD
-    // -----------------------------------------
+    // =========================================
+    // DEMAND LIST PARSER
+    // =========================================
 
-    function findDemandRate(record) {
+    for (const record of sortedRecords) {
 
-        const list =
-            getDemandList(record);
-
+        const list = getDemandList(record);
 
         if (!Array.isArray(list)) {
-            return null;
+            continue;
         }
 
 
         for (const detail of list) {
 
-            const detailCode =
-                getDemandCode(detail);
+            const detailCode = cleanCode(
+                detail?.itemCode ??
+                detail?.item_code ??
+                detail?.code ??
+                detail?.itemID ??
+                detail?.itemId
+            );
 
 
-            if (
-                detailCode !== code
-            ) {
-
+            // Item match
+            if (detailCode !== code) {
                 continue;
-
             }
 
+
+            // ---------------------------------
+            // LATEST RATE FROM MONTHLY DEMAND
+            // ---------------------------------
 
             const rate =
                 detail?.latestRate ??
                 detail?.latest_rate ??
                 detail?.latestCost ??
-                detail?.latest_cost;
+                detail?.latest_cost ??
+                detail?.secondRate ??
+                detail?.second_rate ??
+                detail?.firstRate ??
+                detail?.first_rate;
 
 
             if (
@@ -1019,11 +987,15 @@ function getLatestRate(itemCode) {
                 String(rate).trim() !== "-"
             ) {
 
-                const number =
-                    safeNumber(rate);
-
+                const number = safeNumber(rate);
 
                 if (number > 0) {
+
+                    console.log(
+                        "✅ Latest Rate from Monthly Demand:",
+                        code,
+                        number
+                    );
 
                     return number;
 
@@ -1033,11 +1005,65 @@ function getLatestRate(itemCode) {
 
         }
 
+    }
 
-        return null;
+
+    // =========================================
+    // 2. STOCK IN FALLBACK
+    // =========================================
+
+    const stockEntries = history
+        .filter(r =>
+            r.type === "Stock In" &&
+            cleanCode(r.itemCode) === code
+        )
+        .sort((a, b) => {
+
+            const da = getRecordDate(a);
+            const db = getRecordDate(b);
+
+            return (
+                (db ? db.getTime() : 0) -
+                (da ? da.getTime() : 0)
+            );
+
+        });
+
+
+    if (stockEntries.length) {
+
+        const rate =
+            stockEntries[0].unitCost ??
+            stockEntries[0].latestRate ??
+            stockEntries[0].rate;
+
+        const number = safeNumber(rate);
+
+        if (number > 0) {
+            return number;
+        }
 
     }
 
+
+    // =========================================
+    // 3. MASTER ITEM FALLBACK
+    // =========================================
+
+    const item = getItemByCode(code);
+
+    return safeNumber(
+
+        item?.latest_rate ??
+        item?.latestRate ??
+        item?.unit_cost ??
+        item?.unitCost ??
+        item?.cost ??
+        item?.rate
+
+    );
+
+}
 
     // =========================================
     // SELECTED MONTH DEMAND
