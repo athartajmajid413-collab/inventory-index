@@ -912,9 +912,20 @@ function getAllStockOut(itemCode) {
         );
 }
 
-
 // --------------------------------------------------
 // LATEST RATE
+// --------------------------------------------------
+//
+// IMPORTANT:
+// Latest Rate comes from Demand History.
+// Monthly Demand saves latestRate inside
+// demand_history.items / demand_history.demand_items.
+//
+// Priority:
+// 1. Latest Demand History rate for selected month
+// 2. Latest Demand History rate overall
+// 3. Existing Stock In rate fallback
+// 4. Master item rate fallback
 // --------------------------------------------------
 
 function getLatestRate(itemCode) {
@@ -922,6 +933,193 @@ function getLatestRate(itemCode) {
     const code =
         cleanCode(itemCode);
 
+
+    if (!code) {
+        return 0;
+    }
+
+
+    // =========================================
+    // 1. GET RATE FROM DEMAND HISTORY
+    // =========================================
+
+    const demandRecords =
+        Array.isArray(demandHistory)
+            ? [...demandHistory]
+            : [];
+
+
+    // -----------------------------------------
+    // Sort newest Demand History first
+    // -----------------------------------------
+
+    demandRecords.sort((a, b) => {
+
+        const idA =
+            safeNumber(a?.id);
+
+        const idB =
+            safeNumber(b?.id);
+
+
+        if (idA !== idB) {
+
+            return idB - idA;
+
+        }
+
+
+        const dateA =
+            getRecordDate(a);
+
+        const dateB =
+            getRecordDate(b);
+
+
+        return (
+
+            dateB
+                ? dateB.getTime()
+                : 0
+
+        ) -
+
+        (
+
+            dateA
+                ? dateA.getTime()
+                : 0
+
+        );
+
+    });
+
+
+    // -----------------------------------------
+    // Helper: find item rate inside demand row
+    // -----------------------------------------
+
+    function findDemandRate(record) {
+
+        const list =
+            getDemandList(record);
+
+
+        if (!Array.isArray(list)) {
+            return null;
+        }
+
+
+        for (const detail of list) {
+
+            const detailCode =
+                getDemandCode(detail);
+
+
+            if (
+                detailCode !== code
+            ) {
+
+                continue;
+
+            }
+
+
+            const rate =
+                detail?.latestRate ??
+                detail?.latest_rate ??
+                detail?.latestCost ??
+                detail?.latest_cost;
+
+
+            if (
+                rate !== null &&
+                rate !== undefined &&
+                String(rate).trim() !== "" &&
+                String(rate).trim() !== "-"
+            ) {
+
+                const number =
+                    safeNumber(rate);
+
+
+                if (number > 0) {
+
+                    return number;
+
+                }
+
+            }
+
+        }
+
+
+        return null;
+
+    }
+
+
+    // =========================================
+    // 1A. SELECTED MONTH DEMAND
+    // =========================================
+
+    for (
+        const record of demandRecords
+    ) {
+
+        if (
+            !isDemandRecordSelectedMonth(
+                record
+            )
+        ) {
+
+            continue;
+
+        }
+
+
+        const rate =
+            findDemandRate(record);
+
+
+        if (
+            rate !== null
+        ) {
+
+            return rate;
+
+        }
+
+    }
+
+
+    // =========================================
+    // 1B. IF SELECTED MONTH HAS NO DEMAND,
+    //     GET MOST RECENT DEMAND HISTORY
+    // =========================================
+
+    for (
+        const record of demandRecords
+    ) {
+
+        const rate =
+            findDemandRate(record);
+
+
+        if (
+            rate !== null
+        ) {
+
+            return rate;
+
+        }
+
+    }
+
+
+    // =========================================
+    // 2. EXISTING STOCK IN FALLBACK
+    // =========================================
 
     const selectedMonthEntries =
         history
@@ -949,15 +1147,21 @@ function getLatestRate(itemCode) {
                     const db =
                         getRecordDate(b);
 
+
                     return (
+
                         db
                             ? db.getTime()
                             : 0
+
                     ) -
+
                     (
+
                         da
                             ? da.getTime()
                             : 0
+
                     );
 
                 }
@@ -982,6 +1186,28 @@ function getLatestRate(itemCode) {
         );
 
     }
+
+
+    // =========================================
+    // 3. MASTER ITEM FALLBACK
+    // =========================================
+
+    const item =
+        getItemByCode(code);
+
+
+    return safeNumber(
+
+        item?.latest_rate ??
+        item?.latestRate ??
+        item?.unit_cost ??
+        item?.unitCost ??
+        item?.cost ??
+        item?.rate
+
+    );
+
+}
 
 
     // -----------------------------------------
