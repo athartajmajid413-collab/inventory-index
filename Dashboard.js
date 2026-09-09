@@ -1194,6 +1194,7 @@ function getLatestRate(itemCode) {
 
 }
 
+
 // --------------------------------------------------
 // DEMAND HISTORY
 // --------------------------------------------------
@@ -1210,6 +1211,7 @@ function getDemandCode(record) {
         record?.itemId
 
     );
+
 }
 
 
