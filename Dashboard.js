@@ -906,70 +906,86 @@ function getLatestRate(itemCode) {
         return 0;
     }
 
+
     // =========================================
     // 1. MONTHLY DEMAND HISTORY
     // =========================================
 
-    const records = Array.isArray(demandHistory)
-        ? demandHistory
-        : [];
+    const records =
+        Array.isArray(demandHistory)
+            ? demandHistory
+            : [];
 
-    // Newest records first
-    const sortedRecords = [...records].sort((a, b) => {
 
-        const idA = safeNumber(a?.id);
-        const idB = safeNumber(b?.id);
+    // پہلے Selected Month کی Demand History چیک کریں
+    const selectedMonthRecords =
+        records
+            .filter(record =>
+                isDemandRecordSelectedMonth(record)
+            )
+            .sort((a, b) => {
 
-        if (idA !== idB) {
-            return idB - idA;
-        }
+                const idA =
+                    safeNumber(a?.id);
 
-        const dateA = getRecordDate(a);
-        const dateB = getRecordDate(b);
+                const idB =
+                    safeNumber(b?.id);
 
-        return (
-            (dateB ? dateB.getTime() : 0) -
-            (dateA ? dateA.getTime() : 0)
-        );
+                if (idA !== idB) {
+                    return idB - idA;
+                }
 
-    });
+                const dateA =
+                    getRecordDate(a);
+
+                const dateB =
+                    getRecordDate(b);
+
+                return (
+                    (dateB ? dateB.getTime() : 0) -
+                    (dateA ? dateA.getTime() : 0)
+                );
+
+            });
 
 
     // =========================================
-    // DEMAND LIST PARSER
+    // FIND RATE FROM DEMAND HISTORY
     // =========================================
 
-    for (const record of sortedRecords) {
+    function findDemandRate(record) {
 
-        const list = getDemandList(record);
+        const list =
+            getDemandList(record);
+
 
         if (!Array.isArray(list)) {
-            continue;
+            return null;
         }
 
 
         for (const detail of list) {
 
-            const detailCode = cleanCode(
-                detail?.itemCode ??
-                detail?.item_code ??
-                detail?.code ??
-                detail?.itemID ??
-                detail?.itemId
-            );
+            const detailCode =
+                cleanCode(
+
+                    detail?.itemCode ??
+                    detail?.item_code ??
+                    detail?.code ??
+                    detail?.itemID ??
+                    detail?.itemId
+
+                );
 
 
-            // Item match
             if (detailCode !== code) {
                 continue;
             }
 
 
-            // ---------------------------------
-            // LATEST RATE FROM MONTHLY DEMAND
-            // ---------------------------------
-
+            // Monthly Demand کا Latest Rate
             const rate =
+
                 detail?.latestRate ??
                 detail?.latest_rate ??
                 detail?.latestCost ??
@@ -981,13 +997,17 @@ function getLatestRate(itemCode) {
 
 
             if (
+
                 rate !== null &&
                 rate !== undefined &&
                 String(rate).trim() !== "" &&
                 String(rate).trim() !== "-"
+
             ) {
 
-                const number = safeNumber(rate);
+                const number =
+                    safeNumber(rate);
+
 
                 if (number > 0) {
 
@@ -1005,81 +1025,25 @@ function getLatestRate(itemCode) {
 
         }
 
-    }
 
-
-    // =========================================
-    // 2. STOCK IN FALLBACK
-    // =========================================
-
-    const stockEntries = history
-        .filter(r =>
-            r.type === "Stock In" &&
-            cleanCode(r.itemCode) === code
-        )
-        .sort((a, b) => {
-
-            const da = getRecordDate(a);
-            const db = getRecordDate(b);
-
-            return (
-                (db ? db.getTime() : 0) -
-                (da ? da.getTime() : 0)
-            );
-
-        });
-
-
-    if (stockEntries.length) {
-
-        const rate =
-            stockEntries[0].unitCost ??
-            stockEntries[0].latestRate ??
-            stockEntries[0].rate;
-
-        const number = safeNumber(rate);
-
-        if (number > 0) {
-            return number;
-        }
+        return null;
 
     }
 
 
     // =========================================
-    // 3. MASTER ITEM FALLBACK
-    // =========================================
-
-    const item = getItemByCode(code);
-
-    return safeNumber(
-
-        item?.latest_rate ??
-        item?.latestRate ??
-        item?.unit_cost ??
-        item?.unitCost ??
-        item?.cost ??
-        item?.rate
-
-    );
-
-}
-
-    // =========================================
-    // MOST RECENT DEMAND HISTORY
+    // 1-A. SELECTED MONTH DEMAND
     // =========================================
 
     for (
-        const record of demandRecords
+        const record of selectedMonthRecords
     ) {
 
         const rate =
             findDemandRate(record);
 
 
-        if (
-            rate !== null
-        ) {
+        if (rate !== null) {
 
             return rate;
 
@@ -1089,10 +1053,58 @@ function getLatestRate(itemCode) {
 
 
     // =========================================
-    // STOCK IN FALLBACK
+    // 1-B. MOST RECENT DEMAND HISTORY
     // =========================================
 
-    const selectedMonthEntries =
+    const sortedRecords =
+        [...records].sort((a, b) => {
+
+            const idA =
+                safeNumber(a?.id);
+
+            const idB =
+                safeNumber(b?.id);
+
+            if (idA !== idB) {
+                return idB - idA;
+            }
+
+            const dateA =
+                getRecordDate(a);
+
+            const dateB =
+                getRecordDate(b);
+
+            return (
+                (dateB ? dateB.getTime() : 0) -
+                (dateA ? dateA.getTime() : 0)
+            );
+
+        });
+
+
+    for (
+        const record of sortedRecords
+    ) {
+
+        const rate =
+            findDemandRate(record);
+
+
+        if (rate !== null) {
+
+            return rate;
+
+        }
+
+    }
+
+
+    // =========================================
+    // 2. STOCK IN FALLBACK
+    // =========================================
+
+    const stockEntries =
         history
 
             .filter(
@@ -1103,9 +1115,7 @@ function getLatestRate(itemCode) {
 
                     cleanCode(
                         r.itemCode
-                    ) === code &&
-
-                    isSelectedMonth(r)
+                    ) === code
 
             )
 
@@ -1140,27 +1150,31 @@ function getLatestRate(itemCode) {
 
 
     if (
-        selectedMonthEntries.length
+        stockEntries.length
     ) {
 
-        return safeNumber(
+        const rate =
 
-            selectedMonthEntries[0]
-                .unitCost ??
+            stockEntries[0].unitCost ??
+            stockEntries[0].latestRate ??
+            stockEntries[0].rate;
 
-            selectedMonthEntries[0]
-                .latestRate ??
 
-            selectedMonthEntries[0]
-                .rate
+        const number =
+            safeNumber(rate);
 
-        );
+
+        if (number > 0) {
+
+            return number;
+
+        }
 
     }
 
 
     // =========================================
-    // MASTER ITEM FALLBACK
+    // 3. MASTER ITEM FALLBACK
     // =========================================
 
     const item =
@@ -1178,6 +1192,7 @@ function getLatestRate(itemCode) {
 
     );
 
+}
 
 // --------------------------------------------------
 // DEMAND HISTORY
