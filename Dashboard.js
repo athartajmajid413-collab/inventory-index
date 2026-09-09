@@ -1,4 +1,3 @@
-```javascript
 // =====================================
 // DASHBOARD.JS - SUPABASE VERSION
 // Correct Monthly Stock + LIVE Monthly Demand
@@ -3472,4 +3471,3 @@ window.handleItemPictureError =
 console.log(
     "✅ Dashboard.js loaded successfully."
 );
-```
