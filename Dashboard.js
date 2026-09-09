@@ -1212,8 +1212,6 @@ function getLatestRate(itemCode) {
 
     );
 
-}
-
 
 // --------------------------------------------------
 // DEMAND HISTORY
