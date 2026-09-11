@@ -3,7 +3,11 @@
 // SUPABASE CONNECTED VERSION
 // ORIGINAL TABLE ORDER PRESERVED
 // =====================================================
+const REPORT_SUPABASE_URL =
+    "https://tncmmkyrpzlkupdnkyqm.supabase.co";
 
+const REPORT_SUPABASE_KEY =
+    "sb_publishable_e6j_EkJescicSS3nEOnscg_INwxeukT";
 
 // =====================================================
 // DATA
