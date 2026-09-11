@@ -9,7 +9,7 @@ const REPORT_SUPABASE_URL =
 
 const REPORT_SUPABASE_KEY =
     "sb_publishable_e6j_EkJescicSS3nEOnscg_INwxeukT";
-
+console.log("REPORTS.JS LOADED SUCCESSFULLY");
 
 // =====================================
 // GLOBAL DATA
