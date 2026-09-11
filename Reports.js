@@ -1,2578 +1,762 @@
-// ======================================================
-// REPORTS.JS - SUPABASE VERSION
-// Monthly Demand uses DEMAND MONTH, not Generate Date
-// ======================================================
-
-
-// ------------------------------------------------------
-// SUPABASE CONFIG
-// ------------------------------------------------------
-
+// ============================================================
+// REPORTS.JS
+// SUPABASE VERSION
+// ============================================================
+// IMPORTANT:
+// This file uses Supabase only.
+// No LocalStorage is used for report data.
+//
+// Tables used:
+// 1. items
+// 2. stock_in
+// 3. stock_issue
+// 4. demand_history
+//
+// Monthly Demand IMPORTANT:
+// Demand is grouped by demand_month,
+// NOT by generate_date/date.
+//
+// Example:
+// demand_month = 2026-06
+// generate_date = 2026-09-11
+//
+// Report will show this Demand in June 2026.
+// ============================================================
 const REPORT_SUPABASE_URL =
     "https://tncmmkyrpzlkupdnkyqm.supabase.co";
 
 const REPORT_SUPABASE_KEY =
     "sb_publishable_e6j_EkJescicSS3nEOnscg_INwxeukT";
 
-
-
-// ------------------------------------------------------
+// ============================================================
 // GLOBAL DATA
-// ------------------------------------------------------
+// ============================================================
 
-let items = [];
 let history = [];
-let demands = [];
+let items = [];
 let demandHistory = [];
 
 
-// ------------------------------------------------------
-// SUPABASE REQUEST
-// ------------------------------------------------------
+// ============================================================
+// BASIC HELPERS
+// ============================================================
 
-async function reportSupabaseRequest(
-    table,
-    options = {}
-){
+function val(obj, keys, fallback = "") {
 
-    const {
-        method = "GET",
-        body = null,
-        query = ""
-    } = options;
+    for (let key of keys) {
 
-    const url =
-        REPORT_SUPABASE_URL +
-        "/rest/v1/" +
-        table +
-        query;
+        if (
+            obj &&
+            obj[key] !== undefined &&
+            obj[key] !== null &&
+            obj[key] !== ""
+        ) {
+            return obj[key];
+        }
 
-    const response =
-        await fetch(
-            url,
-            {
-                method: method,
-
-                headers: {
-                    "apikey":
-                        REPORT_SUPABASE_KEY,
-
-                    "Authorization":
-                        "Bearer " +
-                        REPORT_SUPABASE_KEY,
-
-                    "Content-Type":
-                        "application/json",
-
-                    "Prefer":
-                        "return=representation"
-                },
-
-                body:
-                    body
-                        ? JSON.stringify(body)
-                        : null
-            }
-        );
-
-    if(!response.ok){
-
-        const errorText =
-            await response.text();
-
-        throw new Error(
-            errorText ||
-            response.statusText
-        );
     }
 
-    const text =
-        await response.text();
-
-    if(!text){
-        return [];
-    }
-
-    return JSON.parse(text);
+    return fallback;
 }
 
 
-// ------------------------------------------------------
-// PAGE LOAD
-// ------------------------------------------------------
+function num(value) {
 
-document.addEventListener(
-    "DOMContentLoaded",
-    function(){
+    let n = Number(value);
 
-        loadReportData();
-
-    }
-);
-
-
-// ------------------------------------------------------
-// LOAD REPORT DATA
-// ------------------------------------------------------
-
-async function loadReportData(){
-
-    try{
-
-        console.log(
-            "Loading report data..."
-        );
-
-
-        // ----------------------------------------------
-        // ITEMS
-        // ----------------------------------------------
-
-        try{
-
-            items =
-                await reportSupabaseRequest(
-                    "items"
-                );
-
-        }catch(error){
-
-            console.error(
-                "Items loading error:",
-                error
-            );
-
-            items = [];
-        }
-
-
-        // ----------------------------------------------
-        // STOCK IN
-        // ----------------------------------------------
-
-        let stockInData = [];
-
-        try{
-
-            stockInData =
-                await reportSupabaseRequest(
-                    "stock_in"
-                );
-
-        }catch(error){
-
-            console.error(
-                "Stock In loading error:",
-                error
-            );
-
-            stockInData = [];
-        }
-
-
-        // ----------------------------------------------
-        // STOCK OUT
-        // ----------------------------------------------
-
-        let stockIssueData = [];
-
-        try{
-
-            stockIssueData =
-                await reportSupabaseRequest(
-                    "stock_issue"
-                );
-
-        }catch(error){
-
-            console.error(
-                "Stock Out loading error:",
-                error
-            );
-
-            stockIssueData = [];
-        }
-
-
-        // ----------------------------------------------
-        // HISTORY TABLE
-        // ----------------------------------------------
-
-        let historyData = [];
-
-        try{
-
-            historyData =
-                await reportSupabaseRequest(
-                    "history"
-                );
-
-        }catch(error){
-
-            console.warn(
-                "History table not available:",
-                error
-            );
-
-            historyData = [];
-        }
-
-
-        // ----------------------------------------------
-        // BUILD COMMON HISTORY
-        // ----------------------------------------------
-
-        history = [];
-
-
-        // Stock In history
-
-        for(
-            let i = 0;
-            i < stockInData.length;
-            i++
-        ){
-
-            let row =
-                stockInData[i];
-
-            history.push({
-
-                id:
-                    row.id,
-
-                itemCode:
-                    row.item_code ||
-                    row.itemCode ||
-                    row.code ||
-                    "",
-
-                itemName:
-                    row.item_name ||
-                    row.itemName ||
-                    "",
-
-                type:
-                    "Stock In",
-
-                quantity:
-                    Number(
-                        row.quantity ||
-                        row.qty ||
-                        0
-                    ),
-
-                unitCost:
-                    Number(
-                        row.unit_cost ||
-                        row.unitCost ||
-                        row.rate ||
-                        0
-                    ),
-
-                totalCost:
-                    Number(
-                        row.total_cost ||
-                        row.totalCost ||
-                        (
-                            Number(
-                                row.quantity ||
-                                row.qty ||
-                                0
-                            ) *
-                            Number(
-                                row.unit_cost ||
-                                row.unitCost ||
-                                row.rate ||
-                                0
-                            )
-                        )
-                    ),
-
-                date:
-                    row.date ||
-                    row.stock_in_date ||
-                    row.created_at ||
-                    "",
-
-                sourceTable:
-                    "stock_in",
-
-                sourceRow:
-                    row
-
-            });
-
-        }
-
-
-        // Stock Out history
-
-        for(
-            let i = 0;
-            i < stockIssueData.length;
-            i++
-        ){
-
-            let row =
-                stockIssueData[i];
-
-            history.push({
-
-                id:
-                    row.id,
-
-                itemCode:
-                    row.item_code ||
-                    row.itemCode ||
-                    row.code ||
-                    "",
-
-                itemName:
-                    row.item_name ||
-                    row.itemName ||
-                    "",
-
-                type:
-                    "Stock Out",
-
-                quantity:
-                    Number(
-                        row.quantity ||
-                        row.qty ||
-                        0
-                    ),
-
-                unitCost:
-                    Number(
-                        row.unit_cost ||
-                        row.unitCost ||
-                        row.rate ||
-                        0
-                    ),
-
-                totalCost:
-                    Number(
-                        row.total_cost ||
-                        row.totalCost ||
-                        (
-                            Number(
-                                row.quantity ||
-                                row.qty ||
-                                0
-                            ) *
-                            Number(
-                                row.unit_cost ||
-                                row.unitCost ||
-                                row.rate ||
-                                0
-                            )
-                        )
-                    ),
-
-                date:
-                    row.date ||
-                    row.stock_issue_date ||
-                    row.created_at ||
-                    "",
-
-                sourceTable:
-                    "stock_issue",
-
-                sourceRow:
-                    row
-
-            });
-
-        }
-
-
-        // ----------------------------------------------
-// OLD DEMANDS TABLE
-// ----------------------------------------------
-// Current system uses demand_history.
-// No need to load "demands" table.
-
-demands = [];
-
-        // ----------------------------------------------
-        // DEMAND HISTORY
-        // ----------------------------------------------
-
-        try{
-
-            demandHistory =
-                await reportSupabaseRequest(
-                    "demand_history"
-                );
-
-        }catch(error){
-
-            console.error(
-                "Demand History loading error:",
-                error
-            );
-
-            demandHistory = [];
-        }
-
-
-        console.log(
-            "Items:",
-            items
-        );
-
-        console.log(
-            "History:",
-            history
-        );
-
-        console.log(
-            "Demand History:",
-            demandHistory
-        );
-
-
-    }catch(error){
-
-        console.error(
-            "Report data loading error:",
-            error
-        );
-
-        alert(
-            "Report data load نہیں ہو سکا۔"
-        );
-
-    }
-
+    return Number.isFinite(n) ? n : 0;
 }
 
 
-// ======================================================
-// DATE HELPERS
-// ======================================================
-
-
-// ------------------------------------------------------
-// GET MONTH KEY
-// ------------------------------------------------------
-
-function getMonthKeyFromDate(value){
-
-    if(!value){
-        return "";
-    }
-
-    let text =
-        String(value).trim();
-
-
-    // YYYY-MM-DD
-    let match =
-        text.match(
-            /^(\d{4})-(\d{1,2})/
-        );
-
-    if(match){
-
-        return (
-            match[1] +
-            "-" +
-            String(
-                match[2]
-            ).padStart(
-                2,
-                "0"
-            )
-        );
-
-    }
-
-
-    // Try JavaScript date
-
-    let date =
-        new Date(value);
-
-    if(
-        !isNaN(
-            date.getTime()
-        )
-    ){
-
-        return (
-            date.getFullYear() +
-            "-" +
-            String(
-                date.getMonth() + 1
-            ).padStart(
-                2,
-                "0"
-            )
-        );
-
-    }
-
-
-    return "";
-
-}
-
-
-// ------------------------------------------------------
-// GET DEMAND MONTH
-// ------------------------------------------------------
-
-function getDemandMonthKey(
-    record,
-    demandItem = null
-){
-
-    // IMPORTANT:
-    // demand_month is the actual month
-    // for which demand was generated.
-
-    let demandMonth =
-        record.demand_month ||
-        record.demandMonth ||
-        record.selected_month ||
-        record.selectedMonth ||
-        "";
-
-
-    // Sometimes old data may keep
-    // month inside the item.
-
-    if(
-        !demandMonth &&
-        demandItem
-    ){
-
-        demandMonth =
-            demandItem.demand_month ||
-            demandItem.demandMonth ||
-            demandItem.selected_month ||
-            demandItem.selectedMonth ||
-            "";
-
-    }
-
-
-    if(demandMonth){
-
-        let monthKey =
-            getMonthKeyFromDate(
-                demandMonth
-            );
-
-        if(monthKey){
-            return monthKey;
-        }
-
-    }
-
-
-    // --------------------------------------------------
-    // LEGACY FALLBACK
-    // --------------------------------------------------
-    // Only if demand_month does not exist.
-
-    let fallbackDate =
-        record.date ||
-        record.generate_date ||
-        record.generateDate ||
-        "";
-
-    return getMonthKeyFromDate(
-        fallbackDate
-    );
-
-}
-
-
-// ------------------------------------------------------
-// DEMAND MONTH FILTER
-// ------------------------------------------------------
-
-function demandMonthMatchesRange(
-    demandMonth,
-    fromDate,
-    toDate
-){
-
-    if(!demandMonth){
-
-        return false;
-
-    }
-
-
-    let fromMonth =
-        getMonthKeyFromDate(
-            fromDate
-        );
-
-    let toMonth =
-        getMonthKeyFromDate(
-            toDate
-        );
-
-
-    if(
-        fromMonth &&
-        demandMonth < fromMonth
-    ){
-
-        return false;
-
-    }
-
-
-    if(
-        toMonth &&
-        demandMonth > toMonth
-    ){
-
-        return false;
-
-    }
-
-
-    return true;
-
-}
-
-
-// ======================================================
-// DEMAND HELPERS
-// ======================================================
-
-
-// ------------------------------------------------------
-// GET DEMAND ITEMS ARRAY
-// ------------------------------------------------------
-
-function getDemandItems(
-    record
-){
-
-    let list =
-        record.demand_items ||
-        record.demandItems ||
-        record.items ||
-        [];
-
-
-    // Supabase may return JSON
-    // as a string.
-
-    if(
-        typeof list === "string"
-    ){
-
-        try{
-
-            list =
-                JSON.parse(list);
-
-        }catch(error){
-
-            console.error(
-                "Demand items JSON error:",
-                error
-            );
-
-            list = [];
-
-        }
-
-    }
-
-
-    if(
-        !Array.isArray(list)
-    ){
-
-        return [];
-
-    }
-
-
-    return list;
-
-}
-
-
-// ------------------------------------------------------
-// GET DEMAND ITEM CODE
-// ------------------------------------------------------
-
-function getDemandItemCode(
-    item
-){
+// ============================================================
+// ITEM CODE
+// ============================================================
+
+function getItemCode(obj) {
 
     return String(
-
-        item.code ||
-        item.item_code ||
-        item.itemCode ||
-        ""
-
+        val(
+            obj,
+            [
+                "itemCode",
+                "item_code",
+                "code",
+                "itemId",
+                "item_id",
+                "id"
+            ],
+            ""
+        )
     ).trim();
 
 }
 
 
-// ------------------------------------------------------
-// GET DEMAND ITEM NAME
-// ------------------------------------------------------
+// ============================================================
+// ITEM NAME
+// ============================================================
 
-function getDemandItemName(
-    item
-){
+function getItemName(obj) {
 
-    return (
-
-        item.itemName ||
-        item.item_name ||
-        item.name ||
+    return val(
+        obj,
+        [
+            "itemName",
+            "item_name",
+            "name"
+        ],
         ""
-
     );
 
 }
 
 
-// ------------------------------------------------------
-// GET DEMAND QUANTITY
-// ------------------------------------------------------
+// ============================================================
+// DATE
+// ============================================================
 
-function getDemandQuantity(
-    item
-){
+function getRecordDate(obj) {
 
-    let value =
+    return String(
+        val(
+            obj,
+            [
+                "date",
+                "transactionDate",
+                "transaction_date"
+            ],
+            ""
+        )
+    ).trim();
 
-        item.finalDemand ??
-        item.final_demand ??
-        item.approvedQty ??
-        item.approved_qty ??
-        item.quantity ??
-        item.demandQuantity ??
-        item.demand_quantity ??
-        item.demand ??
-        0;
-
-
-    let number =
-        Number(value);
+}
 
 
-    if(
-        isNaN(number)
-    ){
+// ============================================================
+// DEMAND MONTH
+// ============================================================
+// IMPORTANT:
+// This function ALWAYS gives priority to demand_month.
+//
+// This prevents a June Demand generated in September
+// from appearing in September.
+// ============================================================
 
-        return 0;
+function getDemandMonth(record) {
+
+    let month = String(
+        val(
+            record,
+            [
+                "demand_month",
+                "demandMonth",
+                "month"
+            ],
+            ""
+        )
+    ).trim();
+
+
+    // --------------------------------------------------------
+    // If demand_month exists, use it directly.
+    // --------------------------------------------------------
+
+    if (month) {
+
+        // YYYY-MM
+        if (/^\d{4}-\d{2}$/.test(month)) {
+            return month;
+        }
+
+        // YYYY-M
+        if (/^\d{4}-\d{1}$/.test(month)) {
+
+            let parts = month.split("-");
+
+            return (
+                parts[0] +
+                "-" +
+                String(parts[1]).padStart(2, "0")
+            );
+        }
+
+        // Full date YYYY-MM-DD
+        if (/^\d{4}-\d{2}-\d{2}/.test(month)) {
+
+            return month.substring(0, 7);
+        }
+    }
+
+
+    // --------------------------------------------------------
+    // FALLBACK ONLY
+    // --------------------------------------------------------
+    // Old records may not have demand_month.
+    // Then use date / generate_date.
+    // --------------------------------------------------------
+
+    let date = String(
+        val(
+            record,
+            [
+                "date",
+                "generate_date",
+                "generateDate"
+            ],
+            ""
+        )
+    ).trim();
+
+
+    if (/^\d{4}-\d{2}/.test(date)) {
+
+        return date.substring(0, 7);
+    }
+
+
+    return "";
+}
+
+
+// ============================================================
+// GET DEMAND ITEMS
+// ============================================================
+// Demand History stores the item list inside:
+// demand_items
+// or
+// items
+//
+// Some older records may use:
+// demandItems
+// ============================================================
+
+function getDemandItems(record) {
+
+    if (!record) {
+        return [];
+    }
+
+
+    let list =
+        record.demand_items ??
+        record.demandItems ??
+        record.items ??
+        record.demands ??
+        [];
+
+
+    // --------------------------------------------------------
+    // If database returned JSON as text
+    // --------------------------------------------------------
+
+    if (typeof list === "string") {
+
+        try {
+
+            list = JSON.parse(list);
+
+        }
+        catch (error) {
+
+            console.warn(
+                "Could not parse demand item JSON:",
+                error
+            );
+
+            return [];
+        }
 
     }
 
 
-    return number;
+    return Array.isArray(list)
+        ? list
+        : [];
 
 }
 
 
-// ------------------------------------------------------
+// ============================================================
+// GET DEMAND ITEM CODE
+// ============================================================
+
+function getDemandItemCode(item) {
+
+    return String(
+        val(
+            item,
+            [
+                "itemCode",
+                "item_code",
+                "code",
+                "itemId",
+                "item_id",
+                "id"
+            ],
+            ""
+        )
+    ).trim();
+
+}
+
+
+// ============================================================
+// GET DEMAND ITEM NAME
+// ============================================================
+
+function getDemandItemName(item) {
+
+    return val(
+        item,
+        [
+            "itemName",
+            "item_name",
+            "name"
+        ],
+        ""
+    );
+
+}
+
+
+// ============================================================
+// GET DEMAND QUANTITY
+// ============================================================
+
+function getDemandQuantity(item) {
+
+    return num(
+        val(
+            item,
+            [
+                "finalDemand",
+                "final_demand",
+                "approvedQty",
+                "approved_qty",
+                "approvedQuantity",
+                "demandQuantity",
+                "demand_quantity",
+                "demandQty",
+                "demand_qty",
+                "quantity",
+                "qty",
+                "demand"
+            ],
+            0
+        )
+    );
+
+}
+
+
+// ============================================================
 // GET PENDING DEMAND
-// ------------------------------------------------------
+// ============================================================
 
-function getPendingDemand(
-    item
-){
+function getPendingDemand(item) {
 
-    let value =
-
-        item.pendingDemand ??
-        item.pending_demand ??
-        0;
-
-
-    let number =
-        Number(value);
-
-
-    return isNaN(number)
-        ? 0
-        : number;
+    return num(
+        val(
+            item,
+            [
+                "pendingDemand",
+                "pending_demand",
+                "pendingQty",
+                "pending_qty",
+                "pending"
+            ],
+            0
+        )
+    );
 
 }
 
 
-// ------------------------------------------------------
+// ============================================================
 // GET PENDING PO
-// ------------------------------------------------------
+// ============================================================
 
-function getPendingPO(
-    item
-){
+function getPendingPO(item) {
 
-    let value =
-
-        item.pendingPO ??
-        item.pending_po ??
-        item.po ??
-        0;
-
-
-    let number =
-        Number(value);
-
-
-    return isNaN(number)
-        ? 0
-        : number;
+    return num(
+        val(
+            item,
+            [
+                "pendingPO",
+                "pending_po",
+                "pendingPo",
+                "poPending",
+                "po_pending"
+            ],
+            0
+        )
+    );
 
 }
 
 
-// ======================================================
-// GENERATE REPORT
-// ======================================================
+// ============================================================
+// FIND ITEM
+// ============================================================
 
-async function generateReport(){
+function getItem(code) {
+
+    let c = String(code || "").trim();
+
+
+    return items.find(
+        x =>
+            String(
+                val(
+                    x,
+                    [
+                        "code",
+                        "itemCode",
+                        "item_code",
+                        "id"
+                    ],
+                    ""
+                )
+            ).trim() === c
+    );
+
+}
+
+
+// ============================================================
+// CURRENT STOCK
+// ============================================================
+
+function currentStock(item) {
+
+    if (!item) {
+        return 0;
+    }
+
+
+    let opening = num(
+        val(
+            item,
+            [
+                "openingStock",
+                "opening_stock",
+                "opening_Stock",
+                "openStock",
+                "currentStock"
+            ],
+            0
+        )
+    );
+
+
+    let code = String(
+        val(
+            item,
+            [
+                "code",
+                "itemCode",
+                "item_code",
+                "id"
+            ],
+            ""
+        )
+    ).trim();
+
+
+    let inQty = 0;
+    let outQty = 0;
+
+
+    history.forEach(record => {
+
+        let recordCode =
+            getItemCode(record);
+
+
+        if (recordCode !== code) {
+            return;
+        }
+
+
+        let quantity = num(
+            val(
+                record,
+                [
+                    "quantity",
+                    "qty"
+                ],
+                0
+            )
+        );
+
+
+        let type =
+            String(
+                val(
+                    record,
+                    ["type"],
+                    ""
+                )
+            ).toLowerCase();
+
+
+        if (
+            type === "stock in" ||
+            type === "stockin"
+        ) {
+
+            inQty += quantity;
+
+        }
+
+
+        if (
+            type === "stock issue" ||
+            type === "stock out" ||
+            type === "stockout"
+        ) {
+
+            outQty += quantity;
+
+        }
+
+    });
+
+
+    return opening + inQty - outQty;
+
+}
+
+
+// ============================================================
+// REPORT TYPE CHANGE
+// ============================================================
+
+function reportTypeChanged() {
 
     let reportType =
-        document.getElementById(
-            "reportType"
-        )?.value || "";
+        document.getElementById("reportType");
+
+    if (!reportType) {
+        return;
+    }
+
+
+    let type =
+        reportType.value;
+
+
+    let dateEnabled =
+        [
+            "stockIn",
+            "stockOut",
+            "all",
+            "monthlyDemand"
+        ].includes(type);
 
 
     let fromDate =
-        document.getElementById(
-            "fromDate"
-        )?.value || "";
-
+        document.getElementById("fromDate");
 
     let toDate =
-        document.getElementById(
-            "toDate"
-        )?.value || "";
-
-
-    let itemCode =
-        String(
-            document.getElementById(
-                "itemCode"
-            )?.value || ""
-        ).trim();
-
+        document.getElementById("toDate");
 
     let department =
-        String(
-            document.getElementById(
-                "department"
-            )?.value || ""
-        ).trim();
+        document.getElementById("department");
 
 
-    // --------------------------------------------------
-    // MAKE SURE DATA IS LOADED
-    // --------------------------------------------------
-
-    if(
-        !items.length &&
-        !history.length &&
-        !demandHistory.length
-    ){
-
-        await loadReportData();
-
+    if (fromDate) {
+        fromDate.disabled = !dateEnabled;
     }
 
 
-    // --------------------------------------------------
-    // CLEAR OLD TABLE
-    // --------------------------------------------------
+    if (toDate) {
+        toDate.disabled = !dateEnabled;
+    }
 
-    let tableBody =
+
+    if (department) {
+
+        department.disabled =
+            !(
+                type === "stockOut" ||
+                type === "all"
+            );
+
+    }
+
+}
+
+
+// ============================================================
+// TITLES
+// ============================================================
+
+function setTitles(title) {
+
+    let screenTitle =
         document.getElementById(
-            "reportTableBody"
+            "screenReportTitle"
         );
 
 
-    if(tableBody){
+    let printTitle =
+        document.getElementById(
+            "printReportTitle"
+        );
 
-        tableBody.innerHTML = "";
 
+    let printDate =
+        document.getElementById(
+            "printDate"
+        );
+
+
+    if (screenTitle) {
+        screenTitle.innerHTML = title;
     }
 
 
-    // --------------------------------------------------
-    // UPDATE HEADERS
-    // --------------------------------------------------
-
-    updateReportHeaders(
-        reportType
-    );
-
-
-    // --------------------------------------------------
-    // TOTALS
-    // --------------------------------------------------
-
-    let totalEntries = 0;
-    let totalQuantity = 0;
-    let totalValue = 0;
-
-
-    // ==================================================
-    // STOCK IN
-    // ==================================================
-
-    if(
-        reportType === "stockIn"
-    ){
-
-        let filtered =
-            history.filter(
-                function(row){
-
-                    if(
-                        row.type !==
-                        "Stock In"
-                    ){
-
-                        return false;
-
-                    }
-
-
-                    if(
-                        itemCode &&
-                        String(
-                            row.itemCode
-                        ).trim() !==
-                        itemCode
-                    ){
-
-                        return false;
-
-                    }
-
-
-                    if(
-                        !dateMatches(
-                            row.date,
-                            fromDate,
-                            toDate
-                        )
-                    ){
-
-                        return false;
-
-                    }
-
-
-                    return true;
-
-                }
-            );
-
-
-        for(
-            let i = 0;
-            i < filtered.length;
-            i++
-        ){
-
-            let row =
-                filtered[i];
-
-            totalEntries++;
-
-            totalQuantity +=
-                Number(
-                    row.quantity || 0
-                );
-
-            totalValue +=
-                Number(
-                    row.totalCost || 0
-                );
-
-            addReportRow(
-                row
-            );
-
-        }
-
+    if (printTitle) {
+        printTitle.innerHTML =
+            title.toUpperCase();
     }
 
 
-    // ==================================================
-    // STOCK OUT
-    // ==================================================
+    if (printDate) {
 
-    else if(
-        reportType === "stockOut"
-    ){
-
-        let filtered =
-            history.filter(
-                function(row){
-
-                    if(
-                        row.type !==
-                        "Stock Out"
-                    ){
-
-                        return false;
-
-                    }
+        let d = new Date();
 
 
-                    if(
-                        itemCode &&
-                        String(
-                            row.itemCode
-                        ).trim() !==
-                        itemCode
-                    ){
-
-                        return false;
-
-                    }
-
-
-                    if(
-                        !dateMatches(
-                            row.date,
-                            fromDate,
-                            toDate
-                        )
-                    ){
-
-                        return false;
-
-                    }
-
-
-                    return true;
-
-                }
-            );
-
-
-        for(
-            let i = 0;
-            i < filtered.length;
-            i++
-        ){
-
-            let row =
-                filtered[i];
-
-            totalEntries++;
-
-            totalQuantity +=
-                Number(
-                    row.quantity || 0
-                );
-
-            totalValue +=
-                Number(
-                    row.totalCost || 0
-                );
-
-            addReportRow(
-                row
-            );
-
-        }
+        printDate.innerHTML =
+            `${d.getDate()}-${d.getMonth() + 1}-${d.getFullYear()}`;
 
     }
 
-
-    // ==================================================
-    // ALL TRANSACTIONS
-    // ==================================================
-
-    else if(
-        reportType === "all"
-    ){
-
-        let filtered =
-            history.filter(
-                function(row){
-
-                    if(
-                        itemCode &&
-                        String(
-                            row.itemCode
-                        ).trim() !==
-                        itemCode
-                    ){
-
-                        return false;
-
-                    }
+}
 
 
-                    if(
-                        !dateMatches(
-                            row.date,
-                            fromDate,
-                            toDate
-                        )
-                    ){
+// ============================================================
+// TABLE HEADER
+// ============================================================
 
-                        return false;
+function setHead(columns) {
 
-                    }
-
-
-                    return true;
-
-                }
-            );
+    let head =
+        document.getElementById(
+            "reportHead"
+        );
 
 
-        for(
-            let i = 0;
-            i < filtered.length;
-            i++
-        ){
-
-            let row =
-                filtered[i];
-
-            totalEntries++;
-
-            totalQuantity +=
-                Number(
-                    row.quantity || 0
-                );
-
-            totalValue +=
-                Number(
-                    row.totalCost || 0
-                );
-
-            addReportRow(
-                row
-            );
-
-        }
-
+    if (!head) {
+        return;
     }
 
 
-    // ==================================================
-    // CURRENT STOCK
-    // ==================================================
-
-    else if(
-        reportType === "currentStock"
-    ){
-
-        for(
-            let i = 0;
-            i < items.length;
-            i++
-        ){
-
-            let item =
-                items[i];
-
-
-            let code =
-                String(
-                    item.code ||
-                    item.item_code ||
-                    item.itemCode ||
-                    ""
-                ).trim();
-
-
-            if(
-                itemCode &&
-                code !== itemCode
-            ){
-
-                continue;
-
-            }
-
-
-            let departmentValue =
-                item.department ||
-                "";
-
-
-            if(
-                department &&
-                !String(
-                    departmentValue
-                ).toLowerCase()
-                .includes(
-                    department.toLowerCase()
-                )
-            ){
-
-                continue;
-
-            }
-
-
-            let currentStock =
-                calculateCurrentStock(
-                    code,
-                    item
-                );
-
-
-            let row = {
-
-                itemCode:
-                    code,
-
-                itemName:
-                    item.item_name ||
-                    item.itemName ||
-                    item.name ||
-                    "",
-
-                unit:
-                    item.unit ||
-                    "",
-
-                quantity:
-                    currentStock,
-
-                currentStock:
-                    currentStock,
-
-                minimumStock:
-                    item.minimum_stock ??
-                    item.minimumStock ??
-                    item.minimum_Stock ??
-                    0
-
-            };
-
-
-            totalEntries++;
-
-            totalQuantity +=
-                currentStock;
-
-
-            addCurrentStockRow(
-                row
-            );
-
-        }
-
-    }
-
-
-    // ==================================================
-    // COST
-    // ==================================================
-
-    else if(
-        reportType === "cost"
-    ){
-
-        for(
-            let i = 0;
-            i < items.length;
-            i++
-        ){
-
-            let item =
-                items[i];
-
-
-            let code =
-                String(
-                    item.code ||
-                    item.item_code ||
-                    item.itemCode ||
-                    ""
-                ).trim();
-
-
-            if(
-                itemCode &&
-                code !== itemCode
-            ){
-
-                continue;
-
-            }
-
-
-            let latestRate =
-                getLatestRate(
-                    code
-                );
-
-
-            let row = {
-
-                itemCode:
-                    code,
-
-                itemName:
-                    item.item_name ||
-                    item.itemName ||
-                    item.name ||
-                    "",
-
-                unit:
-                    item.unit ||
-                    "",
-
-                latestRate:
-                    latestRate
-
-            };
-
-
-            totalEntries++;
-
-            totalValue +=
-                Number(
-                    latestRate || 0
-                );
-
-
-            addCostRow(
-                row
-            );
-
-        }
-
-    }
-
-
-    // ==================================================
-    // MONTHLY DEMAND
-    // ==================================================
-
-    else if(
-        reportType === "demand"
-    ){
-
-        /*
-        ==================================================
-        IMPORTANT FIX
-        ==================================================
-
-        OLD CODE:
-
-        demands[] was used here.
-
-        That caused a problem because the demand report
-        was not using demand_month.
-
-        Example:
-
-        Demand Month  = 2026-06
-        Generate Date = 2026-09-11
-
-        OLD REPORT:
-        September
-
-        NEW REPORT:
-        June
-
-        We now read demand_history and use:
-
-        demand_month
-
-        as the actual demand month.
-        ==================================================
-        */
-
-
-        let demandData = {};
-
-
-        // ------------------------------------------------
-        // USE DEMAND HISTORY
-        // ------------------------------------------------
-
-        if(
-            demandHistory &&
-            demandHistory.length > 0
-        ){
-
-            for(
-                let i = 0;
-                i < demandHistory.length;
-                i++
-            ){
-
-                let record =
-                    demandHistory[i];
-
-
-                // ----------------------------------------
-                // GET ACTUAL DEMAND MONTH
-                // ----------------------------------------
-
-                let demandMonth =
-                    getDemandMonthKey(
-                        record
-                    );
-
-
-                if(
-                    !demandMonth
-                ){
-
-                    console.warn(
-                        "Demand record has no month:",
-                        record
-                    );
-
-                    continue;
-
-                }
-
-
-                // ----------------------------------------
-                // MONTH FILTER
-                // ----------------------------------------
-
-                if(
-                    !demandMonthMatchesRange(
-                        demandMonth,
-                        fromDate,
-                        toDate
+    head.innerHTML =
+        `<tr>
+            ${
+                columns
+                    .map(
+                        x =>
+                            `<th>${x}</th>`
                     )
-                ){
-
-                    continue;
-
-                }
-
-
-                // ----------------------------------------
-                // DEMAND ITEMS
-                // ----------------------------------------
-
-                let demandItems =
-                    getDemandItems(
-                        record
-                    );
-
-
-                for(
-                    let j = 0;
-                    j < demandItems.length;
-                    j++
-                ){
-
-                    let demandItem =
-                        demandItems[j];
-
-
-                    let code =
-                        getDemandItemCode(
-                            demandItem
-                        );
-
-
-                    if(!code){
-
-                        continue;
-
-                    }
-
-
-                    // ------------------------------------
-                    // ITEM FILTER
-                    // ------------------------------------
-
-                    if(
-                        itemCode &&
-                        code !== itemCode
-                    ){
-
-                        continue;
-
-                    }
-
-
-                    // ------------------------------------
-                    // CREATE RECORD
-                    // ------------------------------------
-
-                    if(
-                        !demandData[code]
-                    ){
-
-                        demandData[code] = {
-
-                            itemCode:
-                                code,
-
-                            itemName:
-                                getDemandItemName(
-                                    demandItem
-                                ),
-
-                            demand:
-                                0,
-
-                            pendingDemand:
-                                0,
-
-                            pendingPO:
-                                0
-
-                        };
-
-                    }
-
-
-                    // ------------------------------------
-                    // DEMAND
-                    // ------------------------------------
-
-                    demandData[code].demand +=
-                        getDemandQuantity(
-                            demandItem
-                        );
-
-
-                    // ------------------------------------
-                    // PENDING DEMAND
-                    // ------------------------------------
-
-                    demandData[code].pendingDemand +=
-                        getPendingDemand(
-                            demandItem
-                        );
-
-
-                    // ------------------------------------
-                    // PENDING PO
-                    // ------------------------------------
-
-                    demandData[code].pendingPO +=
-                        getPendingPO(
-                            demandItem
-                        );
-
-
-                    // ------------------------------------
-                    // ITEM NAME
-                    // ------------------------------------
-
-                    if(
-                        !demandData[code].itemName
-                    ){
-
-                        demandData[code].itemName =
-                            getDemandItemName(
-                                demandItem
-                            );
-
-                    }
-
-                }
-
+                    .join("")
             }
-
-
-        }
-
-
-        // ------------------------------------------------
-        // BACKWARD COMPATIBILITY
-        // ------------------------------------------------
-        // Only use old demands table if there is NO
-        // demand_history data at all.
-        // This prevents double counting.
-
-        else if(
-            demands &&
-            demands.length > 0
-        ){
-
-            for(
-                let i = 0;
-                i < demands.length;
-                i++
-            ){
-
-                let demand =
-                    demands[i];
-
-
-                let code =
-                    String(
-                        demand.item_code ||
-                        demand.itemCode ||
-                        demand.code ||
-                        ""
-                    ).trim();
-
-
-                if(!code){
-
-                    continue;
-
-                }
-
-
-                if(
-                    itemCode &&
-                    code !== itemCode
-                ){
-
-                    continue;
-
-                }
-
-
-                if(
-                    !demandData[code]
-                ){
-
-                    demandData[code] = {
-
-                        itemCode:
-                            code,
-
-                        itemName:
-                            demand.item_name ||
-                            demand.itemName ||
-                            demand.name ||
-                            "",
-
-                        demand:
-                            0,
-
-                        pendingDemand:
-                            0,
-
-                        pendingPO:
-                            0
-
-                    };
-
-                }
-
-
-                demandData[code].demand +=
-                    Number(
-                        demand.demand ??
-                        demand.finalDemand ??
-                        demand.final_demand ??
-                        demand.quantity ??
-                        0
-                    );
-
-
-                demandData[code].pendingDemand +=
-                    Number(
-                        demand.pendingDemand ??
-                        demand.pending_demand ??
-                        0
-                    );
-
-
-                demandData[code].pendingPO +=
-                    Number(
-                        demand.pendingPO ??
-                        demand.pending_po ??
-                        demand.po ??
-                        0
-                    );
-
-            }
-
-        }
-
-
-        // ------------------------------------------------
-        // ADD DEMAND ROWS
-        // ------------------------------------------------
-
-        for(
-            let code in demandData
-        ){
-
-            let record =
-                demandData[code];
-
-
-            totalEntries++;
-
-
-            totalQuantity +=
-                Number(
-                    record.demand || 0
-                );
-
-
-            addDemandRow(
-                record
-            );
-
-        }
-
-    }
-
-
-    // --------------------------------------------------
-    // UPDATE TOTALS
-    // --------------------------------------------------
-
-    updateReportTotals(
-        totalEntries,
-        totalQuantity,
-        totalValue
-    );
-
+        </tr>`;
 
 }
 
 
-// ======================================================
-// DATE MATCH
-// ======================================================
-
-function dateMatches(
-    dateValue,
-    fromDate,
-    toDate
-){
-
-    if(
-        !fromDate &&
-        !toDate
-    ){
-
-        return true;
-
-    }
-
-
-    if(!dateValue){
-
-        return false;
-
-    }
-
-
-    let date =
-        String(
-            dateValue
-        ).substring(
-            0,
-            10
-        );
-
-
-    if(
-        fromDate &&
-        date < fromDate
-    ){
-
-        return false;
-
-    }
-
-
-    if(
-        toDate &&
-        date > toDate
-    ){
-
-        return false;
-
-    }
-
-
-    return true;
-
-}
-
-
-// ======================================================
-// CURRENT STOCK CALCULATION
-// ======================================================
-
-function calculateCurrentStock(
-    code,
-    item
-){
-
-    let openingStock =
-        Number(
-            item.openingStock ??
-            item.opening_stock ??
-            item.opening_Stock ??
-            0
-        );
-
-
-    let stockIn = 0;
-    let stockOut = 0;
-
-
-    for(
-        let i = 0;
-        i < history.length;
-        i++
-    ){
-
-        let row =
-            history[i];
-
-
-        let rowCode =
-            String(
-                row.itemCode ||
-                ""
-            ).trim();
-
-
-        if(
-            rowCode !== code
-        ){
-
-            continue;
-
-        }
-
-
-        if(
-            row.type ===
-            "Stock In"
-        ){
-
-            stockIn +=
-                Number(
-                    row.quantity || 0
-                );
-
-        }
-
-
-        if(
-            row.type ===
-            "Stock Out"
-        ){
-
-            stockOut +=
-                Number(
-                    row.quantity || 0
-                );
-
-        }
-
-    }
-
-
-    return (
-        openingStock +
-        stockIn -
-        stockOut
-    );
-
-}
-
-
-// ======================================================
-// LATEST RATE
-// ======================================================
-
-function getLatestRate(
-    code
-){
-
-    let latestDate = "";
-    let latestRate = 0;
-
-
-    for(
-        let i = 0;
-        i < history.length;
-        i++
-    ){
-
-        let row =
-            history[i];
-
-
-        if(
-            row.type !==
-            "Stock In"
-        ){
-
-            continue;
-
-        }
-
-
-        let rowCode =
-            String(
-                row.itemCode ||
-                ""
-            ).trim();
-
-
-        if(
-            rowCode !== code
-        ){
-
-            continue;
-
-        }
-
-
-        let rowDate =
-            String(
-                row.date || ""
-            );
-
-
-        if(
-            rowDate >= latestDate
-        ){
-
-            latestDate =
-                rowDate;
-
-            latestRate =
-                Number(
-                    row.unitCost || 0
-                );
-
-        }
-
-    }
-
-
-    return latestRate;
-
-}
-
-
-// ======================================================
-// UPDATE REPORT HEADERS
-// ======================================================
-
-function updateReportHeaders(
-    reportType
-){
-
-    let header =
-        document.getElementById(
-            "reportTableHead"
-        );
-
-
-    if(!header){
-
-        return;
-
-    }
-
-
-    if(
-        reportType ===
-        "demand"
-    ){
-
-        header.innerHTML = `
-
-            <tr>
-
-                <th>Item Code</th>
-
-                <th>Item Name</th>
-
-                <th>Demand</th>
-
-                <th>Pending Demand</th>
-
-                <th>Pending PO</th>
-
-            </tr>
-
-        `;
-
-        return;
-
-    }
-
-
-    if(
-        reportType ===
-        "currentStock"
-    ){
-
-        header.innerHTML = `
-
-            <tr>
-
-                <th>Item Code</th>
-
-                <th>Item Name</th>
-
-                <th>Unit</th>
-
-                <th>Current Stock</th>
-
-                <th>Minimum Stock</th>
-
-            </tr>
-
-        `;
-
-        return;
-
-    }
-
-
-    if(
-        reportType ===
-        "cost"
-    ){
-
-        header.innerHTML = `
-
-            <tr>
-
-                <th>Item Code</th>
-
-                <th>Item Name</th>
-
-                <th>Unit</th>
-
-                <th>Latest Rate</th>
-
-            </tr>
-
-        `;
-
-        return;
-
-    }
-
-
-    // Default transaction report
-
-    header.innerHTML = `
-
-        <tr>
-
-            <th>Date</th>
-
-            <th>Item Code</th>
-
-            <th>Item Name</th>
-
-            <th>Type</th>
-
-            <th>Quantity</th>
-
-            <th>Unit Cost</th>
-
-            <th>Total Cost</th>
-
-        </tr>
-
-    `;
-
-}
-
-
-// ======================================================
-// ADD TRANSACTION ROW
-// ======================================================
-
-function addReportRow(
-    row
-){
+// ============================================================
+// ADD TABLE ROW
+// ============================================================
+
+function addRow(values) {
 
     let body =
         document.getElementById(
-            "reportTableBody"
+            "reportBody"
         );
 
 
-    if(!body){
-
+    if (!body) {
         return;
-
     }
 
 
     let tr =
-        document.createElement(
-            "tr"
-        );
+        document.createElement("tr");
 
 
-    tr.innerHTML = `
+    values.forEach(value => {
 
-        <td>
-            ${formatDate(row.date)}
-        </td>
-
-        <td>
-            ${escapeHtml(row.itemCode)}
-        </td>
-
-        <td>
-            ${escapeHtml(row.itemName)}
-        </td>
-
-        <td>
-            ${escapeHtml(row.type)}
-        </td>
-
-        <td>
-            ${formatNumber(row.quantity)}
-        </td>
-
-        <td>
-            ${formatNumber(row.unitCost)}
-        </td>
-
-        <td>
-            ${formatNumber(row.totalCost)}
-        </td>
-
-    `;
+        let td =
+            document.createElement("td");
 
 
-    body.appendChild(
-        tr
-    );
+        td.textContent =
+            value === undefined ||
+            value === null ||
+            value === ""
+                ? "-"
+                : value;
+
+
+        tr.appendChild(td);
+
+    });
+
+
+    body.appendChild(tr);
 
 }
 
 
-// ======================================================
-// ADD DEMAND ROW
-// ======================================================
+// ============================================================
+// SUMMARY RESET
+// ============================================================
 
-function addDemandRow(
-    record
-){
+function resetSummary() {
 
-    let body =
-        document.getElementById(
-            "reportTableBody"
-        );
-
-
-    if(!body){
-
-        return;
-
-    }
-
-
-    let tr =
-        document.createElement(
-            "tr"
-        );
-
-
-    tr.innerHTML = `
-
-        <td>
-            ${escapeHtml(
-                record.itemCode
-            )}
-        </td>
-
-        <td>
-            ${escapeHtml(
-                record.itemName
-            )}
-        </td>
-
-        <td>
-            ${formatNumber(
-                record.demand
-            )}
-        </td>
-
-        <td>
-            ${formatNumber(
-                record.pendingDemand
-            )}
-        </td>
-
-        <td>
-            ${formatNumber(
-                record.pendingPO
-            )}
-        </td>
-
-    `;
-
-
-    body.appendChild(
-        tr
-    );
-
-}
-
-
-// ======================================================
-// ADD CURRENT STOCK ROW
-// ======================================================
-
-function addCurrentStockRow(
-    row
-){
-
-    let body =
-        document.getElementById(
-            "reportTableBody"
-        );
-
-
-    if(!body){
-
-        return;
-
-    }
-
-
-    let tr =
-        document.createElement(
-            "tr"
-        );
-
-
-    tr.innerHTML = `
-
-        <td>
-            ${escapeHtml(
-                row.itemCode
-            )}
-        </td>
-
-        <td>
-            ${escapeHtml(
-                row.itemName
-            )}
-        </td>
-
-        <td>
-            ${escapeHtml(
-                row.unit
-            )}
-        </td>
-
-        <td>
-            ${formatNumber(
-                row.currentStock
-            )}
-        </td>
-
-        <td>
-            ${formatNumber(
-                row.minimumStock
-            )}
-        </td>
-
-    `;
-
-
-    body.appendChild(
-        tr
-    );
-
-}
-
-
-// ======================================================
-// ADD COST ROW
-// ======================================================
-
-function addCostRow(
-    row
-){
-
-    let body =
-        document.getElementById(
-            "reportTableBody"
-        );
-
-
-    if(!body){
-
-        return;
-
-    }
-
-
-    let tr =
-        document.createElement(
-            "tr"
-        );
-
-
-    tr.innerHTML = `
-
-        <td>
-            ${escapeHtml(
-                row.itemCode
-            )}
-        </td>
-
-        <td>
-            ${escapeHtml(
-                row.itemName
-            )}
-        </td>
-
-        <td>
-            ${escapeHtml(
-                row.unit
-            )}
-        </td>
-
-        <td>
-            ${formatNumber(
-                row.latestRate
-            )}
-        </td>
-
-    `;
-
-
-    body.appendChild(
-        tr
-    );
-
-}
-
-
-// ======================================================
-// UPDATE TOTALS
-// ======================================================
-
-function updateReportTotals(
-    entries,
-    quantity,
-    value
-){
-
-    let entriesElement =
+    let entries =
         document.getElementById(
             "totalEntries"
         );
 
-
-    let quantityElement =
+    let quantity =
         document.getElementById(
-            "totalQuantity"
+            "reportQuantity"
+        );
+
+    let cost =
+        document.getElementById(
+            "reportCost"
         );
 
 
-    let valueElement =
-        document.getElementById(
-            "totalValue"
-        );
-
-
-    if(entriesElement){
-
-        entriesElement.textContent =
-            entries;
-
+    if (entries) {
+        entries.innerHTML = "0";
     }
 
 
-    if(quantityElement){
-
-        quantityElement.textContent =
-            formatNumber(
-                quantity
-            );
-
+    if (quantity) {
+        quantity.innerHTML = "0";
     }
 
 
-    if(valueElement){
-
-        valueElement.textContent =
-            formatNumber(
-                value
-            );
-
+    if (cost) {
+        cost.innerHTML = "0";
     }
 
 }
 
 
-// ======================================================
-// FORMAT NUMBER
-// ======================================================
+// ============================================================
+// GENERATE REPORT
+// ============================================================
 
-function formatNumber(
-    value
-){
-
-    let number =
-        Number(value);
-
-
-    if(
-        isNaN(number)
-    ){
-
-        number = 0;
-
-    }
-
-
-    return number.toLocaleString(
-        "en-US",
-        {
-            maximumFractionDigits: 2
-        }
-    );
-
-}
-
-
-// ======================================================
-// FORMAT DATE
-// ======================================================
-
-function formatDate(
-    value
-){
-
-    if(!value){
-
-        return "";
-
-    }
-
-
-    let date =
-        new Date(value);
-
-
-    if(
-        isNaN(
-            date.getTime()
-        )
-    ){
-
-        return String(value);
-
-    }
-
-
-    return (
-        String(
-            date.getDate()
-        ).padStart(
-            2,
-            "0"
-        ) +
-        "-" +
-        String(
-            date.getMonth() + 1
-        ).padStart(
-            2,
-            "0"
-        ) +
-        "-" +
-        date.getFullYear()
-    );
-
-}
-
-
-// ======================================================
-// ESCAPE HTML
-// ======================================================
-
-function escapeHtml(
-value
-){
-
-    if(
-        value === null ||
-        value === undefined
-    ){
-
-        return "";
-
-    }
-
-
-    return String(value)
-        .replace(
-            /&/g,
-            "&amp;"
-        )
-        .replace(
-            /</g,
-            "&lt;"
-        )
-        .replace(
-            />/g,
-            "&gt;"
-        )
-        .replace(
-            /"/g,
-            "&quot;"
-        )
-        .replace(
-            /'/g,
-            "&#039;"
-        );
-
-}
-
-
-// ======================================================
-// CLEAR REPORT
-// ======================================================
-
-function clearReport(){
-
-    let fromDate =
-        document.getElementById(
-            "fromDate"
-        );
-
-    let toDate =
-        document.getElementById(
-            "toDate"
-        );
-
-    let itemCode =
-        document.getElementById(
-            "itemCode"
-        );
-
-    let department =
-        document.getElementById(
-            "department"
-        );
+function generateReport() {
 
     let reportType =
         document.getElementById(
@@ -2580,222 +764,1533 @@ function clearReport(){
         );
 
 
-    if(fromDate){
-
-        fromDate.value = "";
-
+    if (!reportType) {
+        return;
     }
 
 
-    if(toDate){
-
-        toDate.value = "";
-
-    }
+    let type =
+        reportType.value;
 
 
-    if(itemCode){
-
-        itemCode.value = "";
-
-    }
-
-
-    if(department){
-
-        department.value = "";
-
-    }
+    let fromDate =
+        document.getElementById(
+            "fromDate"
+        )?.value || "";
 
 
-    if(reportType){
+    let toDate =
+        document.getElementById(
+            "toDate"
+        )?.value || "";
 
-        reportType.value = "";
 
-    }
+    let itemCode =
+        document.getElementById(
+            "itemCode"
+        )?.value.trim() || "";
+
+
+    let department =
+        document.getElementById(
+            "department"
+        )?.value || "";
 
 
     let body =
         document.getElementById(
-            "reportTableBody"
+            "reportBody"
         );
 
 
-    if(body){
-
+    if (body) {
         body.innerHTML = "";
-
     }
 
 
-    updateReportTotals(
-        0,
-        0,
+    resetSummary();
+
+
+    if (type === "stockIn") {
+
+        stockInReport(
+            fromDate,
+            toDate,
+            itemCode,
+            department
+        );
+
+        return;
+    }
+
+
+    if (type === "stockOut") {
+
+        stockOutReport(
+            fromDate,
+            toDate,
+            itemCode,
+            department
+        );
+
+        return;
+    }
+
+
+    if (type === "currentStock") {
+
+        currentStockReport(
+            itemCode
+        );
+
+        return;
+    }
+
+
+    if (type === "cost") {
+
+        costReport(
+            itemCode
+        );
+
+        return;
+    }
+
+
+    if (type === "monthlyDemand") {
+
+        monthlyDemandReport(
+            fromDate,
+            toDate,
+            itemCode
+        );
+
+        return;
+    }
+
+
+    allTransactionsReport(
+        fromDate,
+        toDate,
+        itemCode,
+        department
+    );
+
+}
+
+
+// ============================================================
+// FILTER HISTORY
+// ============================================================
+
+function filteredHistory(
+    type,
+    fromDate,
+    toDate,
+    itemCode,
+    department
+) {
+
+    return history.filter(record => {
+
+        let recordType =
+            String(
+                val(
+                    record,
+                    ["type"],
+                    ""
+                )
+            ).toLowerCase();
+
+
+        if (
+            type === "stockIn" &&
+            ![
+                "stock in",
+                "stockin"
+            ].includes(recordType)
+        ) {
+
+            return false;
+        }
+
+
+        if (
+            type === "stockOut" &&
+            ![
+                "stock issue",
+                "stock out",
+                "stockout"
+            ].includes(recordType)
+        ) {
+
+            return false;
+        }
+
+
+        let date =
+            getRecordDate(record);
+
+
+        if (
+            fromDate &&
+            date &&
+            date < fromDate
+        ) {
+
+            return false;
+        }
+
+
+        if (
+            toDate &&
+            date &&
+            date > toDate
+        ) {
+
+            return false;
+        }
+
+
+        if (
+            itemCode &&
+            getItemCode(record) !==
+                itemCode
+        ) {
+
+            return false;
+        }
+
+
+        if (
+            department &&
+            String(
+                val(
+                    record,
+                    ["department"],
+                    ""
+                )
+            ).trim() !==
+                department
+        ) {
+
+            return false;
+        }
+
+
+        return true;
+
+    });
+
+}
+
+
+// ============================================================
+// STOCK IN REPORT
+// ============================================================
+
+function stockInReport(
+    fromDate,
+    toDate,
+    itemCode,
+    department
+) {
+
+    setTitles(
+        "Stock In Report"
+    );
+
+
+    setHead(
+        [
+            "Item Code",
+            "Item Name",
+            "Date",
+            "Quantity",
+            "Unit Cost",
+            "Total Cost"
+        ]
+    );
+
+
+    let rows =
+        filteredHistory(
+            "stockIn",
+            fromDate,
+            toDate,
+            itemCode,
+            department
+        );
+
+
+    let quantity = 0;
+    let cost = 0;
+
+
+    rows.forEach(record => {
+
+        let q =
+            num(
+                val(
+                    record,
+                    [
+                        "quantity",
+                        "qty"
+                    ],
+                    0
+                )
+            );
+
+
+        let c =
+            num(
+                val(
+                    record,
+                    [
+                        "totalCost",
+                        "total_cost"
+                    ],
+                    0
+                )
+            );
+
+
+        quantity += q;
+        cost += c;
+
+
+        addRow(
+            [
+                getItemCode(record),
+                getItemName(record),
+                getRecordDate(record),
+                q,
+                val(
+                    record,
+                    [
+                        "unitCost",
+                        "unit_cost"
+                    ],
+                    0
+                ),
+                c || "-"
+            ]
+        );
+
+    });
+
+
+    showSummary(
+        rows.length,
+        quantity,
+        cost
+    );
+
+}
+
+
+// ============================================================
+// STOCK OUT REPORT
+// ============================================================
+
+function stockOutReport(
+    fromDate,
+    toDate,
+    itemCode,
+    department
+) {
+
+    setTitles(
+        "Stock Out Report"
+    );
+
+
+    setHead(
+        [
+            "Item Code",
+            "Item Name",
+            "Department",
+            "Date",
+            "Quantity"
+        ]
+    );
+
+
+    let rows =
+        filteredHistory(
+            "stockOut",
+            fromDate,
+            toDate,
+            itemCode,
+            department
+        );
+
+
+    let quantity = 0;
+
+
+    rows.forEach(record => {
+
+        let q =
+            num(
+                val(
+                    record,
+                    [
+                        "quantity",
+                        "qty"
+                    ],
+                    0
+                )
+            );
+
+
+        quantity += q;
+
+
+        addRow(
+            [
+                getItemCode(record),
+                getItemName(record),
+                val(
+                    record,
+                    ["department"],
+                    ""
+                ),
+                getRecordDate(record),
+                q
+            ]
+        );
+
+    });
+
+
+    showSummary(
+        rows.length,
+        quantity,
         0
     );
 
 }
 
 
-// ======================================================
-// EXPORT TO EXCEL
-// ======================================================
+// ============================================================
+// CURRENT STOCK REPORT
+// ============================================================
 
-function exportReportToExcel(){
+function currentStockReport(
+    itemCode
+) {
 
-    let table =
-        document.getElementById(
-            "reportTable"
-        );
-
-
-    if(!table){
-
-        alert(
-            "Report table نہیں ملی۔"
-        );
-
-        return;
-
-    }
+    setTitles(
+        "Current Stock Report"
+    );
 
 
-    if(
-        typeof XLSX ===
-        "undefined"
-    ){
-
-        alert(
-            "Excel library load نہیں ہوئی۔"
-        );
-
-        return;
-
-    }
+    setHead(
+        [
+            "Item Code",
+            "Item Name",
+            "Unit",
+            "Current Stock",
+            "Minimum Stock",
+            "Low Stock Status"
+        ]
+    );
 
 
-    let workbook =
-        XLSX.utils.table_to_book(
-            table,
-            {
-                sheet:
-                    "Report"
+    let rows =
+        items.filter(item => {
+
+            if (!itemCode) {
+                return true;
             }
+
+
+            return String(
+                val(
+                    item,
+                    [
+                        "code",
+                        "itemCode",
+                        "item_code",
+                        "id"
+                    ],
+                    ""
+                )
+            ).trim() === itemCode;
+
+        });
+
+
+    let totalStock = 0;
+
+
+    rows.forEach(item => {
+
+        let stock =
+            currentStock(item);
+
+
+        let minimum =
+            num(
+                val(
+                    item,
+                    [
+                        "minimumStock",
+                        "minimum_stock",
+                        "minimum_Stock",
+                        "minStock"
+                    ],
+                    0
+                )
+            );
+
+
+        totalStock += stock;
+
+
+        addRow(
+            [
+                val(
+                    item,
+                    [
+                        "code",
+                        "itemCode",
+                        "item_code",
+                        "id"
+                    ],
+                    ""
+                ),
+                getItemName(item),
+                val(
+                    item,
+                    ["unit"],
+                    ""
+                ),
+                stock,
+                minimum,
+                stock <= minimum
+                    ? "LOW STOCK"
+                    : "OK"
+            ]
         );
 
+    });
 
-    XLSX.writeFile(
-        workbook,
-        "Inventory_Report.xlsx"
+
+    showSummary(
+        rows.length,
+        totalStock,
+        0
     );
 
 }
 
 
-// ======================================================
-// PRINT REPORT
-// ======================================================
+// ============================================================
+// COST REPORT
+// ============================================================
 
-function printReport(){
+function costReport(
+    itemCode
+) {
 
-    window.print();
+    setTitles(
+        "Cost Report"
+    );
+
+
+    setHead(
+        [
+            "Item Code",
+            "Item Name",
+            "Total Stock In Quantity",
+            "Total Cost",
+            "Average Unit Cost"
+        ]
+    );
+
+
+    let map = {};
+
+
+    let rows =
+        filteredHistory(
+            "stockIn",
+            "",
+            "",
+            itemCode,
+            ""
+        );
+
+
+    rows.forEach(record => {
+
+        let code =
+            getItemCode(record);
+
+
+        if (!map[code]) {
+
+            map[code] = {
+
+                name:
+                    getItemName(record),
+
+                quantity: 0,
+
+                cost: 0
+
+            };
+
+        }
+
+
+        map[code].quantity +=
+            num(
+                val(
+                    record,
+                    [
+                        "quantity",
+                        "qty"
+                    ],
+                    0
+                )
+            );
+
+
+        map[code].cost +=
+            num(
+                val(
+                    record,
+                    [
+                        "totalCost",
+                        "total_cost"
+                    ],
+                    0
+                )
+            );
+
+    });
+
+
+    let totalCost = 0;
+    let totalQuantity = 0;
+
+
+    Object.keys(map).forEach(code => {
+
+        let x =
+            map[code];
+
+
+        totalCost +=
+            x.cost;
+
+
+        totalQuantity +=
+            x.quantity;
+
+
+        addRow(
+            [
+                code,
+                x.name,
+                x.quantity,
+                x.cost,
+                x.quantity
+                    ? (
+                        x.cost /
+                        x.quantity
+                    ).toFixed(2)
+                    : "0"
+            ]
+        );
+
+    });
+
+
+    addRow(
+        [
+            "",
+            "OVERALL TOTAL",
+            totalQuantity,
+            totalCost,
+            totalQuantity
+                ? (
+                    totalCost /
+                    totalQuantity
+                ).toFixed(2)
+                : "0"
+        ]
+    );
+
+
+    showSummary(
+        Object.keys(map).length,
+        totalQuantity,
+        totalCost
+    );
 
 }
 
 
-// ======================================================
-// DELETE TRANSACTION
-// ======================================================
+// ============================================================
+// MONTHLY DEMAND REPORT
+// ============================================================
+// IMPORTANT:
+//
+// Demand is grouped by:
+//     demand_month
+//
+// NOT:
+//     generate_date
+//
+// Example:
+//
+// demand_month  = 2026-06
+// generate_date = 2026-09-11
+//
+// Result:
+// June Demand
+// ============================================================
 
-async function deleteTransaction(
-    index
-){
+function monthlyDemandReport(
+    fromDate,
+    toDate,
+    itemCode
+) {
 
-    if(
-        index < 0 ||
-        index >= history.length
-    ){
+    setTitles(
+        "Monthly Demand Report"
+    );
 
-        return;
+
+    setHead(
+        [
+            "Item Code",
+            "Item Name",
+            "Demand",
+            "Pending Demand",
+            "Pending PO"
+        ]
+    );
+
+
+    let map = {};
+
+
+    // --------------------------------------------------------
+    // Convert selected date range to month range
+    // --------------------------------------------------------
+
+    let fromMonth = "";
+
+
+    let toMonth = "";
+
+
+    if (fromDate) {
+
+        fromMonth =
+            fromDate.substring(0, 7);
 
     }
 
 
-    let row =
-        history[index];
+    if (toDate) {
 
-
-    if(!row){
-
-        return;
+        toMonth =
+            toDate.substring(0, 7);
 
     }
 
 
-    let confirmed =
-        confirm(
-            "کیا آپ واقعی یہ transaction delete کرنا چاہتے ہیں؟"
-        );
+    // --------------------------------------------------------
+    // Read demand_history
+    // --------------------------------------------------------
+
+    demandHistory.forEach(record => {
+
+        // ====================================================
+        // CRITICAL:
+        // Use demand_month.
+        // Do NOT use generate_date here.
+        // ====================================================
+
+        let demandMonth =
+            getDemandMonth(record);
 
 
-    if(!confirmed){
-
-        return;
-
-    }
-
-
-    try{
-
-        let table =
-            row.sourceTable;
-
-
-        if(!table){
-
-            alert(
-                "Original table معلوم نہیں ہو سکی۔"
-            );
+        if (!demandMonth) {
 
             return;
 
         }
 
 
-        await reportSupabaseRequest(
-            table,
-            {
-                method:
-                    "DELETE",
+        // ----------------------------------------------------
+        // Date range filtering
+        // ----------------------------------------------------
 
-                query:
-                    "?id=eq." +
-                    encodeURIComponent(
-                        row.id
-                    )
+        if (
+            fromMonth &&
+            demandMonth < fromMonth
+        ) {
+
+            return;
+
+        }
+
+
+        if (
+            toMonth &&
+            demandMonth > toMonth
+        ) {
+
+            return;
+
+        }
+
+
+        // ----------------------------------------------------
+        // Get nested demand items
+        // ----------------------------------------------------
+
+        let demandItems =
+            getDemandItems(record);
+
+
+        if (
+            !Array.isArray(
+                demandItems
+            )
+        ) {
+
+            return;
+
+        }
+
+
+        // ----------------------------------------------------
+        // Process each item
+        // ----------------------------------------------------
+
+        demandItems.forEach(item => {
+
+            let code =
+                getDemandItemCode(item);
+
+
+            if (!code) {
+                return;
+            }
+
+
+            // ------------------------------------------------
+            // Item filter
+            // ------------------------------------------------
+
+            if (
+                itemCode &&
+                code !== itemCode
+            ) {
+
+                return;
+
+            }
+
+
+            if (!map[code]) {
+
+                map[code] = {
+
+                    name:
+                        getDemandItemName(item),
+
+                    demand: 0,
+
+                    pending: 0,
+
+                    po: 0
+
+                };
+
+            }
+
+
+            // ------------------------------------------------
+            // Demand
+            // ------------------------------------------------
+
+            map[code].demand +=
+                getDemandQuantity(item);
+
+
+            // ------------------------------------------------
+            // Pending Demand
+            // ------------------------------------------------
+
+            map[code].pending +=
+                getPendingDemand(item);
+
+
+            // ------------------------------------------------
+            // Pending PO
+            // ------------------------------------------------
+
+            map[code].po +=
+                getPendingPO(item);
+
+        });
+
+    });
+
+
+    // --------------------------------------------------------
+    // Display
+    // --------------------------------------------------------
+
+    let totalDemand = 0;
+
+
+    let codes =
+        Object.keys(map);
+
+
+    codes.forEach(code => {
+
+        let x =
+            map[code];
+
+
+        totalDemand +=
+            x.demand;
+
+
+        addRow(
+            [
+                code,
+                x.name,
+                x.demand,
+                x.pending,
+                x.po
+            ]
+        );
+
+    });
+
+
+    showSummary(
+        codes.length,
+        totalDemand,
+        0
+    );
+
+}
+
+
+// ============================================================
+// ALL TRANSACTIONS REPORT
+// ============================================================
+
+function allTransactionsReport(
+    fromDate,
+    toDate,
+    itemCode,
+    department
+) {
+
+    setTitles(
+        "All Transactions Report"
+    );
+
+
+    setHead(
+        [
+            "Date",
+            "Time",
+            "Type",
+            "Item Code",
+            "Item Name",
+            "Department",
+            "Quantity",
+            "Unit Cost",
+            "Total Cost"
+        ]
+    );
+
+
+    let rows =
+        filteredHistory(
+            "all",
+            fromDate,
+            toDate,
+            itemCode,
+            department
+        );
+
+
+    let quantity = 0;
+    let cost = 0;
+
+
+    rows.forEach(record => {
+
+        let q =
+            num(
+                val(
+                    record,
+                    [
+                        "quantity",
+                        "qty"
+                    ],
+                    0
+                )
+            );
+
+
+        let c =
+            num(
+                val(
+                    record,
+                    [
+                        "totalCost",
+                        "total_cost"
+                    ],
+                    0
+                )
+            );
+
+
+        quantity += q;
+        cost += c;
+
+
+        addRow(
+            [
+                getRecordDate(record),
+
+                val(
+                    record,
+                    [
+                        "time",
+                        "transactionTime",
+                        "transaction_time"
+                    ],
+                    ""
+                ),
+
+                val(
+                    record,
+                    ["type"],
+                    ""
+                ),
+
+                getItemCode(record),
+
+                getItemName(record),
+
+                val(
+                    record,
+                    ["department"],
+                    ""
+                ),
+
+                q,
+
+                val(
+                    record,
+                    [
+                        "unitCost",
+                        "unit_cost"
+                    ],
+                    0
+                ),
+
+                c || "-"
+            ]
+        );
+
+    });
+
+
+    showSummary(
+        rows.length,
+        quantity,
+        cost
+    );
+
+}
+
+
+// ============================================================
+// SHOW SUMMARY
+// ============================================================
+
+function showSummary(
+    entries,
+    quantity,
+    cost
+) {
+
+    let totalEntries =
+        document.getElementById(
+            "totalEntries"
+        );
+
+
+    let reportQuantity =
+        document.getElementById(
+            "reportQuantity"
+        );
+
+
+    let reportCost =
+        document.getElementById(
+            "reportCost"
+        );
+
+
+    if (totalEntries) {
+
+        totalEntries.innerHTML =
+            entries;
+
+    }
+
+
+    if (reportQuantity) {
+
+        reportQuantity.innerHTML =
+            quantity;
+
+    }
+
+
+    if (reportCost) {
+
+        reportCost.innerHTML =
+            cost;
+
+    }
+
+}
+
+
+// ============================================================
+// SUPABASE LOAD
+// ============================================================
+
+async function loadReportsFromSupabase() {
+
+    console.log(
+        "====================================="
+    );
+
+
+    console.log(
+        "REPORTS: Loading Supabase data..."
+    );
+
+
+    console.log(
+        "====================================="
+    );
+
+
+    try {
+
+        // ----------------------------------------------------
+        // Check Supabase function
+        // ----------------------------------------------------
+
+        if (
+            typeof supabaseRequest !==
+            "function"
+        ) {
+
+            throw new Error(
+                "supabaseRequest() is not available. " +
+                "Make sure supabase.js is loaded before Reports.js."
+            );
+
+        }
+
+
+        // ====================================================
+        // ITEMS
+        // ====================================================
+
+        let itemsResult =
+            await supabaseRequest(
+                "items",
+                "GET",
+                null,
+                "?select=*"
+            );
+
+
+        if (itemsResult?.success) {
+
+            items =
+                itemsResult.data || [];
+
+        }
+        else {
+
+            items = [];
+
+
+            console.error(
+                "Items Load Error:",
+                itemsResult?.error
+            );
+
+        }
+
+
+        // ====================================================
+        // STOCK IN
+        // ====================================================
+
+        let stockInResult =
+            await supabaseRequest(
+                "stock_in",
+                "GET",
+                null,
+                "?select=*"
+            );
+
+
+        // ====================================================
+        // STOCK ISSUE
+        // ====================================================
+
+        let stockOutResult =
+            await supabaseRequest(
+                "stock_issue",
+                "GET",
+                null,
+                "?select=*"
+            );
+
+
+        // ====================================================
+        // BUILD COMMON HISTORY ARRAY
+        // ====================================================
+
+        history = [];
+
+
+        // ----------------------------------------------------
+        // Stock In
+        // ----------------------------------------------------
+
+        if (
+            stockInResult?.success
+        ) {
+
+            let data =
+                stockInResult.data || [];
+
+
+            data.forEach(record => {
+
+                history.push({
+
+                    id:
+                        record.id,
+
+                    date:
+                        record.date,
+
+                    time:
+                        record.time,
+
+                    itemCode:
+                        record.item_code ??
+                        record.itemCode ??
+                        record.code,
+
+                    itemName:
+                        record.item_name ??
+                        record.itemName,
+
+                    unit:
+                        record.unit,
+
+                    source:
+                        record.source,
+
+                    supplier:
+                        record.supplier,
+
+                    location:
+                        record.location,
+
+                    department:
+                        record.department,
+
+                    quantity:
+                        num(
+                            record.quantity
+                        ),
+
+                    unitCost:
+                        num(
+                            record.unit_cost ??
+                            record.unitCost ??
+                            record.latest_rate ??
+                            record.rate
+                        ),
+
+                    totalCost:
+                        num(
+                            record.total_cost ??
+                            record.totalCost
+                        ),
+
+                    type:
+                        "Stock In"
+
+                });
+
+            });
+
+        }
+        else {
+
+            console.error(
+                "Stock In Load Error:",
+                stockInResult?.error
+            );
+
+        }
+
+
+        // ----------------------------------------------------
+        // Stock Issue
+        // ----------------------------------------------------
+
+        if (
+            stockOutResult?.success
+        ) {
+
+            let data =
+                stockOutResult.data || [];
+
+
+            data.forEach(record => {
+
+                history.push({
+
+                    id:
+                        record.id,
+
+                    date:
+                        record.date,
+
+                    time:
+                        record.time,
+
+                    itemCode:
+                        record.item_code ??
+                        record.itemCode ??
+                        record.code,
+
+                    itemName:
+                        record.item_name ??
+                        record.itemName,
+
+                    unit:
+                        record.unit,
+
+                    source:
+                        record.source,
+
+                    supplier:
+                        record.supplier,
+
+                    location:
+                        record.location,
+
+                    department:
+                        record.department,
+
+                    quantity:
+                        num(
+                            record.quantity
+                        ),
+
+                    unitCost:
+                        0,
+
+                    totalCost:
+                        0,
+
+                    type:
+                        "Stock Issue"
+
+                });
+
+            });
+
+        }
+        else {
+
+            console.error(
+                "Stock Issue Load Error:",
+                stockOutResult?.error
+            );
+
+        }
+
+
+        // ====================================================
+        // DEMAND HISTORY
+        // ====================================================
+
+        let demandResult =
+            await supabaseRequest(
+                "demand_history",
+                "GET",
+                null,
+                "?select=*"
+            );
+
+
+        if (
+            demandResult?.success
+        ) {
+
+            demandHistory =
+                demandResult.data || [];
+
+        }
+        else {
+
+            demandHistory = [];
+
+
+            console.error(
+                "Demand History Load Error:",
+                demandResult?.error
+            );
+
+        }
+
+
+        // ====================================================
+        // DEBUG INFORMATION
+        // ====================================================
+
+        console.log(
+            "Reports Supabase Items:",
+            items.length
+        );
+
+
+        console.log(
+            "Reports Stock In:",
+            history.filter(
+                x =>
+                    x.type ===
+                    "Stock In"
+            ).length
+        );
+
+
+        console.log(
+            "Reports Stock Issue:",
+            history.filter(
+                x =>
+                    x.type ===
+                    "Stock Issue"
+            ).length
+        );
+
+
+        console.log(
+            "Reports Demand History:",
+            demandHistory.length
+        );
+
+
+        // ----------------------------------------------------
+        // Show demand months in console
+        // ----------------------------------------------------
+
+        demandHistory.forEach(
+            record => {
+
+                console.log(
+                    "Demand Record:",
+                    {
+                        id:
+                            record.id,
+
+                        demand_no:
+                            record.demand_no,
+
+                        demand_month:
+                            record.demand_month,
+
+                        generate_date:
+                            record.generate_date,
+
+                        items:
+                            getDemandItems(
+                                record
+                            ).length
+                    }
+                );
+
             }
         );
 
 
-        alert(
-            "Transaction delete ہو گئی۔"
+        console.log(
+            "====================================="
         );
 
 
-        await loadReportData();
+        console.log(
+            "REPORTS: Supabase data loaded."
+        );
 
-        generateReport();
+
+        console.log(
+            "=====================================");
 
 
-    }catch(error){
+        // ====================================================
+        // DEFAULT REPORT
+        // ====================================================
+
+        reportTypeChanged();
+
+
+        setTitles(
+            "Stock In Report"
+        );
+
+
+    }
+    catch (error) {
 
         console.error(
-            "Delete error:",
+            "Reports Supabase Load Error:",
             error
         );
 
+
         alert(
-            "Transaction delete نہیں ہو سکی۔"
+            "Reports data load error.\n\n" +
+            (
+                error.message ||
+                error
+            )
         );
 
     }
@@ -2803,25 +2298,128 @@ async function deleteTransaction(
 }
 
 
-// ======================================================
-// OPTIONAL REPORT TYPE CHANGE
-// ======================================================
+// ============================================================
+// CLEAR REPORT
+// ============================================================
 
-function onReportTypeChange(){
+function clearReport() {
 
     let reportType =
         document.getElementById(
             "reportType"
-        )?.value || "";
+        );
 
 
-    updateReportHeaders(
-        reportType
+    let fromDate =
+        document.getElementById(
+            "fromDate"
+        );
+
+
+    let toDate =
+        document.getElementById(
+            "toDate"
+        );
+
+
+    let itemCode =
+        document.getElementById(
+            "itemCode"
+        );
+
+
+    let department =
+        document.getElementById(
+            "department"
+        );
+
+
+    let body =
+        document.getElementById(
+            "reportBody"
+        );
+
+
+    let head =
+        document.getElementById(
+            "reportHead"
+        );
+
+
+    if (reportType) {
+        reportType.value =
+            "stockIn";
+    }
+
+
+    if (fromDate) {
+        fromDate.value = "";
+    }
+
+
+    if (toDate) {
+        toDate.value = "";
+    }
+
+
+    if (itemCode) {
+        itemCode.value = "";
+    }
+
+
+    if (department) {
+        department.value = "";
+    }
+
+
+    if (body) {
+        body.innerHTML = "";
+    }
+
+
+    if (head) {
+        head.innerHTML = "";
+    }
+
+
+    resetSummary();
+
+
+    reportTypeChanged();
+
+
+    setTitles(
+        "Stock In Report"
     );
 
 }
 
 
-// ======================================================
-// END
-// ======================================================
+// ============================================================
+// PRINT REPORT
+// ============================================================
+
+function printReport() {
+
+    window.print();
+
+}
+
+
+// ============================================================
+// PAGE LOAD
+// ============================================================
+
+window.addEventListener(
+    "load",
+    async function () {
+
+        console.log(
+            "Reports page loaded."
+        );
+
+
+        await loadReportsFromSupabase();
+
+    }
+);
