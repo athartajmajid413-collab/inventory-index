@@ -1853,7 +1853,23 @@ function generateDemand(){
         return;
 
     }
+let demandDate =
+    document.getElementById(
+        "demandDate"
+    ).value;
 
+
+if(
+    demandDate === ""
+){
+
+    alert(
+        "Please select Demand Date!"
+    );
+
+    return;
+
+}
 
     let confirmGenerate =
         confirm(
@@ -2020,7 +2036,23 @@ async function saveGeneratedDemand(){
         return;
 
     }
+let demandDate =
+    document.getElementById(
+        "demandDate"
+    ).value;
 
+
+if(
+    demandDate === ""
+){
+
+    alert(
+        "Please select Demand Date!"
+    );
+
+    return;
+
+}
 
     // =================================================
     // DEMAND NUMBER
@@ -2030,45 +2062,46 @@ async function saveGeneratedDemand(){
         "DEM-" +
         Date.now();
 
-
-    let today =
-        new Date();
-
-
-    let generateDate =
-        today
-        .toISOString()
-        .split("T")[0];
+let generateDate =
+    new Date()
+    .toISOString()
+    .split("T")[0];
 
 
     // =================================================
     // DEMAND RECORD
     // =================================================
 
-    let demandRecord = {
+   let demandRecord = {
 
-        demand_no:
-            demandNumber,
+    demand_no:
+        demandNumber,
 
-        demand_month:
-            demandMonth,
+    // User selected date
+    demand_date:
+        demandDate,
 
-        generate_date:
-            generateDate,
+    // Demand for which month
+    demand_month:
+        demandMonth,
 
-        date:
-            generateDate,
+    // Actual system generation date
+    generate_date:
+        generateDate,
 
-        items:
-            selectedItems,
+    date:
+        generateDate,
 
-        demand_items:
-            selectedItems,
+    items:
+        selectedItems,
 
-        status:
-            "Generated"
+    demand_items:
+        selectedItems,
 
-    };
+    status:
+        "Generated"
+
+};
 
 
     console.log(
