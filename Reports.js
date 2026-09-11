@@ -1874,7 +1874,6 @@ function monthlyDemandReport(
     itemCode
 ) {
 
-
     // ---------------------------------
     // TITLE
     // ---------------------------------
@@ -1897,6 +1896,10 @@ function monthlyDemandReport(
 
         "Demand",
 
+        "Received Demand",
+
+        "Demand vs Received",
+
         "Pending Demand",
 
         "Pending PO"
@@ -1907,30 +1910,17 @@ function monthlyDemandReport(
     let map = {};
 
 
-    // ---------------------------------
-    // ONLY demand_history
-    // ---------------------------------
+    // =================================
+    // 1. GET DEMAND FOR SELECTED MONTH
+    // =================================
 
     demandHistory.forEach(record => {
-
-
-        // ---------------------------------
-        // IMPORTANT:
-        // demand_month is used.
-        //
-        // Example:
-        //
-        // demand_month = 2026-06
-        // generate_date = 2026-09-11
-        //
-        // Result:
-        // June 2026
-        // ---------------------------------
 
         const recordMonth =
             getDemandMonth(record);
 
 
+        // صرف selected demand month
         if (
             recordMonth !== demandMonth
         ) {
@@ -1940,23 +1930,17 @@ function monthlyDemandReport(
         }
 
 
-        // ---------------------------------
-        // GET NESTED DEMAND ITEMS
-        // ---------------------------------
-
         const demandItems =
             getDemandItems(record);
 
 
         // ---------------------------------
-        // NORMAL CURRENT FORMAT
+        // NORMAL NESTED DEMAND DATA
         // ---------------------------------
 
         if (demandItems.length > 0) {
 
-
             demandItems.forEach(item => {
-
 
                 const code =
                     getDemandItemCode(item);
@@ -1990,26 +1974,23 @@ function monthlyDemandReport(
 
                         demand: 0,
 
-                        pending: 0,
+                        received: 0,
 
-                        po: 0
+                        pendingPO: 0
 
                     };
 
                 }
 
 
+                // Demand
                 map[code].demand +=
                     getDemandQuantity(item);
 
 
-                map[code].pending +=
-                    getPendingDemand(item);
-
-
-                map[code].po +=
+                // Pending PO
+                map[code].pendingPO +=
                     getPendingPO(item);
-
 
             });
 
@@ -2020,9 +2001,7 @@ function monthlyDemandReport(
 
 
         // ---------------------------------
-        // FALLBACK:
-        // If old/simple demand record
-        // has no nested array.
+        // FALLBACK OLD FORMAT
         // ---------------------------------
 
         const code =
@@ -2072,9 +2051,9 @@ function monthlyDemandReport(
 
                 demand: 0,
 
-                pending: 0,
+                received: 0,
 
-                po: 0
+                pendingPO: 0
 
             };
 
@@ -2098,21 +2077,7 @@ function monthlyDemandReport(
             );
 
 
-        map[code].pending +=
-            num(
-                val(
-                    record,
-                    [
-                        "pendingDemand",
-                        "pending_demand",
-                        "pending",
-                        "pendingQty"
-                    ]
-                )
-            );
-
-
-        map[code].po +=
+        map[code].pendingPO +=
             num(
                 val(
                     record,
@@ -2128,11 +2093,143 @@ function monthlyDemandReport(
     });
 
 
-    // ---------------------------------
-    // SHOW RESULT
-    // ---------------------------------
+    // =================================
+    // 2. CALCULATE RECEIVED DEMAND
+    // =================================
+    //
+    // Selected month کے آخر تک کی
+    // Stock In quantity count ہوگی.
+    //
+    // Example:
+    // June Demand = 1000
+    // June Stock In = 700
+    //
+    // Received = 700
+    // Difference = -300
+    // Pending = 300
+    //
+    // اگر Stock In = 1200
+    //
+    // Received = 1200
+    // Difference = +200
+    // Pending = 0
+    // =================================
+
+    history.forEach(r => {
+
+        // صرف Stock In
+        const type =
+            String(
+                val(r, ["type"])
+            ).toLowerCase();
+
+
+        if (
+            type !== "stock in" &&
+            type !== "stockin"
+        ) {
+
+            return;
+
+        }
+
+
+        const code =
+            String(
+                val(
+                    r,
+                    [
+                        "itemCode",
+                        "item_code",
+                        "code"
+                    ]
+                )
+            ).trim();
+
+
+        if (!code) {
+
+            return;
+
+        }
+
+
+        if (
+            itemCode &&
+            code !== itemCode
+        ) {
+
+            return;
+
+        }
+
+
+        // اگر اس item کی demand نہیں ہے
+        // تو report میں Stock In کو demand
+        // received نہیں سمجھیں گے.
+        if (!map[code]) {
+
+            return;
+
+        }
+
+
+        const stockInDate =
+            String(
+                val(
+                    r,
+                    [
+                        "date",
+                        "transactionDate",
+                        "transaction_date"
+                    ]
+                )
+            );
+
+
+        const stockInMonth =
+            getMonthKeyFromDate(
+                stockInDate
+            );
+
+
+        // صرف selected month کی Stock In
+        if (
+            stockInMonth !== demandMonth
+        ) {
+
+            return;
+
+        }
+
+
+        const quantity =
+            num(
+                val(
+                    r,
+                    [
+                        "quantity",
+                        "qty"
+                    ]
+                )
+            );
+
+
+        map[code].received +=
+            quantity;
+
+    });
+
+
+    // =================================
+    // 3. SHOW RESULT
+    // =================================
 
     let totalDemand = 0;
+
+    let totalReceived = 0;
+
+    let totalPending = 0;
 
 
     Object.keys(map).forEach(
@@ -2142,8 +2239,85 @@ function monthlyDemandReport(
                 map[code];
 
 
+            // ---------------------------------
+            // DEMAND
+            // ---------------------------------
+
+            const demand =
+                num(x.demand);
+
+
+            // ---------------------------------
+            // RECEIVED
+            // ---------------------------------
+
+            const received =
+                num(x.received);
+
+
+            // ---------------------------------
+            // DIFFERENCE
+            // ---------------------------------
+            //
+            // Received - Demand
+            //
+            // + = زیادہ received
+            // - = کم received
+            // ---------------------------------
+
+            const difference =
+                received - demand;
+
+
+            // ---------------------------------
+            // PENDING DEMAND
+            // ---------------------------------
+            //
+            // Demand - Received
+            //
+            // اگر negative ہو تو 0
+            // ---------------------------------
+
+            const pending =
+                Math.max(
+                    demand - received,
+                    0
+                );
+
+
             totalDemand +=
-                x.demand;
+                demand;
+
+
+            totalReceived +=
+                received;
+
+
+            totalPending +=
+                pending;
+
+
+            // ---------------------------------
+            // + / - DISPLAY
+            // ---------------------------------
+
+            let differenceDisplay;
+
+
+            if (
+                difference > 0
+            ) {
+
+                differenceDisplay =
+                    "+" +
+                    difference;
+
+            } else {
+
+                differenceDisplay =
+                    String(difference);
+
+            }
 
 
             addRow([
@@ -2152,11 +2326,15 @@ function monthlyDemandReport(
 
                 x.name,
 
-                x.demand,
+                demand,
 
-                x.pending,
+                received,
 
-                x.po
+                differenceDisplay,
+
+                pending,
+
+                x.pendingPO
 
             ]);
 
@@ -2164,9 +2342,9 @@ function monthlyDemandReport(
     );
 
 
-    // ---------------------------------
+    // =================================
     // SUMMARY
-    // ---------------------------------
+    // =================================
 
     showSummary(
 
@@ -2179,9 +2357,9 @@ function monthlyDemandReport(
     );
 
 
-    // ---------------------------------
+    // =================================
     // NO DATA MESSAGE
-    // ---------------------------------
+    // =================================
 
     if (
         Object.keys(map).length === 0
@@ -2198,6 +2376,10 @@ function monthlyDemandReport(
 
             "-",
 
+            "-",
+
+            "-",
+
             "-"
 
         ]);
@@ -2205,6 +2387,7 @@ function monthlyDemandReport(
     }
 
 }
+
 
 
 // =====================================
