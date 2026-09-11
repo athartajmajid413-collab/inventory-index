@@ -1,6 +1,7 @@
 // =====================================
 // REPORTS.JS
 // SUPABASE VERSION
+// NO LOCALSTORAGE
 // =====================================
 
 const REPORT_SUPABASE_URL =
@@ -13,6 +14,9 @@ const REPORT_SUPABASE_KEY =
 // =====================================
 // GLOBAL DATA
 // =====================================
+
+// یہ صرف temporary JavaScript memory ہے
+// LocalStorage استعمال نہیں ہو رہا
 
 let history = [];
 let items = [];
@@ -92,7 +96,8 @@ function formatMonth(monthKey) {
 
     if (!monthKey) return "";
 
-    const parts = String(monthKey).split("-");
+    const parts =
+        String(monthKey).split("-");
 
     if (parts.length !== 2) {
         return monthKey;
@@ -123,7 +128,7 @@ function formatMonth(monthKey) {
 
 
 // =====================================
-// LOAD REPORT DATA
+// LOAD REPORT DATA FROM SUPABASE
 // =====================================
 
 async function loadReportsData() {
@@ -138,6 +143,7 @@ async function loadReportsData() {
                 "?select=*"
             );
 
+
         const stockInResult =
             await supabaseRequest(
                 "stock_in",
@@ -146,6 +152,7 @@ async function loadReportsData() {
                 "?select=*"
             );
 
+
         const stockOutResult =
             await supabaseRequest(
                 "stock_issue",
@@ -153,6 +160,7 @@ async function loadReportsData() {
                 null,
                 "?select=*"
             );
+
 
         const demandResult =
             await supabaseRequest(
@@ -172,11 +180,15 @@ async function loadReportsData() {
             Array.isArray(itemsResult.data)
         ) {
 
-            items = itemsResult.data;
+            items =
+                itemsResult.data;
 
-        } else {
+        }
+
+        else {
 
             items = [];
+
         }
 
 
@@ -187,7 +199,9 @@ async function loadReportsData() {
         history = [];
 
 
+        // =================================
         // STOCK IN
+        // =================================
 
         if (
             stockInResult &&
@@ -202,89 +216,100 @@ async function loadReportsData() {
 
                     type: "Stock In",
 
-                    itemCode: val(
-                        row,
-                        [
-                            "item_code",
-                            "itemCode",
-                            "code"
-                        ]
-                    ),
-
-                    itemName: val(
-                        row,
-                        [
-                            "item_name",
-                            "itemName",
-                            "name"
-                        ]
-                    ),
-
-                    quantity: num(
+                    itemCode:
                         val(
                             row,
                             [
-                                "quantity",
-                                "qty"
+                                "item_code",
+                                "itemCode",
+                                "code"
                             ]
-                        )
-                    ),
+                        ),
 
-                    unitCost: num(
+                    itemName:
                         val(
                             row,
                             [
-                                "unit_cost",
-                                "unitCost",
-                                "rate",
-                                "cost"
+                                "item_name",
+                                "itemName",
+                                "name"
                             ]
-                        )
-                    ),
+                        ),
 
-                    totalCost: num(
+                    quantity:
+                        num(
+                            val(
+                                row,
+                                [
+                                    "quantity",
+                                    "qty"
+                                ]
+                            )
+                        ),
+
+                    unitCost:
+                        num(
+                            val(
+                                row,
+                                [
+                                    "unit_cost",
+                                    "unitCost",
+                                    "rate",
+                                    "cost"
+                                ]
+                            )
+                        ),
+
+                    totalCost:
+                        num(
+                            val(
+                                row,
+                                [
+                                    "total_cost",
+                                    "totalCost"
+                                ]
+                            )
+                        ),
+
+                    date:
                         val(
                             row,
                             [
-                                "total_cost",
-                                "totalCost"
+                                "date",
+                                "transaction_date",
+                                "transactionDate"
+                            ]
+                        ),
+
+                    time:
+                        val(
+                            row,
+                            [
+                                "time",
+                                "transaction_time",
+                                "transactionTime"
+                            ]
+                        ),
+
+                    department:
+                        val(
+                            row,
+                            [
+                                "department",
+                                "dept"
                             ]
                         )
-                    ),
-
-                    date: val(
-                        row,
-                        [
-                            "date",
-                            "transaction_date",
-                            "transactionDate"
-                        ]
-                    ),
-
-                    time: val(
-                        row,
-                        [
-                            "time",
-                            "transaction_time",
-                            "transactionTime"
-                        ]
-                    ),
-
-                    department: val(
-                        row,
-                        [
-                            "department",
-                            "dept"
-                        ]
-                    )
 
                 });
 
             });
+
         }
 
 
+        // =================================
         // STOCK OUT
+        // =================================
 
         if (
             stockOutResult &&
@@ -299,91 +324,100 @@ async function loadReportsData() {
 
                     type: "Stock Issue",
 
-                    itemCode: val(
-                        row,
-                        [
-                            "item_code",
-                            "itemCode",
-                            "code"
-                        ]
-                    ),
-
-                    itemName: val(
-                        row,
-                        [
-                            "item_name",
-                            "itemName",
-                            "name"
-                        ]
-                    ),
-
-                    quantity: num(
+                    itemCode:
                         val(
                             row,
                             [
-                                "quantity",
-                                "qty"
+                                "item_code",
+                                "itemCode",
+                                "code"
                             ]
-                        )
-                    ),
+                        ),
 
-                    unitCost: num(
+                    itemName:
                         val(
                             row,
                             [
-                                "unit_cost",
-                                "unitCost",
-                                "rate",
-                                "cost"
+                                "item_name",
+                                "itemName",
+                                "name"
                             ]
-                        )
-                    ),
+                        ),
 
-                    totalCost: num(
+                    quantity:
+                        num(
+                            val(
+                                row,
+                                [
+                                    "quantity",
+                                    "qty"
+                                ]
+                            )
+                        ),
+
+                    unitCost:
+                        num(
+                            val(
+                                row,
+                                [
+                                    "unit_cost",
+                                    "unitCost",
+                                    "rate",
+                                    "cost"
+                                ]
+                            )
+                        ),
+
+                    totalCost:
+                        num(
+                            val(
+                                row,
+                                [
+                                    "total_cost",
+                                    "totalCost"
+                                ]
+                            )
+                        ),
+
+                    date:
                         val(
                             row,
                             [
-                                "total_cost",
-                                "totalCost"
+                                "date",
+                                "transaction_date",
+                                "transactionDate"
+                            ]
+                        ),
+
+                    time:
+                        val(
+                            row,
+                            [
+                                "time",
+                                "transaction_time",
+                                "transactionTime"
+                            ]
+                        ),
+
+                    department:
+                        val(
+                            row,
+                            [
+                                "department",
+                                "dept"
                             ]
                         )
-                    ),
-
-                    date: val(
-                        row,
-                        [
-                            "date",
-                            "transaction_date",
-                            "transactionDate"
-                        ]
-                    ),
-
-                    time: val(
-                        row,
-                        [
-                            "time",
-                            "transaction_time",
-                            "transactionTime"
-                        ]
-                    ),
-
-                    department: val(
-                        row,
-                        [
-                            "department",
-                            "dept"
-                        ]
-                    )
 
                 });
 
             });
+
         }
 
 
-        // ---------------------------------
+        // =================================
         // DEMAND HISTORY
-        // ---------------------------------
+        // =================================
 
         if (
             demandResult &&
@@ -393,14 +427,17 @@ async function loadReportsData() {
             demandHistory =
                 demandResult.data;
 
-        } else {
+        }
+
+        else {
 
             demandHistory = [];
+
         }
 
 
         console.log(
-            "Reports data loaded:",
+            "Reports data loaded from Supabase:",
             {
                 items,
                 history,
@@ -409,7 +446,9 @@ async function loadReportsData() {
         );
 
 
-    } catch (error) {
+    }
+
+    catch (error) {
 
         console.error(
             "Error loading Reports data:",
@@ -419,7 +458,9 @@ async function loadReportsData() {
         alert(
             "Reports data load نہیں ہو سکا۔ Console میں error check کریں۔"
         );
+
     }
+
 }
 
 
@@ -433,6 +474,7 @@ function getItem(code) {
         String(code || "")
             .trim()
             .toLowerCase();
+
 
     return items.find(item => {
 
@@ -450,9 +492,11 @@ function getItem(code) {
                 .trim()
                 .toLowerCase();
 
+
         return itemCode === searchCode;
 
     });
+
 }
 
 
@@ -491,7 +535,10 @@ function currentStock(item) {
     history.forEach(row => {
 
         const rowCode =
-            String(row.itemCode || "").trim();
+            String(
+                row.itemCode || ""
+            ).trim();
+
 
         if (rowCode !== code) {
             return;
@@ -518,6 +565,7 @@ function currentStock(item) {
 
 
     return stock;
+
 }
 
 
@@ -528,7 +576,10 @@ function currentStock(item) {
 function reportTypeChanged() {
 
     const reportType =
-        document.getElementById("reportType");
+        document.getElementById(
+            "reportType"
+        );
+
 
     if (!reportType) return;
 
@@ -538,19 +589,27 @@ function reportTypeChanged() {
 
 
     const demandMonthBox =
-        document.getElementById("demandMonthBox");
+        document.getElementById(
+            "demandMonthBox"
+        );
 
 
     const fromDate =
-        document.getElementById("fromDate");
+        document.getElementById(
+            "fromDate"
+        );
 
 
     const toDate =
-        document.getElementById("toDate");
+        document.getElementById(
+            "toDate"
+        );
 
 
     const department =
-        document.getElementById("department");
+        document.getElementById(
+            "department"
+        );
 
 
     if (
@@ -559,8 +618,10 @@ function reportTypeChanged() {
     ) {
 
         if (demandMonthBox) {
+
             demandMonthBox.style.display =
                 "block";
+
         }
 
 
@@ -609,18 +670,24 @@ function reportTypeChanged() {
 
 
         if (fromDate) {
-            fromDate.disabled = false;
+
+            fromDate.disabled =
+                false;
+
         }
 
 
         if (toDate) {
-            toDate.disabled = false;
+
+            toDate.disabled =
+                false;
+
         }
 
     }
 
 
-    // Department is mainly required
+    // Department mainly required
     // for Stock Out / All Transactions
 
     if (department) {
@@ -630,16 +697,21 @@ function reportTypeChanged() {
             type === "all"
         ) {
 
-            department.disabled = false;
+            department.disabled =
+                false;
 
         }
 
         else {
 
-            department.disabled = true;
-            department.value = "";
+            department.disabled =
+                true;
+
+            department.value =
+                "";
 
         }
+
     }
 
 
@@ -665,6 +737,7 @@ function setTitles(title) {
             "reportTitle"
         );
 
+
     if (screenTitle) {
 
         screenTitle.textContent =
@@ -677,6 +750,7 @@ function setTitles(title) {
         document.getElementById(
             "printTitle"
         );
+
 
     if (printTitle) {
 
@@ -691,9 +765,12 @@ function setTitles(title) {
             "printDate"
         );
 
+
     if (printDate) {
 
-        const d = new Date();
+        const d =
+            new Date();
+
 
         printDate.textContent =
             d.toLocaleDateString();
@@ -714,23 +791,31 @@ function setHead(columns) {
             "#reportTable thead"
         );
 
+
     if (!thead) return;
 
 
-    thead.innerHTML = "";
+    thead.innerHTML =
+        "";
 
 
     const tr =
-        document.createElement("tr");
+        document.createElement(
+            "tr"
+        );
 
 
     columns.forEach(column => {
 
         const th =
-            document.createElement("th");
+            document.createElement(
+                "th"
+            );
+
 
         th.textContent =
             column;
+
 
         tr.appendChild(th);
 
@@ -753,20 +838,27 @@ function addRow(values) {
             "#reportTable tbody"
         );
 
+
     if (!tbody) return;
 
 
     const tr =
-        document.createElement("tr");
+        document.createElement(
+            "tr"
+        );
 
 
     values.forEach(value => {
 
         const td =
-            document.createElement("td");
+            document.createElement(
+                "td"
+            );
+
 
         td.textContent =
             value ?? "";
+
 
         tr.appendChild(td);
 
@@ -789,9 +881,11 @@ function resetSummary() {
             "summary"
         );
 
+
     if (summary) {
 
-        summary.innerHTML = "";
+        summary.innerHTML =
+            "";
 
     }
 
@@ -854,6 +948,7 @@ function generateReport() {
         );
 
         return;
+
     }
 
 
@@ -1043,6 +1138,7 @@ function stockInReport(
 
 
     let totalQty = 0;
+
     let totalCost = 0;
 
 
@@ -1064,6 +1160,7 @@ function stockInReport(
 
 
         totalQty += qty;
+
         totalCost += total;
 
 
@@ -1555,6 +1652,7 @@ function getDemandMonth(record) {
     return getMonthKeyFromDate(
         fallbackDate
     );
+
 }
 
 
@@ -1575,12 +1673,15 @@ function getDemandDate(record) {
 
 
     if (!value) {
+
         return "";
+
     }
 
 
     return String(value)
         .substring(0, 10);
+
 }
 
 
@@ -1593,7 +1694,9 @@ function getNextDemandDate(
 ) {
 
     if (!currentDemandDate) {
+
         return "";
+
     }
 
 
@@ -1628,6 +1731,7 @@ function getNextDemandDate(
 
 
     return futureDates[0];
+
 }
 
 
@@ -1652,6 +1756,7 @@ function getDemandItems(record) {
 
 
     return [];
+
 }
 
 
@@ -1674,6 +1779,7 @@ function getDemandItemCode(item) {
             ]
         )
     ).trim();
+
 }
 
 
@@ -1691,6 +1797,7 @@ function getDemandItemName(item) {
             "name"
         ]
     );
+
 }
 
 
@@ -1718,6 +1825,7 @@ function getDemandQuantity(item) {
             ]
         )
     );
+
 }
 
 
@@ -1739,6 +1847,7 @@ function getPendingDemand(item) {
             ]
         )
     );
+
 }
 
 
@@ -1760,6 +1869,7 @@ function getPendingPO(item) {
             ]
         )
     );
+
 }
 
 
@@ -1779,6 +1889,7 @@ function monthlyDemandReport(
         );
 
         return;
+
     }
 
 
@@ -1835,6 +1946,7 @@ function monthlyDemandReport(
         );
 
         return;
+
     }
 
 
@@ -1855,6 +1967,7 @@ function monthlyDemandReport(
         );
 
         return;
+
     }
 
 
@@ -1908,7 +2021,9 @@ function monthlyDemandReport(
 
 
             if (!code) {
+
                 return;
+
             }
 
 
@@ -2026,20 +2141,20 @@ function monthlyDemandReport(
     // =================================
     // RECEIVED DEMAND
     //
-    // IMPORTANT:
-    //
-    // Demand Date سے شروع ہوگا
-    //
+    // Demand Date سے شروع
     // اگلی Demand Date سے پہلے تک
-    // Stock In اس Demand میں شمار ہوگا
     //
     // Example:
     //
-    // June Demand Date = 14-05-2026
-    // July Demand Date = 21-06-2026
+    // June Demand:
+    // Demand Date = 2026-05-14
+    //
+    // July Demand:
+    // Demand Date = 2026-06-21
     //
     // June Received:
-    // 14-05-2026 <= Stock In < 21-06-2026
+    //
+    // 2026-05-14 <= Stock In < 2026-06-21
     //
     // =================================
 
@@ -2047,8 +2162,12 @@ function monthlyDemandReport(
 
         // صرف Stock In
 
-        if (row.type !== "Stock In") {
+        if (
+            row.type !== "Stock In"
+        ) {
+
             return;
+
         }
 
 
@@ -2059,18 +2178,22 @@ function monthlyDemandReport(
 
 
         if (!code) {
+
             return;
+
         }
 
 
-        // صرف وہ item جو Demand میں موجود ہے
+        // Demand میں موجود item ہی شامل ہوگا
 
         if (!map[code]) {
+
             return;
+
         }
 
 
-        // اگر report میں specific item selected ہے
+        // Specific item selected ہو تو
 
         if (
             itemCode &&
@@ -2079,6 +2202,7 @@ function monthlyDemandReport(
         ) {
 
             return;
+
         }
 
 
@@ -2096,13 +2220,15 @@ function monthlyDemandReport(
 
 
         if (!stockInDate) {
+
             return;
+
         }
 
 
         // ---------------------------------
-        // Stock In Demand Date سے پہلے ہے
-        // تو شامل نہیں ہوگا
+        // Demand Date سے پہلے کا Stock In
+        // شامل نہیں ہوگا
         // ---------------------------------
 
         if (
@@ -2111,15 +2237,13 @@ function monthlyDemandReport(
         ) {
 
             return;
+
         }
 
 
         // ---------------------------------
-        // اگر اگلی Demand موجود ہے
-        //
-        // تو اگلی Demand Date پر
-        // یا اس کے بعد کا Stock In
-        // موجودہ Demand میں شامل نہیں ہوگا
+        // اگلی Demand Date پر یا اس کے بعد
+        // کا Stock In اگلی Demand کا ہوگا
         // ---------------------------------
 
         if (
@@ -2129,6 +2253,7 @@ function monthlyDemandReport(
         ) {
 
             return;
+
         }
 
 
@@ -2168,28 +2293,13 @@ function monthlyDemandReport(
                 num(record.received);
 
 
-            // ---------------------------------
-            // Difference
-            //
             // Received - Demand
-            //
-            // 1000 - 700 = -300
-            // 1000 - 1200 = +200
-            // ---------------------------------
 
             const difference =
                 received - demand;
 
 
-            // ---------------------------------
-            // Pending
-            //
-            // اگر Received کم ہے
-            // تو باقی Pending ہوگا
-            //
-            // 1000 - 700 = 300
-            // 1000 - 1200 = 0
-            // ---------------------------------
+            // Demand باقی ہو تو Pending
 
             const pending =
                 Math.max(
@@ -2285,16 +2395,21 @@ function showSummary(lines) {
     if (!summary) return;
 
 
-    summary.innerHTML = "";
+    summary.innerHTML =
+        "";
 
 
     lines.forEach(line => {
 
         const div =
-            document.createElement("div");
+            document.createElement(
+                "div"
+            );
+
 
         div.textContent =
             line;
+
 
         summary.appendChild(div);
 
@@ -2317,7 +2432,8 @@ function clearReport() {
 
     if (tbody) {
 
-        tbody.innerHTML = "";
+        tbody.innerHTML =
+            "";
 
     }
 
@@ -2330,7 +2446,8 @@ function clearReport() {
 
     if (thead) {
 
-        thead.innerHTML = "";
+        thead.innerHTML =
+            "";
 
     }
 
@@ -2412,7 +2529,7 @@ document.addEventListener(
 
 
         // -----------------------------
-        // Load Supabase Data
+        // Load data from Supabase
         // -----------------------------
 
         await loadReportsData();
