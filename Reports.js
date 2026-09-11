@@ -777,149 +777,92 @@ async function loadReportsData() {
 
 function reportTypeChanged() {
 
-    const typeElement =
-        document.getElementById(
-            "reportType"
-        );
+    const reportType = document.getElementById("reportType").value;
 
-    if (!typeElement) {
-        return;
-    }
+    const fromDate = document.getElementById("fromDate");
+    const toDate = document.getElementById("toDate");
 
+    const department = document.getElementById("department");
 
-    const type =
-        typeElement.value;
+    const demandMonthBox = document.getElementById("demandMonthBox");
+    const demandMonth = document.getElementById("demandMonth");
 
 
-    const fromDate =
-        document.getElementById(
-            "fromDate"
-        );
+    // ==========================================
+    // MONTHLY DEMAND REPORT
+    // ==========================================
 
-    const toDate =
-        document.getElementById(
-            "toDate"
-        );
+    if (reportType === "monthlyDemand") {
 
-    const department =
-        document.getElementById(
-            "department"
-        );
-
-    const demandMonthBox =
-        document.getElementById(
-            "demandMonthBox"
-        );
-
-    const demandMonth =
-        document.getElementById(
-            "demandMonth"
-        );
-
-
-    // =================================
-    // MONTHLY DEMAND
-    // =================================
-
-    if (
-        type === "monthlyDemand" ||
-        type === "demand"
-    ) {
-
+        // From Date / To Date hide
         if (fromDate) {
-
-            fromDate.value = "";
-
+            fromDate.parentElement.style.display = "none";
             fromDate.disabled = true;
         }
 
-
         if (toDate) {
-
-            toDate.value = "";
-
+            toDate.parentElement.style.display = "none";
             toDate.disabled = true;
         }
 
 
+        // Department disable
         if (department) {
-
-            department.value = "";
-
             department.disabled = true;
         }
 
 
+        // Monthly Demand Month selector SHOW
         if (demandMonthBox) {
-            demandMonthBox.style.display =
-                "block";
+            demandMonthBox.style.display = "block";
         }
-
 
         if (demandMonth) {
-
             demandMonth.disabled = false;
 
+            // اگر ابھی کوئی month selected نہیں ہے
             if (!demandMonth.value) {
+                const today = new Date();
 
-                demandMonth.value =
-                    getTodayMonthKey();
+                const year = today.getFullYear();
+                const month = String(today.getMonth() + 1).padStart(2, "0");
+
+                demandMonth.value = `${year}-${month}`;
             }
         }
-
 
         return;
     }
 
 
-    // =================================
-    // NORMAL REPORTS
-    // =================================
-
-    if (demandMonthBox) {
-        demandMonthBox.style.display =
-            "none";
-    }
-
-
-    if (demandMonth) {
-
-        demandMonth.value = "";
-
-        demandMonth.disabled = true;
-    }
-
-
-    const dateEnabled =
-        [
-            "stockIn",
-            "stockOut",
-            "all"
-        ].includes(type);
-
+    // ==========================================
+    // OTHER REPORTS
+    // ==========================================
 
     if (fromDate) {
-        fromDate.disabled =
-            !dateEnabled;
+        fromDate.parentElement.style.display = "";
+        fromDate.disabled = false;
     }
-
 
     if (toDate) {
-        toDate.disabled =
-            !dateEnabled;
+        toDate.parentElement.style.display = "";
+        toDate.disabled = false;
     }
-
 
     if (department) {
+        department.disabled = false;
+    }
 
-        department.disabled =
-            !(
-                type === "stockOut" ||
-                type === "all"
-            );
+
+    // Monthly Demand selector hide
+    if (demandMonthBox) {
+        demandMonthBox.style.display = "none";
+    }
+
+    if (demandMonth) {
+        demandMonth.disabled = true;
     }
 }
-
 
 // =====================================
 // TITLES
