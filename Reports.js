@@ -388,26 +388,12 @@ async function loadReportData(){
 
 
         // ----------------------------------------------
-        // OLD DEMANDS TABLE
-        // ----------------------------------------------
+// OLD DEMANDS TABLE
+// ----------------------------------------------
+// Current system uses demand_history.
+// No need to load "demands" table.
 
-        try{
-
-            demands =
-                await reportSupabaseRequest(
-                    "demands"
-                );
-
-        }catch(error){
-
-            console.warn(
-                "Demands table not available:",
-                error
-            );
-
-            demands = [];
-        }
-
+demands = [];
 
         // ----------------------------------------------
         // DEMAND HISTORY
