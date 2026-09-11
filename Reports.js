@@ -9,10 +9,11 @@
 // ------------------------------------------------------
 
 const REPORT_SUPABASE_URL =
-    "https://YOUR-PROJECT.supabase.co";
+    "https://tncmmkyrpzlkupdnkyqm.supabase.co";
 
 const REPORT_SUPABASE_KEY =
-    "YOUR-SUPABASE-ANON-KEY";
+    "sb_publishable_e6j_EkJescicSS3nEOnscg_INwxeukT";
+
 
 
 // ------------------------------------------------------
