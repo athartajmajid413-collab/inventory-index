@@ -184,7 +184,7 @@
             Report Type:
         </label>
 
-        <select id="reportType">
+       <select id="reportType" onchange="reportTypeChanged()">
 
             <option value="all">
                 All Transactions
@@ -193,7 +193,6 @@
             <option value="stockIn">
                 Stock In Report
             </option>
-
             <option value="stockOut">
                 Stock Out Report
             </option>
