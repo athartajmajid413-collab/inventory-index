@@ -59,173 +59,109 @@
 
         }
 
-
         #printHeader {
-
             display: block;
             text-align: center;
             margin-bottom: 20px;
-
         }
-
 
         #printHeader h1 {
-
             margin: 0;
             font-size: 22px;
-
         }
-
 
         #printHeader h2 {
-
             margin: 5px 0;
             font-size: 18px;
-
         }
-
 
         #printHeader h3 {
-
             margin: 8px 0;
             font-size: 16px;
-
         }
-
 
         #printHeader p {
-
             margin: 5px;
-
         }
 
-
         table {
-
             width: 100%;
             border-collapse: collapse;
             margin-top: 20px;
-
         }
 
-
         th {
-
             padding: 10px;
             background-color: #12355b;
             color: white;
-
         }
-
 
         td {
-
             padding: 8px;
             border: 1px solid #ccc;
-
         }
-
 
         .report-controls {
-
             margin-top: 20px;
             margin-bottom: 20px;
-
         }
-
 
         .filter-box {
-
             margin-bottom: 12px;
-
         }
-
 
         .filter-box label {
-
             display: inline-block;
             width: 120px;
-
         }
 
-
         #reportSummary {
-
             margin-top: 20px;
             padding: 15px;
             text-align: center;
-
         }
 
-
         .deleteButton {
-
             background-color: #c62828;
             color: white;
             border: none;
             padding: 6px 10px;
             cursor: pointer;
             border-radius: 4px;
-
         }
 
-
         .deleteButton:hover {
-
             background-color: #a00000;
-
         }
 
     </style>
 
 </head>
 
-
 <body>
-
 
 <h1>Store Reports</h1>
 
-
-<!-- =========================================
-     PRINT HEADER
-========================================= -->
-
 <div id="printHeader">
 
-    <h1>
-        MECAS ENGINEERING PVT LIMITED SUNDAR
-    </h1>
+    <h1>MECAS ENGINEERING PVT LIMITED SUNDAR</h1>
 
-    <h2>
-        STORE MANAGEMENT SYSTEM
-    </h2>
+    <h2>STORE MANAGEMENT SYSTEM</h2>
 
-    <h3 id="printReportTitle">
-        STORE REPORT
-    </h3>
+    <h3 id="printReportTitle">STORE REPORT</h3>
 
     <p>
-
         Report Date:
-
         <span id="printDate"></span>
-
     </p>
 
 </div>
 
 
-<!-- =========================================
-     BACK TO DASHBOARD
-========================================= -->
-
 <div>
 
-    <button
-        type="button"
-        onclick="window.location.href='Dashboard.html'"
-    >
+    <button type="button"
+            onclick="window.location.href='Dashboard.html'">
 
         🏠 Back to Dashboard
 
@@ -237,19 +173,16 @@
 <br>
 
 
-<!-- =========================================
-     REPORT CONTROLS
-========================================= -->
-
 <div class="report-controls">
 
+
+    <!-- REPORT TYPE -->
 
     <div class="filter-box">
 
         <label for="reportType">
             Report Type:
         </label>
-
 
         <select id="reportType">
 
@@ -273,7 +206,7 @@
                 Cost Report
             </option>
 
-            <option value="demand">
+            <option value="monthlyDemand">
                 Monthly Demand Report
             </option>
 
@@ -282,7 +215,27 @@
     </div>
 
 
-    <div class="filter-box">
+    <!-- DEMAND MONTH -->
+
+    <div class="filter-box"
+         id="demandMonthBox"
+         style="display:none;">
+
+        <label for="demandMonth">
+            Demand Month:
+        </label>
+
+        <input
+            type="month"
+            id="demandMonth">
+
+    </div>
+
+
+    <!-- FROM DATE -->
+
+    <div class="filter-box"
+         id="fromDateBox">
 
         <label for="fromDate">
             From Date:
@@ -290,13 +243,15 @@
 
         <input
             type="date"
-            id="fromDate"
-        >
+            id="fromDate">
 
     </div>
 
 
-    <div class="filter-box">
+    <!-- TO DATE -->
+
+    <div class="filter-box"
+         id="toDateBox">
 
         <label for="toDate">
             To Date:
@@ -304,11 +259,12 @@
 
         <input
             type="date"
-            id="toDate"
-        >
+            id="toDate">
 
     </div>
 
+
+    <!-- ITEM CODE -->
 
     <div class="filter-box">
 
@@ -319,68 +275,76 @@
         <input
             type="text"
             id="itemCode"
-            placeholder="Optional"
-        >
+            placeholder="Optional">
 
     </div>
-    
+
+
+    <!-- DEPARTMENT -->
+
+    <div class="filter-box">
+
+        <label for="department">
+            Department:
+        </label>
+
         <select id="department">
 
             <option value="">
                 All Departments
-            <option value="CNC">CNC</option>
+            </option>
 
-    <option value="DiscLine">
-        DISC LINE
-    </option>
+            <option value="CNC">
+                CNC
+            </option>
 
-    <option value="stiffenerLine">
-        STIFFENER LINE
-    </option>
+            <option value="DiscLine">
+                DISC LINE
+            </option>
 
-    <option value="Quailty">
-        QUAILTY
-    </option>
+            <option value="stiffenerLine">
+                STIFFENER LINE
+            </option>
 
-    <option value="PaintShop">
-        PAINT SHOP
-    </option>
+            <option value="Quailty">
+                QUAILTY
+            </option>
 
-    <option value="Phosphating">
-        PHOSPHATING
-    </option>
+            <option value="PaintShop">
+                PAINT SHOP
+            </option>
 
-    <option value="GrindingHonning">
-        GRINDING/HONNING
-    </option>
+            <option value="Phosphating">
+                PHOSPHATING
+            </option>
 
-    <option value="Packing">
-        PACKING
-    </option>
+            <option value="GrindingHonning">
+                GRINDING/HONNING
+            </option>
 
-    <option value="Maintenance">
-        MAINTENANCE
-    </option>
+            <option value="Packing">
+                PACKING
+            </option>
 
-    <option value="Other">
-        OTHER
-    </option>
+            <option value="Maintenance">
+                MAINTENANCE
+            </option>
 
-</select>
+            <option value="Other">
+                OTHER
+            </option>
+
+        </select>
+
     </div>
 
 
 </div>
 
 
-<!-- =========================================
-     BUTTONS
-========================================= -->
-
 <button
     type="button"
-    onclick="generateReport()"
->
+    onclick="generateReport()">
 
     Generate Report
 
@@ -389,8 +353,7 @@
 
 <button
     type="button"
-    onclick="clearReport()"
->
+    onclick="clearReport()">
 
     Clear
 
@@ -401,39 +364,25 @@
 <br>
 
 
-<!-- =========================================
-     SUMMARY
-========================================= -->
-
 <div id="reportSummary">
 
-    <strong>
-        Total Entries:
-    </strong>
+    <strong>Total Entries:</strong>
 
     <span id="totalEntries">
         0
     </span>
 
-
     &nbsp;&nbsp;&nbsp;
 
-
-    <strong>
-        Total Quantity:
-    </strong>
+    <strong>Total Quantity:</strong>
 
     <span id="reportQuantity">
         0
     </span>
 
-
     &nbsp;&nbsp;&nbsp;
 
-
-    <strong>
-        Total Cost:
-    </strong>
+    <strong>Total Cost:</strong>
 
     <span id="reportCost">
         0
@@ -445,30 +394,23 @@
 <br>
 
 
-<!-- =========================================
-     PRINT
-========================================= -->
-
 <button
     type="button"
-    onclick="printReport()"
->
+    onclick="printReport()">
 
     🖨️ Print Report
 
 </button>
+
+
 <br>
 <br>
 
 
-<h2>
+<h2 id="screenReportTitle">
     Report
 </h2>
 
-
-<!-- =========================================
-     REPORT TABLE
-========================================= -->
 
 <table border="1">
 
@@ -477,23 +419,14 @@
         <tr>
 
             <th>Date</th>
-
             <th>Time</th>
-
             <th>Type</th>
-
             <th>Item Code</th>
-
             <th>Item Name</th>
-
             <th>Department</th>
-
             <th>Quantity</th>
-
             <th>Unit Cost</th>
-
             <th>Total Cost</th>
-
             <th class="deleteColumn">
                 Action
             </th>
@@ -503,13 +436,13 @@
     </thead>
 
 
-    <tbody id="reportBody">
-
-    </tbody>
+    <tbody id="reportBody"></tbody>
 
 </table>
 
+
 <script src="supabase.js"></script>
+
 <script src="Reports.js"></script>
 
 
