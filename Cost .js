@@ -1,7 +1,9 @@
 // =====================================
 // COST MANAGEMENT
 // SUPABASE VERSION
+// WITH MONTHLY LAST BALANCE
 // =====================================
+
 
 // =====================================
 // SUPABASE DATA
@@ -17,6 +19,7 @@ let costHistory = [];
 
 let demandHistory = [];
 
+
 // =====================================
 // LOAD ALL DATA FROM SUPABASE
 // =====================================
@@ -26,7 +29,6 @@ async function loadCostDataFromSupabase(){
     console.log("=====================================");
     console.log("LOADING COST DATA FROM SUPABASE");
     console.log("=====================================");
-
 
     try{
 
@@ -42,7 +44,6 @@ async function loadCostDataFromSupabase(){
                 "?select=*"
             );
 
-
         if(!itemsResult.success){
 
             console.error(
@@ -53,50 +54,47 @@ async function loadCostDataFromSupabase(){
             throw itemsResult.error;
         }
 
-
         items =
             itemsResult.data || [];
+
+
         // =================================
-// SORT ITEM CODE NUMERICALLY
-// SI 1, SI 2, SI 3 ... SI 10
-// =================================
+        // SORT ITEM CODE NUMERICALLY
+        // SI 1, SI 2, SI 3 ... SI 10
+        // =================================
 
-items.sort(function(a, b){
+        items.sort(function(a, b){
 
-    let codeA =
-        String(a.code || "").trim();
+            let codeA =
+                String(a.code || "").trim();
 
-    let codeB =
-        String(b.code || "").trim();
+            let codeB =
+                String(b.code || "").trim();
 
+            let numberA =
+                parseInt(
+                    codeA.replace(/\D/g, ""),
+                    10
+                );
 
-    let numberA =
-        parseInt(
-            codeA.replace(/\D/g, ""),
-            10
-        );
+            let numberB =
+                parseInt(
+                    codeB.replace(/\D/g, ""),
+                    10
+                );
 
+            if(isNaN(numberA)){
+                numberA = Infinity;
+            }
 
-    let numberB =
-        parseInt(
-            codeB.replace(/\D/g, ""),
-            10
-        );
+            if(isNaN(numberB)){
+                numberB = Infinity;
+            }
 
+            return numberA - numberB;
 
-    if(isNaN(numberA)){
-        numberA = Infinity;
-    }
+        });
 
-
-    if(isNaN(numberB)){
-        numberB = Infinity;
-    }
-
-
-    return numberA - numberB;
-
-});
 
         console.log(
             "Supabase Items:",
@@ -116,7 +114,6 @@ items.sort(function(a, b){
                 "?select=*"
             );
 
-
         if(!stockInResult.success){
 
             console.error(
@@ -126,7 +123,6 @@ items.sort(function(a, b){
 
             throw stockInResult.error;
         }
-
 
         stockInHistory =
             stockInResult.data || [];
@@ -150,7 +146,6 @@ items.sort(function(a, b){
                 "?select=*"
             );
 
-
         if(!stockOutResult.success){
 
             console.error(
@@ -160,7 +155,6 @@ items.sort(function(a, b){
 
             throw stockOutResult.error;
         }
-
 
         stockOutHistory =
             stockOutResult.data || [];
@@ -184,7 +178,6 @@ items.sort(function(a, b){
                 "?select=*"
             );
 
-
         if(!costResult.success){
 
             console.error(
@@ -195,7 +188,6 @@ items.sort(function(a, b){
             throw costResult.error;
         }
 
-
         costHistory =
             costResult.data || [];
 
@@ -204,6 +196,56 @@ items.sort(function(a, b){
             "Supabase Cost History:",
             costHistory
         );
+
+
+        // =================================
+        // LOAD DEMAND HISTORY
+        // =================================
+
+        let demandResult =
+            await supabaseRequest(
+                "demand_history",
+                "GET",
+                null,
+                "?select=*"
+            );
+
+
+        if(!demandResult.success){
+
+            console.error(
+                "Demand History Load Error:",
+                demandResult.error
+            );
+
+            demandHistory = [];
+
+        }else{
+
+            demandHistory =
+                demandResult.data || [];
+
+        }
+
+
+        console.log(
+            "Supabase Demand History:",
+            demandHistory
+        );
+
+
+        // =================================
+        // LOAD YEARS
+        // =================================
+
+        loadYears();
+
+
+        // =================================
+        // SHOW COST
+        // =================================
+
+        showAllCost();
 
 
         console.log(
@@ -235,54 +277,12 @@ items.sort(function(a, b){
         );
 
         console.log(
+            "Demand History:",
+            demandHistory.length
+        );
+
+        console.log(
             "=====================================");
-        // =================================
-// LOAD DEMAND HISTORY
-// =================================
-
-let demandResult =
-    await supabaseRequest(
-        "demand_history",
-        "GET",
-        null,
-        "?select=*"
-    );
-
-
-if(!demandResult.success){
-
-    console.error(
-        "Demand History Load Error:",
-        demandResult.error
-    );
-
-    demandHistory = [];
-
-}else{
-
-    demandHistory =
-        demandResult.data || [];
-
-}
-
-
-console.log(
-    "Supabase Demand History:",
-    demandHistory
-);
-
-        // =================================
-        // LOAD YEARS
-        // =================================
-
-        loadYears();
-
-
-        // =================================
-        // SHOW COST
-        // =================================
-
-        showAllCost();
 
 
     }catch(error){
@@ -291,7 +291,6 @@ console.log(
             "Cost Data Load Error:",
             error
         );
-
 
         alert(
             "Supabase سے Cost data load نہیں ہو سکا۔\n\nConsole میں error check کریں۔"
@@ -310,6 +309,559 @@ function getStockIn(itemCode){
 
     let total = 0;
 
+    for(
+        let i = 0;
+        i < stockInHistory.length;
+        i++
+    ){
+
+        let record =
+            stockInHistory[i];
+
+        let code =
+            String(
+                record.item_code || ""
+            ).trim();
+
+        if(
+            code ===
+            String(itemCode || "").trim()
+        ){
+
+            total +=
+                Number(
+                    record.quantity || 0
+                );
+
+        }
+
+    }
+
+    return total;
+
+}
+
+
+// =====================================
+// GET STOCK OUT
+// =====================================
+
+function getStockOut(itemCode){
+
+    let total = 0;
+
+    for(
+        let i = 0;
+        i < stockOutHistory.length;
+        i++
+    ){
+
+        let record =
+            stockOutHistory[i];
+
+        let code =
+            String(
+                record.item_code || ""
+            ).trim();
+
+        if(
+            code ===
+            String(itemCode || "").trim()
+        ){
+
+            total +=
+                Number(
+                    record.quantity || 0
+                );
+
+        }
+
+    }
+
+    return total;
+
+}
+
+
+// =====================================
+// GET OPENING STOCK
+// SUPPORTS:
+// opening_stock
+// opening_Stock
+// openingStock
+// =====================================
+
+function getOpeningStock(item){
+
+    if(!item){
+
+        return 0;
+
+    }
+
+    let value =
+        item.opening_stock ??
+        item.opening_Stock ??
+        item.openingStock ??
+        0;
+
+    return Number(value || 0);
+
+}
+
+
+// =====================================
+// GET CURRENT STOCK
+// Opening + In - Out
+// =====================================
+
+function getCurrentStock(item){
+
+    if(!item){
+
+        return 0;
+
+    }
+
+    let openingStock =
+        getOpeningStock(item);
+
+    let stockIn =
+        getStockIn(
+            item.code
+        );
+
+    let stockOut =
+        getStockOut(
+            item.code
+        );
+
+    let stock =
+        openingStock +
+        stockIn -
+        stockOut;
+
+    if(stock < 0){
+
+        stock = 0;
+
+    }
+
+    return stock;
+
+}
+
+
+// =====================================
+// NORMALIZE DATE
+// =====================================
+
+function normalizeDateValue(value){
+
+    if(!value){
+
+        return "";
+
+    }
+
+    let text =
+        String(value).trim();
+
+    // YYYY-MM-DD
+    if(
+        /^\d{4}-\d{2}-\d{2}$/.test(text)
+    ){
+
+        return text;
+
+    }
+
+    // ISO timestamp
+    let parsed =
+        new Date(text);
+
+    if(
+        !isNaN(
+            parsed.getTime()
+        )
+    ){
+
+        return (
+            parsed
+            .toISOString()
+            .substring(0,10)
+        );
+
+    }
+
+    return text.substring(0,10);
+
+}
+
+
+// =====================================
+// GET RECORD DATE
+// =====================================
+
+function getRecordDate(record){
+
+    return normalizeDateValue(
+
+        record.date ||
+        record.stock_date ||
+        record.issue_date ||
+        record.created_at ||
+        ""
+
+    );
+
+}
+
+
+// =====================================
+// GET RECORD TIME
+// =====================================
+
+function getRecordTime(record){
+
+    let time =
+        String(
+            record.time ||
+            record.stock_time ||
+            record.issue_time ||
+            ""
+        ).trim();
+
+    if(!time){
+
+        return "00:00:00";
+
+    }
+
+    // HH:MM
+    if(
+        /^\d{2}:\d{2}$/.test(time)
+    ){
+
+        return time + ":00";
+
+    }
+
+    return time;
+
+}
+
+
+// =====================================
+// GET DEMAND DATE
+// =====================================
+
+function getDemandDate(record){
+
+    if(!record){
+
+        return "";
+
+    }
+
+    return (
+        record.demand_date ||
+        record.demandDate ||
+        record.generate_date ||
+        record.generateDate ||
+        record.date ||
+        ""
+    );
+
+}
+
+
+// =====================================
+// GET DEMAND MONTH
+// =====================================
+
+function getDemandMonth(record){
+
+    if(!record){
+
+        return "";
+
+    }
+
+    let demandMonth =
+        String(
+            record.demand_month ||
+            record.demandMonth ||
+            record.month ||
+            ""
+        ).trim();
+
+
+    if(demandMonth){
+
+        return demandMonth.substring(0,7);
+
+    }
+
+
+    let fallbackDate =
+        String(
+            record.generate_date ||
+            record.generateDate ||
+            record.date ||
+            ""
+        ).trim();
+
+
+    if(
+        /^\d{4}-\d{2}-\d{2}/.test(
+            fallbackDate
+        )
+    ){
+
+        return fallbackDate.substring(
+            0,
+            7
+        );
+
+    }
+
+
+    return "";
+
+}
+
+
+// =====================================
+// GET DEMAND RECORD FOR MONTH
+// =====================================
+
+function getDemandRecordForMonth(
+    selectedMonth
+){
+
+    if(!selectedMonth){
+
+        return null;
+
+    }
+
+    let targetMonth =
+        String(
+            selectedMonth
+        )
+        .substring(0,7);
+
+
+    let matches = [];
+
+
+    for(
+        let i = 0;
+        i < demandHistory.length;
+        i++
+    ){
+
+        let record =
+            demandHistory[i];
+
+        let demandMonth =
+            getDemandMonth(record);
+
+
+        if(
+            demandMonth ===
+            targetMonth
+        ){
+
+            matches.push(record);
+
+        }
+
+    }
+
+
+    if(matches.length === 0){
+
+        return null;
+
+    }
+
+
+    // =================================
+    // IF MULTIPLE RECORDS EXIST
+    // USE LATEST RECORD
+    // =================================
+
+    matches.sort(function(a,b){
+
+        let idA =
+            Number(a.id || 0);
+
+        let idB =
+            Number(b.id || 0);
+
+        if(
+            idA &&
+            idB &&
+            idA !== idB
+        ){
+
+            return idB - idA;
+
+        }
+
+
+        let dateA =
+            String(
+                getDemandDate(a) || ""
+            );
+
+        let dateB =
+            String(
+                getDemandDate(b) || ""
+            );
+
+
+        return dateB.localeCompare(
+            dateA
+        );
+
+    });
+
+
+    return matches[0];
+
+}
+
+
+// =====================================
+// GET BALANCE AT DEMAND DATE
+//
+// Opening Stock
+// + Stock In <= Demand Date
+// - Stock Out <= Demand Date
+// =====================================
+
+function getBalanceAtDate(
+    item,
+    demandDateValue
+){
+
+    if(!item){
+
+        return 0;
+
+    }
+
+    if(!demandDateValue){
+
+        return getCurrentStock(item);
+
+    }
+
+
+    let demandText =
+        String(
+            demandDateValue
+        ).trim();
+
+
+    // =================================
+    // DETERMINE IF DEMAND DATE HAS TIME
+    // =================================
+
+    let hasTime =
+        /T\d{2}:\d{2}/.test(
+            demandText
+        ) ||
+        /\s\d{2}:\d{2}/.test(
+            demandText
+        );
+
+
+    let demandDate =
+        normalizeDateValue(
+            demandText
+        );
+
+
+    if(!demandDate){
+
+        return getCurrentStock(item);
+
+    }
+
+
+    let demandTime =
+        "23:59:59";
+
+
+    if(hasTime){
+
+        let parsedDemand =
+            new Date(demandText);
+
+        if(
+            !isNaN(
+                parsedDemand.getTime()
+            )
+        ){
+
+            // ISO timestamp
+            // Keep local date/time comparison
+            demandTime =
+                demandText
+                .replace("T"," ")
+                .substring(
+                    11,
+                    19
+                );
+
+        }else{
+
+            let timeMatch =
+                demandText.match(
+                    /(\d{2}:\d{2}(?::\d{2})?)/
+                );
+
+            if(timeMatch){
+
+                demandTime =
+                    timeMatch[1];
+
+                if(
+                    demandTime.length === 5
+                ){
+
+                    demandTime += ":00";
+
+                }
+
+            }
+
+        }
+
+    }
+
+
+    let openingStock =
+        getOpeningStock(item);
+
+
+    let balance =
+        openingStock;
+
+
+    let itemCode =
+        String(
+            item.code || ""
+        ).trim();
+
+
+    // =================================
+    // STOCK IN UP TO DEMAND DATE
+    // =================================
 
     for(
         let i = 0;
@@ -328,11 +880,64 @@ function getStockIn(itemCode){
 
 
         if(
-            code ===
-            String(itemCode || "").trim()
+            code !== itemCode
         ){
 
-            total +=
+            continue;
+
+        }
+
+
+        let recordDate =
+            getRecordDate(record);
+
+
+        if(!recordDate){
+
+            continue;
+
+        }
+
+
+        let recordTime =
+            getRecordTime(record);
+
+
+        let includeRecord = false;
+
+
+        if(
+            recordDate <
+            demandDate
+        ){
+
+            includeRecord = true;
+
+        }else if(
+            recordDate ===
+            demandDate
+        ){
+
+            if(hasTime){
+
+                includeRecord =
+                    recordTime <=
+                    demandTime;
+
+            }else{
+
+                // Date only:
+                // include complete day
+                includeRecord = true;
+
+            }
+
+        }
+
+
+        if(includeRecord){
+
+            balance +=
                 Number(
                     record.quantity || 0
                 );
@@ -342,19 +947,9 @@ function getStockIn(itemCode){
     }
 
 
-    return total;
-
-}
-
-
-// =====================================
-// GET STOCK OUT
-// =====================================
-
-function getStockOut(itemCode){
-
-    let total = 0;
-
+    // =================================
+    // STOCK OUT UP TO DEMAND DATE
+    // =================================
 
     for(
         let i = 0;
@@ -373,11 +968,64 @@ function getStockOut(itemCode){
 
 
         if(
-            code ===
-            String(itemCode || "").trim()
+            code !== itemCode
         ){
 
-            total +=
+            continue;
+
+        }
+
+
+        let recordDate =
+            getRecordDate(record);
+
+
+        if(!recordDate){
+
+            continue;
+
+        }
+
+
+        let recordTime =
+            getRecordTime(record);
+
+
+        let includeRecord = false;
+
+
+        if(
+            recordDate <
+            demandDate
+        ){
+
+            includeRecord = true;
+
+        }else if(
+            recordDate ===
+            demandDate
+        ){
+
+            if(hasTime){
+
+                includeRecord =
+                    recordTime <=
+                    demandTime;
+
+            }else{
+
+                // Date only:
+                // include complete day
+                includeRecord = true;
+
+            }
+
+        }
+
+
+        if(includeRecord){
+
+            balance -=
                 Number(
                     record.quantity || 0
                 );
@@ -387,57 +1035,72 @@ function getStockOut(itemCode){
     }
 
 
-    return total;
+    if(balance < 0){
+
+        balance = 0;
+
+    }
+
+
+    return balance;
 
 }
 
 
 // =====================================
-// GET CURRENT STOCK
-// Opening + In - Out
+// GET MONTHLY DISPLAY QUANTITY
+//
+// If month selected:
+//     Last Balance
+//
+// If no month selected:
+//     Current Stock
 // =====================================
 
-function getCurrentStock(item){
+function getDisplayQuantity(
+    item,
+    selectedMonth
+){
 
-    if(!item){
+    if(!selectedMonth){
 
-        return 0;
-
-    }
-
-
-    let openingStock =
-        Number(
-            item.opening_stock || 0
-        );
-
-
-    let stockIn =
-        getStockIn(
-            item.code
-        );
-
-
-    let stockOut =
-        getStockOut(
-            item.code
-        );
-
-
-    let stock =
-        openingStock +
-        stockIn -
-        stockOut;
-
-
-    if(stock < 0){
-
-        stock = 0;
+        return getCurrentStock(item);
 
     }
 
 
-    return stock;
+    let demandRecord =
+        getDemandRecordForMonth(
+            selectedMonth
+        );
+
+
+    if(!demandRecord){
+
+        // No demand record
+        // Keep old behavior
+        return getCurrentStock(item);
+
+    }
+
+
+    let demandDate =
+        getDemandDate(
+            demandRecord
+        );
+
+
+    if(!demandDate){
+
+        return getCurrentStock(item);
+
+    }
+
+
+    return getBalanceAtDate(
+        item,
+        demandDate
+    );
 
 }
 
@@ -506,21 +1169,26 @@ function getPurchaseRates(itemCode){
 
         }else{
 
-            let currentDateTime =
-                String(
-                    record.date || ""
-                ) +
-                String(
-                    record.time || ""
+            let currentDate =
+                getRecordDate(record);
+
+            let latestDate =
+                getRecordDate(
+                    latestRecord
                 );
 
 
+            let currentDateTime =
+                currentDate +
+                " " +
+                getRecordTime(record);
+
+
             let latestDateTime =
-                String(
-                    latestRecord.date || ""
-                ) +
-                String(
-                    latestRecord.time || ""
+                latestDate +
+                " " +
+                getRecordTime(
+                    latestRecord
                 );
 
 
@@ -600,10 +1268,6 @@ function getSupplier(item){
 
 
 // =====================================
-// GET DEMAND FROM COST HISTORY
-// =====================================
-
-// =====================================
 // GET APPROVED DEMAND
 // FROM DEMAND HISTORY
 // =====================================
@@ -627,48 +1291,8 @@ function getDemandForItem(
             demandHistory[i];
 
 
-        // =================================
-        // DEMAND MONTH
-        // =================================
-
         let demandMonth =
-            String(
-                record.demand_month ||
-                record.demandMonth ||
-                record.month ||
-                ""
-            ).trim();
-
-
-        // اگر Demand Month موجود نہیں
-        // تو generate date سے fallback
-
-        if(!demandMonth){
-
-            let fallbackDate =
-                String(
-                    record.generate_date ||
-                    record.generateDate ||
-                    record.date ||
-                    ""
-                ).trim();
-
-
-            if(
-                /^\d{4}-\d{2}-\d{2}$/.test(
-                    fallbackDate
-                )
-            ){
-
-                demandMonth =
-                    fallbackDate.substring(
-                        0,
-                        7
-                    );
-
-            }
-
-        }
+            getDemandMonth(record);
 
 
         // =================================
@@ -677,7 +1301,7 @@ function getDemandForItem(
 
         if(
             selectedMonth &&
-            demandMonth.substring(0,7) !==
+            demandMonth !==
             String(selectedMonth).substring(0,7)
         ){
 
@@ -794,7 +1418,6 @@ function getDemandForItem(
 
 
             // اگر value "200 Liter" جیسی ہو
-            // تو صرف number نکالیں
 
             if(
                 typeof approvedQty === "string"
@@ -833,6 +1456,7 @@ function getDemandForItem(
 
 }
 
+
 // =====================================
 // LOAD YEARS
 // =====================================
@@ -856,7 +1480,7 @@ function loadYears(){
 
 
     // =================================
-    // ITEM / STOCK YEARS
+    // STOCK IN YEARS
     // =================================
 
     for(
@@ -866,8 +1490,8 @@ function loadYears(){
     ){
 
         let date =
-            String(
-                stockInHistory[i].date || ""
+            getRecordDate(
+                stockInHistory[i]
             );
 
 
@@ -887,6 +1511,10 @@ function loadYears(){
     }
 
 
+    // =================================
+    // STOCK OUT YEARS
+    // =================================
+
     for(
         let i = 0;
         i < stockOutHistory.length;
@@ -894,13 +1522,45 @@ function loadYears(){
     ){
 
         let date =
-            String(
-                stockOutHistory[i].date || ""
+            getRecordDate(
+                stockOutHistory[i]
             );
 
 
         let year =
             date.substring(0,4);
+
+
+        if(
+            year &&
+            !years.includes(year)
+        ){
+
+            years.push(year);
+
+        }
+
+    }
+
+
+    // =================================
+    // DEMAND HISTORY YEARS
+    // =================================
+
+    for(
+        let i = 0;
+        i < demandHistory.length;
+        i++
+    ){
+
+        let month =
+            getDemandMonth(
+                demandHistory[i]
+            );
+
+
+        let year =
+            month.substring(0,4);
 
 
         if(
@@ -1200,11 +1860,20 @@ function showCostTable(
 
 
         // =================================
+        // AVAILABLE QUANTITY
+        //
+        // MONTH SELECTED:
+        // LAST BALANCE
+        //
+        // NO MONTH:
         // CURRENT STOCK
         // =================================
 
         let availableQty =
-            getCurrentStock(item);
+            getDisplayQuantity(
+                item,
+                selectedMonth
+            );
 
 
         // =================================
@@ -1726,6 +2395,530 @@ function buildSupplierSummary(
 
 
 // =====================================
+// ADD COST HISTORY
+// SAVE SELECTED MONTH SNAPSHOT
+// =====================================
+
+async function addCostHistory(){
+
+    let monthElement =
+        document.getElementById(
+            "reportMonth"
+        );
+
+
+    let selectedMonth =
+        monthElement
+        ? monthElement.value
+        : "";
+
+
+    // =================================
+    // MONTH REQUIRED
+    // =================================
+
+    if(!selectedMonth){
+
+        alert(
+            "براہ کرم پہلے Month منتخب کریں۔"
+        );
+
+        return;
+
+    }
+
+
+    // =================================
+    // FIND DEMAND RECORD
+    // =================================
+
+    let demandRecord =
+        getDemandRecordForMonth(
+            selectedMonth
+        );
+
+
+    if(!demandRecord){
+
+        alert(
+            "اس Month کی Demand History موجود نہیں ہے۔\n\n" +
+            "Cost History save کرنے کے لیے پہلے اس Month کی Demand generate کریں۔"
+        );
+
+        return;
+
+    }
+
+
+    // =================================
+    // GET DEMAND DATE
+    // =================================
+
+    let demandDate =
+        getDemandDate(
+            demandRecord
+        );
+
+
+    if(!demandDate){
+
+        alert(
+            "اس Month کی Demand میں Demand Date موجود نہیں ہے۔\n\n" +
+            "Last Balance calculate نہیں ہو سکتا۔"
+        );
+
+        return;
+
+    }
+
+
+    // =================================
+    // CONFIRM
+    // =================================
+
+    let monthParts =
+        String(
+            selectedMonth
+        ).split("-");
+
+
+    let monthNames = [
+
+        "January",
+        "February",
+        "March",
+        "April",
+        "May",
+        "June",
+        "July",
+        "August",
+        "September",
+        "October",
+        "November",
+        "December"
+
+    ];
+
+
+    let monthName =
+        monthNames[
+            Number(monthParts[1]) - 1
+        ] || selectedMonth;
+
+
+    let confirmSave =
+        confirm(
+
+            monthName +
+            " " +
+            monthParts[0] +
+            " کی Cost History save کریں؟\n\n" +
+
+            "Last Balance Date: " +
+            String(demandDate).substring(0,19)
+
+        );
+
+
+    if(!confirmSave){
+
+        return;
+
+    }
+
+
+    // =================================
+    // BUILD COMPLETE SNAPSHOT
+    // =================================
+
+    let historyItems = [];
+
+    let totalItems = 0;
+
+    let totalStockCost = 0;
+
+    let totalDemandQty = 0;
+
+    let totalDemandCost = 0;
+
+
+    // =================================
+    // ALL ITEMS
+    // IMPORTANT:
+    // SEARCH FILTER IGNORE ہوگا
+    // =================================
+
+    for(
+        let i = 0;
+        i < items.length;
+        i++
+    ){
+
+        let item =
+            items[i];
+
+
+        let code =
+            String(
+                item.code || ""
+            ).trim();
+
+
+        if(!code){
+
+            continue;
+
+        }
+
+
+        let lastBalance =
+            getBalanceAtDate(
+                item,
+                demandDate
+            );
+
+
+        // =================================
+        // RATES
+        // =================================
+
+        let rates =
+            getPurchaseRates(code);
+
+
+        let openingRate =
+            getOpeningRate(item);
+
+
+        let latestRate =
+            rates.latestRate;
+
+
+        if(latestRate <= 0){
+
+            latestRate =
+                openingRate;
+
+        }
+
+
+        // =================================
+        // DEMAND
+        // =================================
+
+        let approvedDemand =
+            getDemandForItem(
+
+                code,
+
+                selectedMonth,
+
+                ""
+
+            );
+
+
+        // =================================
+        // COST
+        // =================================
+
+        let availableCost =
+            lastBalance *
+            latestRate;
+
+
+        let approvedDemandCost =
+            approvedDemand *
+            latestRate;
+
+
+        // =================================
+        // TOTALS
+        // =================================
+
+        totalItems++;
+
+        totalStockCost +=
+            availableCost;
+
+        totalDemandQty +=
+            approvedDemand;
+
+        totalDemandCost +=
+            approvedDemandCost;
+
+
+        // =================================
+        // HISTORY ITEM
+        // =================================
+
+        historyItems.push({
+
+            code:
+                code,
+
+            item_code:
+                code,
+
+            item_name:
+                item.item_name || "",
+
+            category:
+                item.category || "Other",
+
+            supplier:
+                getSupplier(item),
+
+            unit:
+                item.unit || "",
+
+            opening_rate:
+                openingRate,
+
+            opening_cost:
+                openingRate,
+
+            min_rate:
+                rates.minRate,
+
+            max_rate:
+                rates.maxRate,
+
+            latest_rate:
+                latestRate,
+
+            available_quantity:
+                lastBalance,
+
+            last_balance:
+                lastBalance,
+
+            approved_demand:
+                approvedDemand,
+
+            available_cost:
+                availableCost,
+
+            approved_demand_cost:
+                approvedDemandCost,
+
+            demand_date:
+                demandDate
+
+        });
+
+    }
+
+
+    // =================================
+    // PAYLOAD
+    // =================================
+
+    let payload = {
+
+        month:
+            selectedMonth,
+
+        month_name:
+            monthName,
+
+        year:
+            Number(monthParts[0]),
+
+        total_items:
+            totalItems,
+
+        total_stock_cost:
+            totalStockCost,
+
+        approved_demand_qty:
+            totalDemandQty,
+
+        total_demand_cost:
+            totalDemandCost,
+
+        saved_date:
+            new Date().toISOString(),
+
+        items:
+            historyItems
+
+    };
+
+
+    console.log(
+        "Cost History Payload:",
+        payload
+    );
+
+
+    try{
+
+        // =================================
+        // CHECK EXISTING MONTH
+        // =================================
+
+        let existingResult =
+            await supabaseRequest(
+
+                "cost_history",
+
+                "GET",
+
+                null,
+
+                "?select=id&month=eq." +
+                encodeURIComponent(
+                    selectedMonth
+                )
+
+            );
+
+
+        if(
+            !existingResult.success
+        ){
+
+            throw existingResult.error;
+
+        }
+
+
+        let existingRows =
+            existingResult.data || [];
+
+
+        let saveResult;
+
+
+        // =================================
+        // UPDATE EXISTING
+        // =================================
+
+        if(
+            existingRows.length > 0
+        ){
+
+            let existingId =
+                existingRows[0].id;
+
+
+            saveResult =
+                await supabaseRequest(
+
+                    "cost_history",
+
+                    "PATCH",
+
+                    payload,
+
+                    "?id=eq." +
+                    encodeURIComponent(
+                        existingId
+                    )
+
+                );
+
+        }
+
+        // =================================
+        // INSERT NEW
+        // =================================
+
+        else{
+
+            saveResult =
+                await supabaseRequest(
+
+                    "cost_history",
+
+                    "POST",
+
+                    payload
+
+                );
+
+        }
+
+
+        if(
+            !saveResult.success
+        ){
+
+            console.error(
+                "Cost History Save Error:",
+                saveResult.error
+            );
+
+            throw saveResult.error;
+
+        }
+
+
+        // =================================
+        // REFRESH COST HISTORY
+        // =================================
+
+        let refreshResult =
+            await supabaseRequest(
+
+                "cost_history",
+
+                "GET",
+
+                null,
+
+                "?select=*"
+
+            );
+
+
+        if(
+            refreshResult.success
+        ){
+
+            costHistory =
+                refreshResult.data || [];
+
+            loadYears();
+
+        }
+
+
+        alert(
+
+            monthName +
+            " " +
+            monthParts[0] +
+            " کی Cost History کامیابی سے محفوظ ہو گئی ہے۔\n\n" +
+
+            "Last Balance Date: " +
+            String(demandDate).substring(0,19)
+
+        );
+
+
+    }catch(error){
+
+        console.error(
+            "Add Cost History Error:",
+            error
+        );
+
+
+        alert(
+
+            "Cost History save نہیں ہو سکی۔\n\n" +
+            "Console میں error check کریں۔"
+
+        );
+
+    }
+
+}
+
+
+// =====================================
 // PRINT COST REPORT
 // =====================================
 
@@ -2000,6 +3193,8 @@ window.addEventListener(
 
     }
 );
+
+
 // =====================================
 // EXPORT COST REPORT TO XLSX
 // WITH COLORS
@@ -2030,10 +3225,12 @@ function exportCostToExcel(){
             "costSearch"
         );
 
+
     let monthElement =
         document.getElementById(
             "reportMonth"
         );
+
 
     let yearElement =
         document.getElementById(
@@ -2069,10 +3266,6 @@ function exportCostToExcel(){
 
     let excelData = [];
 
-
-    // =====================================
-    // COMPANY
-    // =====================================
 
     excelData.push([
         "MECAS ENGINEERING PVT LIMITED SUNDAR"
@@ -2224,11 +3417,17 @@ function exportCostToExcel(){
 
 
         // =================================
-        // STOCK
+        // AVAILABLE QUANTITY
+        //
+        // MONTH SELECTED:
+        // LAST BALANCE
         // =================================
 
         let availableQty =
-            getCurrentStock(item);
+            getDisplayQuantity(
+                item,
+                selectedMonth
+            );
 
 
         // =================================
@@ -2431,12 +3630,7 @@ function exportCostToExcel(){
     // CATEGORY SUMMARY
     // =====================================
 
-    let categoryStart =
-        excelData.length + 2;
-
-
     excelData.push([]);
-
 
     excelData.push([
         "CATEGORY SUMMARY"
@@ -2475,7 +3669,7 @@ function exportCostToExcel(){
             ? (
                 amount /
                 totalStockCost
-            ) * 100
+            )
             : 0;
 
 
@@ -2485,7 +3679,7 @@ function exportCostToExcel(){
 
             amount,
 
-            percentage / 100
+            percentage
 
         ]);
 
@@ -2809,6 +4003,7 @@ function exportCostToExcel(){
                 "FFFFFF";
 
         }
+
 
         // =================================
         // YELLOW = LOW
