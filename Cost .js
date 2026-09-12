@@ -55,7 +55,47 @@ async function loadCostDataFromSupabase(){
 
         items =
             itemsResult.data || [];
+        // =================================
+// SORT ITEM CODE NUMERICALLY
+// SI 1, SI 2, SI 3 ... SI 10
+// =================================
 
+items.sort(function(a, b){
+
+    let codeA =
+        String(a.code || "").trim();
+
+    let codeB =
+        String(b.code || "").trim();
+
+
+    let numberA =
+        parseInt(
+            codeA.replace(/\D/g, ""),
+            10
+        );
+
+
+    let numberB =
+        parseInt(
+            codeB.replace(/\D/g, ""),
+            10
+        );
+
+
+    if(isNaN(numberA)){
+        numberA = Infinity;
+    }
+
+
+    if(isNaN(numberB)){
+        numberB = Infinity;
+    }
+
+
+    return numberA - numberB;
+
+});
 
         console.log(
             "Supabase Items:",
