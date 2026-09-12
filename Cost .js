@@ -1190,132 +1190,98 @@ function getDisplayQuantity(
 // GET PURCHASE RATES
 // =====================================
 
-function getPurchaseRates(itemCode){
+function getPurchaseRates(itemCode, cutoffDate = null) {
 
-    let rates = [];
-    let latestRecord = null;
+    const rates = stockInHistory
+        .filter(record => {
 
+            const code =
+                record.item_code ??
+                record.itemCode ??
+                record.code ??
+                record.item_id ??
+                record.itemId;
 
-    let target =
-        String(itemCode || "").trim();
+            if (String(code) !== String(itemCode)) {
+                return false;
+            }
 
-
-    for(
-        let i = 0;
-        i < stockInHistory.length;
-        i++
-    ){
-
-        let record =
-            stockInHistory[i];
-
-
-        let code =
-            getRecordItemCode(record);
-
-
-        if(code !== target){
-            continue;
-        }
-
-
-        let rate =
-            Number(
+            const rate = Number(
                 record.unit_cost ??
                 record.unitCost ??
                 record.rate ??
+                record.purchase_rate ??
+                record.purchaseRate ??
                 0
             );
 
-
-        if(rate <= 0){
-            continue;
-        }
-
-
-        rates.push(rate);
-
-
-        if(latestRecord === null){
-
-            latestRecord =
-                record;
-
-        }else{
-
-            let currentDate =
-                getRecordDate(record);
-
-            let latestDate =
-                getRecordDate(
-                    latestRecord
-                );
-
-
-            let currentDateTime =
-                currentDate +
-                " " +
-                getRecordTime(record);
-
-
-            let latestDateTime =
-                latestDate +
-                " " +
-                getRecordTime(
-                    latestRecord
-                );
-
-
-            if(
-                currentDateTime >
-                latestDateTime
-            ){
-
-                latestRecord =
-                    record;
-
+            if (!rate || rate <= 0) {
+                return false;
             }
 
-        }
+            // -----------------------------------------
+            // اگر historical date دی گئی ہے
+            // تو صرف اس date تک کے Stock In لیں
+            // -----------------------------------------
+            if (cutoffDate) {
 
-    }
+                const recordDate = getRecordDate(record);
 
+                if (!recordDate) {
+                    return false;
+                }
 
-    let latestRate = 0;
+                const demandDate = normalizeDateValue(cutoffDate);
+                const stockDate = normalizeDateValue(recordDate);
 
+                if (!demandDate || !stockDate) {
+                    return false;
+                }
 
-    if(latestRecord){
+                // Demand Date کے بعد کا rate نہیں لینا
+                if (stockDate > demandDate) {
+                    return false;
+                }
+            }
 
-        latestRate =
-            Number(
-                latestRecord.unit_cost ??
-                latestRecord.unitCost ??
-                latestRecord.rate ??
+            return true;
+        })
+        .map(record => {
+
+            const recordDate = getRecordDate(record);
+            const recordTime = getRecordTime(record);
+
+            const rate = Number(
+                record.unit_cost ??
+                record.unitCost ??
+                record.rate ??
+                record.purchase_rate ??
+                record.purchaseRate ??
                 0
             );
 
-    }
+            return {
+                rate: rate,
+                date: normalizeDateValue(recordDate),
+                time: recordTime || "00:00:00",
+                timestamp:
+                    normalizeDateValue(recordDate) +
+                    " " +
+                    (recordTime || "00:00:00")
+            };
+        });
 
+    // Latest date/time پہلے
+    rates.sort((a, b) => {
 
-    return {
+        if (a.timestamp < b.timestamp) return 1;
+        if (a.timestamp > b.timestamp) return -1;
 
-        minRate:
-            rates.length
-            ? Math.min(...rates)
-            : 0,
+        return 0;
+    });
 
-        maxRate:
-            rates.length
-            ? Math.max(...rates)
-            : 0,
-
-        latestRate:
-            latestRate
-
-    };
-
+    return rates;
 }
-
 
 // =====================================
 // GET OPENING RATE
@@ -1775,382 +1741,206 @@ function showCostReport(){
 // SHOW COST TABLE
 // =====================================
 
-function showCostTable(
-    selectedMonth,
-    selectedYear
-){
+function showCostTable(selectedMonth = "", selectedYear = "") {
 
-    let body =
-        document.getElementById(
-            "costBody"
-        );
+    const tbody = document.getElementById("costTableBody");
 
-
-    if(!body){
+    if (!tbody) {
+        console.error("costTableBody not found");
         return;
     }
 
+    tbody.innerHTML = "";
 
-    body.innerHTML = "";
-
-
-    let searchInput =
-        document.getElementById(
-            "costSearch"
-        );
-
-
-    let searchText =
-        searchInput
-        ? String(
-            searchInput.value || ""
-          )
-          .trim()
-          .toLowerCase()
-        : "";
-
-
-    let totalItems = 0;
-    let totalAvailableQty = 0;
-    let totalDemandQty = 0;
     let totalStockCost = 0;
     let totalDemandCost = 0;
 
-    let categoryTotals = {};
-    let supplierTotals = {};
+    // -----------------------------------------
+    // Selected month کی Demand نکالیں
+    // -----------------------------------------
+    let selectedDemandRecord = null;
+    let selectedDemandDate = null;
 
+    if (selectedMonth) {
 
-    // =================================
-    // ITEMS
-    // =================================
+        selectedDemandRecord =
+            getDemandRecordForMonth(selectedMonth);
 
-    for(
-        let i = 0;
-        i < items.length;
-        i++
-    ){
+        if (selectedDemandRecord) {
 
-        let item =
-            items[i];
-
-
-        let code =
-            getItemCode(item);
-
-
-        let itemName =
-            String(
-                item.item_name || ""
-            );
-
-
-        let category =
-            item.category ||
-            "Other";
-
-
-        let supplier =
-            getSupplier(item);
-
-
-        // =================================
-        // SEARCH
-        // =================================
-
-        if(searchText){
-
-            let searchData = (
-
-                code +
-                " " +
-                itemName +
-                " " +
-                category +
-                " " +
-                supplier
-
-            ).toLowerCase();
-
-
-            if(
-                !searchData.includes(
-                    searchText
-                )
-            ){
-
-                continue;
-
-            }
-
+            selectedDemandDate =
+                getDemandDate(selectedDemandRecord);
         }
-
-
-        // =================================
-        // AVAILABLE QUANTITY
-        //
-        // SELECTED MONTH:
-        // LAST BALANCE
-        //
-        // NO MONTH:
-        // CURRENT STOCK
-        // =================================
-
-        let availableQty =
-            getDisplayQuantity(
-                item,
-                selectedMonth
-            );
-
-
-        // =================================
-        // RATES
-        // =================================
-
-        let rates =
-            getPurchaseRates(code);
-
-
-        let openingRate =
-            getOpeningRate(item);
-
-
-        let latestRate =
-            rates.latestRate;
-
-
-        if(latestRate <= 0){
-
-            latestRate =
-                openingRate;
-
-        }
-
-
-        // =================================
-        // DEMAND
-        // =================================
-
-        let approvedDemand =
-            getDemandForItem(
-
-                code,
-
-                selectedMonth,
-
-                selectedYear
-
-            );
-
-
-        // =================================
-        // COST
-        // =================================
-
-        let availableCost =
-            availableQty *
-            latestRate;
-
-
-        let approvedDemandCost =
-            approvedDemand *
-            latestRate;
-
-
-        // =================================
-        // TOTALS
-        // =================================
-
-        totalItems++;
-
-        totalAvailableQty +=
-            availableQty;
-
-        totalDemandQty +=
-            approvedDemand;
-
-        totalStockCost +=
-            availableCost;
-
-        totalDemandCost +=
-            approvedDemandCost;
-
-
-        // =================================
-        // CATEGORY
-        // =================================
-
-        if(
-            !categoryTotals[category]
-        ){
-
-            categoryTotals[category] = 0;
-
-        }
-
-
-        categoryTotals[category] +=
-            availableCost;
-
-
-        // =================================
-        // SUPPLIER
-        // =================================
-
-        if(
-            !supplierTotals[supplier]
-        ){
-
-            supplierTotals[supplier] = 0;
-
-        }
-
-
-        supplierTotals[supplier] +=
-            availableCost;
-
-
-        // =================================
-        // ROW
-        // =================================
-
-        let row =
-            document.createElement(
-                "tr"
-            );
-
-
-        let values = [
-
-            category,
-
-            code || "-",
-
-            itemName || "-",
-
-            supplier,
-
-            "Rs. " +
-            openingRate.toFixed(2),
-
-            "Rs. " +
-            rates.minRate.toFixed(2),
-
-            "Rs. " +
-            rates.maxRate.toFixed(2),
-
-            "Rs. " +
-            latestRate.toFixed(2),
-
-            availableQty.toFixed(2) +
-            " " +
-            (
-                item.unit || ""
-            ),
-
-            approvedDemand.toFixed(2) +
-            " " +
-            (
-                item.unit || ""
-            ),
-
-            "Rs. " +
-            availableCost.toFixed(2),
-
-            "Rs. " +
-            approvedDemandCost.toFixed(2)
-
-        ];
-
-
-        for(
-            let j = 0;
-            j < values.length;
-            j++
-        ){
-
-            let cell =
-                document.createElement(
-                    "td"
-                );
-
-
-            cell.textContent =
-                values[j];
-
-
-            row.appendChild(
-                cell
-            );
-
-        }
-
-
-        body.appendChild(
-            row
-        );
-
     }
 
+    items.forEach((item, index) => {
 
-    // =================================
-    // SUMMARY
-    // =================================
+        const itemCode =
+            item.code ??
+            item.item_code ??
+            item.itemCode ??
+            "";
 
-    setCostText(
-        "totalItems",
-        totalItems
-    );
+        // -----------------------------------------
+        // Available Quantity
+        // -----------------------------------------
+        let availableQty;
 
+        if (selectedMonth && selectedDemandDate) {
 
-    setCostText(
-        "grandStockCost",
-        "Rs. " +
-        totalStockCost.toFixed(2)
-    );
+            // Selected month کا Last Balance
+            availableQty =
+                getBalanceAtDate(
+                    item,
+                    selectedDemandDate
+                );
 
+        } else {
 
-    setCostText(
-        "grandDemandCost",
-        "Rs. " +
-        totalDemandCost.toFixed(2)
-    );
+            // Current stock
+            availableQty =
+                getCurrentStock(item);
+        }
 
+        availableQty = Number(availableQty) || 0;
 
-    // =================================
-    // FOOTER
-    // =================================
+        // -----------------------------------------
+        // Latest Rate
+        // -----------------------------------------
+        let latestRate = 0;
 
-    setCostText(
-        "footerStockCost",
-        "Rs. " +
-        totalStockCost.toFixed(2)
-    );
+        if (selectedMonth && selectedDemandDate) {
 
+            // Historical Latest Rate
+            const historicalRates =
+                getPurchaseRates(
+                    itemCode,
+                    selectedDemandDate
+                );
 
-    setCostText(
-        "footerDemandCost",
-        "Rs. " +
-        totalDemandCost.toFixed(2)
-    );
+            if (historicalRates.length > 0) {
 
+                latestRate =
+                    Number(historicalRates[0].rate) || 0;
+            }
 
-    // =================================
-    // SUMMARY TABLES
-    // =================================
+        } else {
 
-    buildCategorySummary(
-        categoryTotals,
-        totalStockCost
-    );
+            // Current Latest Rate
+            const currentRates =
+                getPurchaseRates(itemCode);
 
+            if (currentRates.length > 0) {
 
-    buildSupplierSummary(
-        supplierTotals,
-        totalStockCost
-    );
+                latestRate =
+                    Number(currentRates[0].rate) || 0;
+            }
+        }
 
+        // -----------------------------------------
+        // Opening Cost fallback
+        // -----------------------------------------
+        if (!latestRate || latestRate <= 0) {
+
+            latestRate =
+                Number(getOpeningRate(item)) || 0;
+        }
+
+        // -----------------------------------------
+        // Approved Demand
+        // -----------------------------------------
+        const approvedDemand =
+            Number(
+                getDemandForItem(
+                    itemCode,
+                    selectedMonth,
+                    selectedYear
+                )
+            ) || 0;
+
+        // -----------------------------------------
+        // Costs
+        // -----------------------------------------
+        const availableCost =
+            availableQty * latestRate;
+
+        const demandCost =
+            approvedDemand * latestRate;
+
+        totalStockCost += availableCost;
+        totalDemandCost += demandCost;
+
+        // -----------------------------------------
+        // Row
+        // -----------------------------------------
+        const tr = document.createElement("tr");
+
+        tr.innerHTML = `
+            <td>${item.category ?? "-"}</td>
+
+            <td>${item.id ?? (index + 1)}</td>
+
+            <td>${item.item_name ?? "-"}</td>
+
+            <td>${getSupplier(item)}</td>
+
+            <td>
+                Rs. ${Number(getOpeningRate(item) || 0).toFixed(2)}
+            </td>
+
+            <td>
+                Rs. ${getMinRate(itemCode).toFixed(2)}
+            </td>
+
+            <td>
+                Rs. ${getMaxRate(itemCode).toFixed(2)}
+            </td>
+
+            <td>
+                Rs. ${latestRate.toFixed(2)}
+            </td>
+
+            <td>
+                ${availableQty.toFixed(2)}
+                ${item.unit ?? ""}
+            </td>
+
+            <td>
+                ${approvedDemand.toFixed(2)}
+                ${item.unit ?? ""}
+            </td>
+
+            <td>
+                Rs. ${availableCost.toFixed(2)}
+            </td>
+
+            <td>
+                Rs. ${demandCost.toFixed(2)}
+            </td>
+        `;
+
+        tbody.appendChild(tr);
+    });
+
+    // -----------------------------------------
+    // Footer totals
+    // -----------------------------------------
+    const footerStockCost =
+        document.getElementById("footerStockCost");
+
+    const footerDemandCost =
+        document.getElementById("footerDemandCost");
+
+    if (footerStockCost) {
+        footerStockCost.textContent =
+            "Rs. " + totalStockCost.toFixed(2);
+    }
+
+    if (footerDemandCost) {
+        footerDemandCost.textContent =
+            "Rs. " + totalDemandCost.toFixed(2);
+    }
 }
-
 
 // =====================================
 // SET TEXT
