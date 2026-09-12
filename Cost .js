@@ -974,121 +974,128 @@ function recordIsBeforeOrEqualDemandDate(
 // + Stock In ON / BEFORE Demand Date
 // - Stock Out ON / BEFORE Demand Date
 // =====================================
+function getBalanceAtDate(item, demandDateValue) {
 
-function getBalanceAtDate(
-    item,
-    demandDateValue
-){
-
-    if(!item){
-        return 0;
-    }
-
-
-    if(!demandDateValue){
-
+    if (!demandDateValue) {
         return getCurrentStock(item);
-
     }
 
+    const demandDate = normalizeDateValue(demandDateValue);
 
-    let itemCode =
-        getItemCode(item);
-
-
-    let balance =
-        getOpeningStock(item);
-
-
-    // =================================
-    // STOCK IN
-    // =================================
-
-    for(
-        let i = 0;
-        i < stockInHistory.length;
-        i++
-    ){
-
-        let record =
-            stockInHistory[i];
-
-
-        let code =
-            getRecordItemCode(record);
-
-
-        if(code !== itemCode){
-            continue;
-        }
-
-
-        if(
-            recordIsBeforeOrEqualDemandDate(
-                record,
-                demandDateValue
-            )
-        ){
-
-            balance +=
-                getRecordQuantity(record);
-
-        }
-
+    if (!demandDate) {
+        return getCurrentStock(item);
     }
 
+    // IMPORTANT:
+    // Demand Date کو شامل نہیں کرنا۔
+    // صرف Demand Date سے پہلے تک کا balance لیا جائے گا۔
 
-    // =================================
-    // STOCK OUT
-    // =================================
+    const d = new Date(demandDate + "T00:00:00");
 
-    for(
-        let i = 0;
-        i < stockOutHistory.length;
-        i++
-    ){
-
-        let record =
-            stockOutHistory[i];
-
-
-        let code =
-            getRecordItemCode(record);
-
-
-        if(code !== itemCode){
-            continue;
-        }
-
-
-        if(
-            recordIsBeforeOrEqualDemandDate(
-                record,
-                demandDateValue
-            )
-        ){
-
-            balance -=
-                getRecordQuantity(record);
-
-        }
-
+    if (isNaN(d.getTime())) {
+        return getCurrentStock(item);
     }
 
+    d.setDate(d.getDate() - 1);
 
-    // =================================
-    // NEVER SHOW NEGATIVE
-    // =================================
+    const cutoffDate =
+        d.getFullYear() +
+        "-" +
+        String(d.getMonth() + 1).padStart(2, "0") +
+        "-" +
+        String(d.getDate()).padStart(2, "0");
 
-    if(balance < 0){
-        balance = 0;
-    }
+    const itemCode =
+        item.code ??
+        item.item_code ??
+        item.itemCode ??
+        "";
 
+    let balance = Number(
+        item.opening_stock ??
+        item.opening_Stock ??
+        item.openingStock ??
+        0
+    );
 
-    return balance;
+    // --------------------------------------------------
+    // STOCK IN - صرف Demand Date سے پہلے
+    // --------------------------------------------------
 
+    stockInHistory.forEach(record => {
+
+        const code =
+            record.item_code ??
+            record.itemCode ??
+            record.code ??
+            record.item_id ??
+            record.itemId;
+
+        if (String(code) !== String(itemCode)) {
+            return;
+        }
+
+        const recordDate =
+            normalizeDateValue(getRecordDate(record));
+
+        if (!recordDate) {
+            return;
+        }
+
+        if (recordDate < demandDate) {
+
+            const qty = Number(
+                record.quantity ??
+                record.qty ??
+                0
+            );
+
+            if (!isNaN(qty)) {
+                balance += qty;
+            }
+        }
+    });
+
+    // --------------------------------------------------
+    // STOCK OUT - صرف Demand Date سے پہلے
+    // --------------------------------------------------
+
+    stockOutHistory.forEach(record => {
+
+        const code =
+            record.item_code ??
+            record.itemCode ??
+            record.code ??
+            record.item_id ??
+            record.itemId;
+
+        if (String(code) !== String(itemCode)) {
+            return;
+        }
+
+        const recordDate =
+            normalizeDateValue(getRecordDate(record));
+
+        if (!recordDate) {
+            return;
+        }
+
+        if (recordDate < demandDate) {
+
+            const qty = Number(
+                record.quantity ??
+                record.qty ??
+                0
+            );
+
+            if (!isNaN(qty)) {
+                balance -= qty;
+            }
+        }
+    });
+
+    return Math.max(0, balance);
 }
-
 
 // =====================================
 // GET MONTHLY DISPLAY QUANTITY
@@ -1206,41 +1213,40 @@ function getPurchaseRates(itemCode, cutoffDate = null) {
                 return false;
             }
 
-            const rate =
-                Number(
-                    record.unit_cost ??
-                    record.unitCost ??
-                    record.rate ??
-                    record.purchase_rate ??
-                    record.purchaseRate ??
-                    0
-                );
+            const rate = Number(
+                record.unit_cost ??
+                record.unitCost ??
+                record.rate ??
+                record.purchase_rate ??
+                record.purchaseRate ??
+                0
+            );
 
             if (!rate || rate <= 0) {
                 return false;
             }
 
-            // Historical cutoff
+            // --------------------------------------------------
+            // IMPORTANT:
+            // Demand Date کو شامل نہیں کرنا
+            // --------------------------------------------------
+
             if (cutoffDate) {
 
                 const recordDate =
-                    getRecordDate(record);
-
-                if (!recordDate) {
-                    return false;
-                }
-
-                const stockDate =
-                    normalizeDateValue(recordDate);
+                    normalizeDateValue(
+                        getRecordDate(record)
+                    );
 
                 const demandDate =
                     normalizeDateValue(cutoffDate);
 
-                if (!stockDate || !demandDate) {
+                if (!recordDate || !demandDate) {
                     return false;
                 }
 
-                if (stockDate > demandDate) {
+                // صرف Demand Date سے پہلے
+                if (recordDate >= demandDate) {
                     return false;
                 }
             }
@@ -1250,33 +1256,34 @@ function getPurchaseRates(itemCode, cutoffDate = null) {
         .map(record => {
 
             const recordDate =
-                getRecordDate(record);
+                normalizeDateValue(
+                    getRecordDate(record)
+                );
 
             const recordTime =
                 getRecordTime(record) || "00:00:00";
 
-            const rate =
-                Number(
-                    record.unit_cost ??
-                    record.unitCost ??
-                    record.rate ??
-                    record.purchase_rate ??
-                    record.purchaseRate ??
-                    0
-                );
+            const rate = Number(
+                record.unit_cost ??
+                record.unitCost ??
+                record.rate ??
+                record.purchase_rate ??
+                record.purchaseRate ??
+                0
+            );
 
             return {
                 rate: rate,
-                date: normalizeDateValue(recordDate),
+                date: recordDate,
                 time: recordTime,
                 timestamp:
-                    normalizeDateValue(recordDate) +
+                    recordDate +
                     " " +
                     recordTime
             };
         });
 
-    // Latest transaction first
+    // Latest valid rate first
     rates.sort((a, b) =>
         b.timestamp.localeCompare(a.timestamp)
     );
