@@ -1206,39 +1206,40 @@ function getPurchaseRates(itemCode, cutoffDate = null) {
                 return false;
             }
 
-            const rate = Number(
-                record.unit_cost ??
-                record.unitCost ??
-                record.rate ??
-                record.purchase_rate ??
-                record.purchaseRate ??
-                0
-            );
+            const rate =
+                Number(
+                    record.unit_cost ??
+                    record.unitCost ??
+                    record.rate ??
+                    record.purchase_rate ??
+                    record.purchaseRate ??
+                    0
+                );
 
             if (!rate || rate <= 0) {
                 return false;
             }
 
-            // -----------------------------------------
-            // اگر historical date دی گئی ہے
-            // تو صرف اس date تک کے Stock In لیں
-            // -----------------------------------------
+            // Historical cutoff
             if (cutoffDate) {
 
-                const recordDate = getRecordDate(record);
+                const recordDate =
+                    getRecordDate(record);
 
                 if (!recordDate) {
                     return false;
                 }
 
-                const demandDate = normalizeDateValue(cutoffDate);
-                const stockDate = normalizeDateValue(recordDate);
+                const stockDate =
+                    normalizeDateValue(recordDate);
 
-                if (!demandDate || !stockDate) {
+                const demandDate =
+                    normalizeDateValue(cutoffDate);
+
+                if (!stockDate || !demandDate) {
                     return false;
                 }
 
-                // Demand Date کے بعد کا rate نہیں لینا
                 if (stockDate > demandDate) {
                     return false;
                 }
@@ -1248,41 +1249,40 @@ function getPurchaseRates(itemCode, cutoffDate = null) {
         })
         .map(record => {
 
-            const recordDate = getRecordDate(record);
-            const recordTime = getRecordTime(record);
+            const recordDate =
+                getRecordDate(record);
 
-            const rate = Number(
-                record.unit_cost ??
-                record.unitCost ??
-                record.rate ??
-                record.purchase_rate ??
-                record.purchaseRate ??
-                0
-            );
+            const recordTime =
+                getRecordTime(record) || "00:00:00";
+
+            const rate =
+                Number(
+                    record.unit_cost ??
+                    record.unitCost ??
+                    record.rate ??
+                    record.purchase_rate ??
+                    record.purchaseRate ??
+                    0
+                );
 
             return {
                 rate: rate,
                 date: normalizeDateValue(recordDate),
-                time: recordTime || "00:00:00",
+                time: recordTime,
                 timestamp:
                     normalizeDateValue(recordDate) +
                     " " +
-                    (recordTime || "00:00:00")
+                    recordTime
             };
         });
 
-    // Latest date/time پہلے
-    rates.sort((a, b) => {
-
-        if (a.timestamp < b.timestamp) return 1;
-        if (a.timestamp > b.timestamp) return -1;
-
-        return 0;
-    });
+    // Latest transaction first
+    rates.sort((a, b) =>
+        b.timestamp.localeCompare(a.timestamp)
+    );
 
     return rates;
 }
-
 // =====================================
 // GET OPENING RATE
 // =====================================
@@ -1745,35 +1745,17 @@ function showCostTable(selectedMonth = "", selectedYear = "") {
 
     const tbody = document.getElementById("costBody");
 
-   if (!tbody) {
-    console.error("costBody not found");
-    return;
-}
+    if (!tbody) {
+        console.error("costBody not found");
+        return;
+    }
 
     tbody.innerHTML = "";
 
     let totalStockCost = 0;
     let totalDemandCost = 0;
 
-    // -----------------------------------------
-    // Selected month کی Demand نکالیں
-    // -----------------------------------------
-    let selectedDemandRecord = null;
-    let selectedDemandDate = null;
-
-    if (selectedMonth) {
-
-        selectedDemandRecord =
-            getDemandRecordForMonth(selectedMonth);
-
-        if (selectedDemandRecord) {
-
-            selectedDemandDate =
-                getDemandDate(selectedDemandRecord);
-        }
-    }
-
-    items.forEach((item, index) => {
+    items.forEach(item => {
 
         const itemCode =
             item.code ??
@@ -1781,133 +1763,154 @@ function showCostTable(selectedMonth = "", selectedYear = "") {
             item.itemCode ??
             "";
 
-        // -----------------------------------------
-        // Available Quantity
-        // -----------------------------------------
-        let availableQty;
+        // --------------------------------------------------
+        // HISTORICAL DEMAND DATE
+        // --------------------------------------------------
 
-        if (selectedMonth && selectedDemandDate) {
+        let demandRecord = null;
+        let selectedDemandDate = null;
 
-            // Selected month کا Last Balance
-            availableQty =
-                getBalanceAtDate(
-                    item,
-                    selectedDemandDate
-                );
+        if (selectedMonth) {
 
-        } else {
+            demandRecord = getDemandRecordForMonth(selectedMonth);
 
-            // Current stock
-            availableQty =
-                getCurrentStock(item);
+            if (demandRecord) {
+                selectedDemandDate = getDemandDate(demandRecord);
+            }
         }
 
-        availableQty = Number(availableQty) || 0;
+        // --------------------------------------------------
+        // AVAILABLE QUANTITY
+        // --------------------------------------------------
 
-        // -----------------------------------------
-        // Latest Rate
-        // -----------------------------------------
+        const availableQty =
+            selectedMonth
+                ? getBalanceAtDate(item, selectedDemandDate)
+                : getCurrentStock(item);
+
+        // --------------------------------------------------
+        // PURCHASE RATES
+        // --------------------------------------------------
+
+        const rates =
+            selectedMonth && selectedDemandDate
+                ? getPurchaseRates(itemCode, selectedDemandDate)
+                : getPurchaseRates(itemCode);
+
+        let minRate = 0;
+        let maxRate = 0;
         let latestRate = 0;
 
-        if (selectedMonth && selectedDemandDate) {
+        if (rates.length > 0) {
 
-            // Historical Latest Rate
-            const historicalRates =
-                getPurchaseRates(
-                    itemCode,
-                    selectedDemandDate
-                );
+            const numericRates = rates
+                .map(r => Number(r.rate))
+                .filter(r => !isNaN(r) && r > 0);
 
-            if (historicalRates.length > 0) {
+            if (numericRates.length > 0) {
 
-                latestRate =
-                    Number(historicalRates[0].rate) || 0;
-            }
+                minRate = Math.min(...numericRates);
+                maxRate = Math.max(...numericRates);
 
-        } else {
-
-            // Current Latest Rate
-            const currentRates =
-                getPurchaseRates(itemCode);
-
-            if (currentRates.length > 0) {
-
-                latestRate =
-                    Number(currentRates[0].rate) || 0;
+                // Latest rate = latest purchase rate
+                latestRate = Number(rates[0].rate) || 0;
             }
         }
 
-        // -----------------------------------------
-        // Opening Cost fallback
-        // -----------------------------------------
-        if (!latestRate || latestRate <= 0) {
+        // --------------------------------------------------
+        // OPENING COST
+        // --------------------------------------------------
 
-            latestRate =
-                Number(getOpeningRate(item)) || 0;
-        }
-
-        // -----------------------------------------
-        // Approved Demand
-        // -----------------------------------------
-        const approvedDemand =
+        const openingRate =
             Number(
-                getDemandForItem(
-                    itemCode,
-                    selectedMonth,
-                    selectedYear
-                )
+                item.opening_cost ??
+                item.openingCost ??
+                0
             ) || 0;
 
-        // -----------------------------------------
-        // Costs
-        // -----------------------------------------
+        // اگر Stock In rate موجود نہ ہو
+        if (latestRate <= 0) {
+            latestRate = openingRate;
+        }
+
+        if (minRate <= 0) {
+            minRate = latestRate;
+        }
+
+        if (maxRate <= 0) {
+            maxRate = latestRate;
+        }
+
+        // --------------------------------------------------
+        // APPROVED DEMAND
+        // --------------------------------------------------
+
+        const demandQty =
+            getDemandForItem(
+                itemCode,
+                selectedMonth,
+                selectedYear
+            );
+
+        // --------------------------------------------------
+        // COST CALCULATION
+        // --------------------------------------------------
+
         const availableCost =
-            availableQty * latestRate;
+            Number(availableQty) * Number(latestRate);
 
         const demandCost =
-            approvedDemand * latestRate;
+            Number(demandQty) * Number(latestRate);
 
         totalStockCost += availableCost;
         totalDemandCost += demandCost;
 
-        // -----------------------------------------
-        // Row
-        // -----------------------------------------
-        const tr = document.createElement("tr");
+        // --------------------------------------------------
+        // SUPPLIER
+        // --------------------------------------------------
 
-        tr.innerHTML = `
+        const supplier = getSupplier(item);
+
+        // --------------------------------------------------
+        // UNIT
+        // --------------------------------------------------
+
+        const unit =
+            item.unit ??
+            item.packed_unit ??
+            "";
+
+        // --------------------------------------------------
+        // TABLE ROW
+        // --------------------------------------------------
+
+        const row = document.createElement("tr");
+
+        row.innerHTML = `
             <td>${item.category ?? "-"}</td>
 
-            <td>${item.id ?? (index + 1)}</td>
+            <td>${itemCode}</td>
 
-            <td>${item.item_name ?? "-"}</td>
+            <td>${item.item_name ?? item.itemName ?? "-"}</td>
 
-            <td>${getSupplier(item)}</td>
+            <td>${supplier}</td>
+
+            <td>Rs. ${openingRate.toFixed(2)}</td>
+
+            <td>Rs. ${minRate.toFixed(2)}</td>
+
+            <td>Rs. ${maxRate.toFixed(2)}</td>
+
+            <td>Rs. ${latestRate.toFixed(2)}</td>
 
             <td>
-                Rs. ${Number(getOpeningRate(item) || 0).toFixed(2)}
+                ${Number(availableQty).toFixed(2)}
+                ${unit}
             </td>
 
             <td>
-                Rs. ${getMinRate(itemCode).toFixed(2)}
-            </td>
-
-            <td>
-                Rs. ${getMaxRate(itemCode).toFixed(2)}
-            </td>
-
-            <td>
-                Rs. ${latestRate.toFixed(2)}
-            </td>
-
-            <td>
-                ${availableQty.toFixed(2)}
-                ${item.unit ?? ""}
-            </td>
-
-            <td>
-                ${approvedDemand.toFixed(2)}
-                ${item.unit ?? ""}
+                ${Number(demandQty).toFixed(2)}
+                ${unit}
             </td>
 
             <td>
@@ -1919,12 +1922,13 @@ function showCostTable(selectedMonth = "", selectedYear = "") {
             </td>
         `;
 
-        tbody.appendChild(tr);
+        tbody.appendChild(row);
     });
 
-    // -----------------------------------------
-    // Footer totals
-    // -----------------------------------------
+    // --------------------------------------------------
+    // FOOTER TOTALS
+    // --------------------------------------------------
+
     const footerStockCost =
         document.getElementById("footerStockCost");
 
@@ -1940,8 +1944,17 @@ function showCostTable(selectedMonth = "", selectedYear = "") {
         footerDemandCost.textContent =
             "Rs. " + totalDemandCost.toFixed(2);
     }
-}
 
+    console.log(
+        "Cost Table Loaded",
+        {
+            selectedMonth,
+            selectedYear,
+            totalStockCost,
+            totalDemandCost
+        }
+    );
+}
 // =====================================
 // SET TEXT
 // =====================================
