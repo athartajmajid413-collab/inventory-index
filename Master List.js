@@ -47,13 +47,50 @@ async function loadItems(){
     items = result.data || [];
 
 
-    console.log(
-        "Items loaded:",
-        items
+// =====================================
+// SORT ITEMS BY ITEM CODE NUMBER
+// Example:
+// SI 1
+// SI 2
+// SI 3
+// ...
+// SI 9
+// SI 10
+// SI 11
+// =====================================
+
+items.sort(function(a, b){
+
+    let codeA = String(a.code || "").trim();
+    let codeB = String(b.code || "").trim();
+
+    // Item Code se numeric number nikalna
+    let numberA = parseInt(
+        codeA.replace(/\D/g, ""),
+        10
     );
 
+    let numberB = parseInt(
+        codeB.replace(/\D/g, ""),
+        10
+    );
 
-    renderItems();
+    // Agar number na mile to end mein rakhein
+    if(isNaN(numberA)) numberA = Infinity;
+    if(isNaN(numberB)) numberB = Infinity;
+
+    return numberA - numberB;
+
+});
+
+
+console.log(
+    "Items loaded and sorted:",
+    items
+);
+
+
+renderItems();
 
 }
 
