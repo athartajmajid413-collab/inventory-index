@@ -1,7 +1,8 @@
 // =====================================
 // COST MANAGEMENT
 // SUPABASE VERSION
-// WITH MONTHLY LAST BALANCE
+// MONTHLY LAST BALANCE
+// AVAILABLE QUANTITY = LAST BALANCE
 // =====================================
 
 
@@ -10,13 +11,9 @@
 // =====================================
 
 let items = [];
-
 let stockInHistory = [];
-
 let stockOutHistory = [];
-
 let costHistory = [];
-
 let demandHistory = [];
 
 
@@ -33,7 +30,7 @@ async function loadCostDataFromSupabase(){
     try{
 
         // =================================
-        // LOAD MASTER ITEMS
+        // ITEMS
         // =================================
 
         let itemsResult =
@@ -59,11 +56,10 @@ async function loadCostDataFromSupabase(){
 
 
         // =================================
-        // SORT ITEM CODE NUMERICALLY
-        // SI 1, SI 2, SI 3 ... SI 10
+        // NUMERIC ITEM SORT
         // =================================
 
-        items.sort(function(a, b){
+        items.sort(function(a,b){
 
             let codeA =
                 String(a.code || "").trim();
@@ -73,13 +69,13 @@ async function loadCostDataFromSupabase(){
 
             let numberA =
                 parseInt(
-                    codeA.replace(/\D/g, ""),
+                    codeA.replace(/\D/g,""),
                     10
                 );
 
             let numberB =
                 parseInt(
-                    codeB.replace(/\D/g, ""),
+                    codeB.replace(/\D/g,""),
                     10
                 );
 
@@ -96,14 +92,8 @@ async function loadCostDataFromSupabase(){
         });
 
 
-        console.log(
-            "Supabase Items:",
-            items
-        );
-
-
         // =================================
-        // LOAD STOCK IN
+        // STOCK IN
         // =================================
 
         let stockInResult =
@@ -128,14 +118,8 @@ async function loadCostDataFromSupabase(){
             stockInResult.data || [];
 
 
-        console.log(
-            "Supabase Stock In:",
-            stockInHistory
-        );
-
-
         // =================================
-        // LOAD STOCK OUT
+        // STOCK OUT
         // =================================
 
         let stockOutResult =
@@ -160,14 +144,8 @@ async function loadCostDataFromSupabase(){
             stockOutResult.data || [];
 
 
-        console.log(
-            "Supabase Stock Out:",
-            stockOutHistory
-        );
-
-
         // =================================
-        // LOAD COST HISTORY
+        // COST HISTORY
         // =================================
 
         let costResult =
@@ -192,14 +170,8 @@ async function loadCostDataFromSupabase(){
             costResult.data || [];
 
 
-        console.log(
-            "Supabase Cost History:",
-            costHistory
-        );
-
-
         // =================================
-        // LOAD DEMAND HISTORY
+        // DEMAND HISTORY
         // =================================
 
         let demandResult =
@@ -211,7 +183,12 @@ async function loadCostDataFromSupabase(){
             );
 
 
-        if(!demandResult.success){
+        if(demandResult.success){
+
+            demandHistory =
+                demandResult.data || [];
+
+        }else{
 
             console.error(
                 "Demand History Load Error:",
@@ -220,70 +197,26 @@ async function loadCostDataFromSupabase(){
 
             demandHistory = [];
 
-        }else{
-
-            demandHistory =
-                demandResult.data || [];
-
         }
 
 
-        console.log(
-            "Supabase Demand History:",
-            demandHistory
-        );
-
-
         // =================================
-        // LOAD YEARS
+        // YEARS
         // =================================
 
         loadYears();
 
 
         // =================================
-        // SHOW COST
+        // SHOW ALL
         // =================================
 
         showAllCost();
 
 
         console.log(
-            "====================================="
-        );
-
-        console.log(
             "SUPABASE COST DATA LOADED"
         );
-
-        console.log(
-            "Items:",
-            items.length
-        );
-
-        console.log(
-            "Stock In:",
-            stockInHistory.length
-        );
-
-        console.log(
-            "Stock Out:",
-            stockOutHistory.length
-        );
-
-        console.log(
-            "Cost History:",
-            costHistory.length
-        );
-
-        console.log(
-            "Demand History:",
-            demandHistory.length
-        );
-
-        console.log(
-            "=====================================");
-
 
     }catch(error){
 
@@ -302,12 +235,85 @@ async function loadCostDataFromSupabase(){
 
 
 // =====================================
+// GET ITEM CODE
+// =====================================
+
+function getItemCode(item){
+
+    if(!item){
+        return "";
+    }
+
+    return String(
+        item.code ??
+        item.item_code ??
+        item.itemCode ??
+        item.id ??
+        ""
+    ).trim();
+
+}
+
+
+// =====================================
+// GET RECORD ITEM CODE
+// =====================================
+
+function getRecordItemCode(record){
+
+    if(!record){
+        return "";
+    }
+
+    return String(
+
+        record.item_code ??
+        record.itemCode ??
+        record.code ??
+        record.item_id ??
+        record.itemId ??
+        ""
+
+    ).trim();
+
+}
+
+
+// =====================================
+// GET RECORD QUANTITY
+// =====================================
+
+function getRecordQuantity(record){
+
+    if(!record){
+        return 0;
+    }
+
+    let value =
+        record.quantity ??
+        record.qty ??
+        record.stock_in_qty ??
+        record.stock_out_qty ??
+        record.issue_qty ??
+        record.stock_quantity ??
+        0;
+
+    return Number(value || 0);
+
+}
+
+
+// =====================================
 // GET STOCK IN
 // =====================================
 
 function getStockIn(itemCode){
 
     let total = 0;
+
+    let target =
+        String(itemCode || "").trim();
+
 
     for(
         let i = 0;
@@ -319,23 +325,19 @@ function getStockIn(itemCode){
             stockInHistory[i];
 
         let code =
-            String(
-                record.item_code || ""
-            ).trim();
+            getRecordItemCode(record);
 
-        if(
-            code ===
-            String(itemCode || "").trim()
-        ){
 
-            total +=
-                Number(
-                    record.quantity || 0
-                );
-
+        if(code !== target){
+            continue;
         }
 
+
+        total +=
+            getRecordQuantity(record);
+
     }
+
 
     return total;
 
@@ -350,6 +352,10 @@ function getStockOut(itemCode){
 
     let total = 0;
 
+    let target =
+        String(itemCode || "").trim();
+
+
     for(
         let i = 0;
         i < stockOutHistory.length;
@@ -360,23 +366,19 @@ function getStockOut(itemCode){
             stockOutHistory[i];
 
         let code =
-            String(
-                record.item_code || ""
-            ).trim();
+            getRecordItemCode(record);
 
-        if(
-            code ===
-            String(itemCode || "").trim()
-        ){
 
-            total +=
-                Number(
-                    record.quantity || 0
-                );
-
+        if(code !== target){
+            continue;
         }
 
+
+        total +=
+            getRecordQuantity(record);
+
     }
+
 
     return total;
 
@@ -394,9 +396,7 @@ function getStockOut(itemCode){
 function getOpeningStock(item){
 
     if(!item){
-
         return 0;
-
     }
 
     let value =
@@ -412,42 +412,39 @@ function getOpeningStock(item){
 
 // =====================================
 // GET CURRENT STOCK
-// Opening + In - Out
 // =====================================
 
 function getCurrentStock(item){
 
     if(!item){
-
         return 0;
-
     }
 
-    let openingStock =
+    let opening =
         getOpeningStock(item);
 
     let stockIn =
         getStockIn(
-            item.code
+            getItemCode(item)
         );
 
     let stockOut =
         getStockOut(
-            item.code
+            getItemCode(item)
         );
 
-    let stock =
-        openingStock +
+    let balance =
+        opening +
         stockIn -
         stockOut;
 
-    if(stock < 0){
 
-        stock = 0;
-
+    if(balance < 0){
+        balance = 0;
     }
 
-    return stock;
+
+    return balance;
 
 }
 
@@ -459,61 +456,143 @@ function getCurrentStock(item){
 function normalizeDateValue(value){
 
     if(!value){
-
         return "";
-
     }
 
     let text =
         String(value).trim();
 
-    // YYYY-MM-DD
-    if(
-        /^\d{4}-\d{2}-\d{2}$/.test(text)
-    ){
 
-        return text;
+    // =================================
+    // YYYY-MM-DD
+    // =================================
+
+    let dateOnly =
+        text.match(
+            /^(\d{4}-\d{2}-\d{2})/
+        );
+
+
+    if(dateOnly){
+
+        return dateOnly[1];
 
     }
 
-    // ISO timestamp
-    let parsed =
-        new Date(text);
 
-    if(
-        !isNaN(
-            parsed.getTime()
-        )
-    ){
+    // =================================
+    // DD-MM-YYYY
+    // =================================
+
+    let dmy =
+        text.match(
+            /^(\d{2})-(\d{2})-(\d{4})/
+        );
+
+
+    if(dmy){
 
         return (
-            parsed
-            .toISOString()
-            .substring(0,10)
+            dmy[3] +
+            "-" +
+            dmy[2] +
+            "-" +
+            dmy[1]
         );
 
     }
 
-    return text.substring(0,10);
+
+    // =================================
+    // DD/MM/YYYY
+    // =================================
+
+    let slash =
+        text.match(
+            /^(\d{2})\/(\d{2})\/(\d{4})/
+        );
+
+
+    if(slash){
+
+        return (
+            slash[3] +
+            "-" +
+            slash[2] +
+            "-" +
+            slash[1]
+        );
+
+    }
+
+
+    // =================================
+    // ISO / DATE OBJECT
+    // =================================
+
+    let parsed =
+        new Date(text);
+
+
+    if(!isNaN(parsed.getTime())){
+
+        let year =
+            parsed.getFullYear();
+
+        let month =
+            String(
+                parsed.getMonth() + 1
+            ).padStart(2,"0");
+
+        let day =
+            String(
+                parsed.getDate()
+            ).padStart(2,"0");
+
+        return (
+            year +
+            "-" +
+            month +
+            "-" +
+            day
+        );
+
+    }
+
+
+    return "";
 
 }
 
 
 // =====================================
 // GET RECORD DATE
+// SUPPORT MANY POSSIBLE FIELD NAMES
 // =====================================
 
 function getRecordDate(record){
 
-    return normalizeDateValue(
+    if(!record){
+        return "";
+    }
 
-        record.date ||
-        record.stock_date ||
-        record.issue_date ||
-        record.created_at ||
-        ""
+    let value =
 
-    );
+        record.date ??
+        record.stock_date ??
+        record.stockDate ??
+        record.issue_date ??
+        record.issueDate ??
+        record.transaction_date ??
+        record.transactionDate ??
+        record.in_date ??
+        record.out_date ??
+        record.created_at ??
+        record.createdAt ??
+        "";
+
+
+    return normalizeDateValue(value);
 
 }
 
@@ -524,21 +603,27 @@ function getRecordDate(record){
 
 function getRecordTime(record){
 
-    let time =
-        String(
-            record.time ||
-            record.stock_time ||
-            record.issue_time ||
-            ""
-        ).trim();
-
-    if(!time){
-
+    if(!record){
         return "00:00:00";
-
     }
 
-    // HH:MM
+    let time = String(
+
+        record.time ??
+        record.stock_time ??
+        record.stockTime ??
+        record.issue_time ??
+        record.issueTime ??
+        ""
+
+    ).trim();
+
+
+    if(!time){
+        return "00:00:00";
+    }
+
+
     if(
         /^\d{2}:\d{2}$/.test(time)
     ){
@@ -547,7 +632,28 @@ function getRecordTime(record){
 
     }
 
-    return time;
+
+    let match =
+        time.match(
+            /(\d{2}:\d{2}(?::\d{2})?)/
+        );
+
+
+    if(match){
+
+        let result =
+            match[1];
+
+        if(result.length === 5){
+            result += ":00";
+        }
+
+        return result;
+
+    }
+
+
+    return "00:00:00";
 
 }
 
@@ -559,18 +665,18 @@ function getRecordTime(record){
 function getDemandDate(record){
 
     if(!record){
-
         return "";
-
     }
 
     return (
-        record.demand_date ||
-        record.demandDate ||
-        record.generate_date ||
-        record.generateDate ||
-        record.date ||
+
+        record.demand_date ??
+        record.demandDate ??
+        record.generate_date ??
+        record.generateDate ??
+        record.date ??
         ""
+
     );
 
 }
@@ -583,46 +689,57 @@ function getDemandDate(record){
 function getDemandMonth(record){
 
     if(!record){
-
         return "";
-
-    }
-
-    let demandMonth =
-        String(
-            record.demand_month ||
-            record.demandMonth ||
-            record.month ||
-            ""
-        ).trim();
-
-
-    if(demandMonth){
-
-        return demandMonth.substring(0,7);
-
     }
 
 
-    let fallbackDate =
+    let value =
+
+        record.demand_month ??
+        record.demandMonth ??
+        "";
+
+
+    let text =
+        String(value || "").trim();
+
+
+    // =================================
+    // YYYY-MM
+    // =================================
+
+    if(
+        /^\d{4}-\d{2}/.test(text)
+    ){
+
+        return text.substring(0,7);
+
+    }
+
+
+    // =================================
+    // FALLBACK
+    // =================================
+
+    let fallback =
+
+        record.generate_date ??
+        record.generateDate ??
+        record.date ??
+        "";
+
+
+    let date =
         String(
-            record.generate_date ||
-            record.generateDate ||
-            record.date ||
-            ""
+            fallback || ""
         ).trim();
 
 
     if(
-        /^\d{4}-\d{2}-\d{2}/.test(
-            fallbackDate
-        )
+        /^\d{4}-\d{2}/.test(date)
     ){
 
-        return fallbackDate.substring(
-            0,
-            7
-        );
+        return date.substring(0,7);
 
     }
 
@@ -641,16 +758,14 @@ function getDemandRecordForMonth(
 ){
 
     if(!selectedMonth){
-
         return null;
-
     }
+
 
     let targetMonth =
         String(
             selectedMonth
-        )
-        .substring(0,7);
+        ).substring(0,7);
 
 
     let matches = [];
@@ -664,6 +779,7 @@ function getDemandRecordForMonth(
 
         let record =
             demandHistory[i];
+
 
         let demandMonth =
             getDemandMonth(record);
@@ -682,15 +798,12 @@ function getDemandRecordForMonth(
 
 
     if(matches.length === 0){
-
         return null;
-
     }
 
 
     // =================================
-    // IF MULTIPLE RECORDS EXIST
-    // USE LATEST RECORD
+    // LATEST DEMAND RECORD
     // =================================
 
     matches.sort(function(a,b){
@@ -700,6 +813,7 @@ function getDemandRecordForMonth(
 
         let idB =
             Number(b.id || 0);
+
 
         if(
             idA &&
@@ -717,15 +831,14 @@ function getDemandRecordForMonth(
                 getDemandDate(a) || ""
             );
 
+
         let dateB =
             String(
                 getDemandDate(b) || ""
             );
 
 
-        return dateB.localeCompare(
-            dateA
-        );
+        return dateB.localeCompare(dateA);
 
     });
 
@@ -736,48 +849,23 @@ function getDemandRecordForMonth(
 
 
 // =====================================
-// GET BALANCE AT DEMAND DATE
-//
-// Opening Stock
-// + Stock In <= Demand Date
-// - Stock Out <= Demand Date
+// CHECK WHETHER RECORD IS BEFORE
+// DEMAND DATE
 // =====================================
 
-function getBalanceAtDate(
-    item,
+function recordIsBeforeOrEqualDemandDate(
+    record,
     demandDateValue
 ){
 
-    if(!item){
-
-        return 0;
-
-    }
-
-    if(!demandDateValue){
-
-        return getCurrentStock(item);
-
-    }
+    let recordDate =
+        getRecordDate(record);
 
 
     let demandText =
         String(
-            demandDateValue
+            demandDateValue || ""
         ).trim();
-
-
-    // =================================
-    // DETERMINE IF DEMAND DATE HAS TIME
-    // =================================
-
-    let hasTime =
-        /T\d{2}:\d{2}/.test(
-            demandText
-        ) ||
-        /\s\d{2}:\d{2}/.test(
-            demandText
-        );
 
 
     let demandDate =
@@ -786,81 +874,134 @@ function getBalanceAtDate(
         );
 
 
-    if(!demandDate){
+    if(
+        !recordDate ||
+        !demandDate
+    ){
 
-        return getCurrentStock(item);
+        return false;
 
     }
 
+
+    // =================================
+    // RECORD BEFORE DEMAND DATE
+    // =================================
+
+    if(recordDate < demandDate){
+        return true;
+    }
+
+
+    // =================================
+    // RECORD AFTER DEMAND DATE
+    // =================================
+
+    if(recordDate > demandDate){
+        return false;
+    }
+
+
+    // =================================
+    // SAME DATE
+    // =================================
+
+    // اگر demand_date میں time نہیں ہے
+    // تو پورا دن شامل ہوگا
+
+    let demandHasTime =
+        /T\d{2}:\d{2}/.test(
+            demandText
+        ) ||
+        /\s\d{2}:\d{2}/.test(
+            demandText
+        );
+
+
+    if(!demandHasTime){
+
+        return true;
+
+    }
+
+
+    // =================================
+    // EXACT TIME
+    // =================================
 
     let demandTime =
         "23:59:59";
 
 
-    if(hasTime){
+    let timeMatch =
+        demandText.match(
+            /(\d{2}:\d{2}(?::\d{2})?)/
+        );
 
-        let parsedDemand =
-            new Date(demandText);
+
+    if(timeMatch){
+
+        demandTime =
+            timeMatch[1];
 
         if(
-            !isNaN(
-                parsedDemand.getTime()
-            )
+            demandTime.length === 5
         ){
 
-            // ISO timestamp
-            // Keep local date/time comparison
-            demandTime =
-                demandText
-                .replace("T"," ")
-                .substring(
-                    11,
-                    19
-                );
-
-        }else{
-
-            let timeMatch =
-                demandText.match(
-                    /(\d{2}:\d{2}(?::\d{2})?)/
-                );
-
-            if(timeMatch){
-
-                demandTime =
-                    timeMatch[1];
-
-                if(
-                    demandTime.length === 5
-                ){
-
-                    demandTime += ":00";
-
-                }
-
-            }
+            demandTime += ":00";
 
         }
 
     }
 
 
-    let openingStock =
-        getOpeningStock(item);
+    let recordTime =
+        getRecordTime(record);
 
 
-    let balance =
-        openingStock;
+    return (
+        recordTime <=
+        demandTime
+    );
+
+}
+
+
+// =====================================
+// GET BALANCE AT DEMAND DATE
+//
+// Opening Stock
+// + Stock In ON / BEFORE Demand Date
+// - Stock Out ON / BEFORE Demand Date
+// =====================================
+
+function getBalanceAtDate(
+    item,
+    demandDateValue
+){
+
+    if(!item){
+        return 0;
+    }
+
+
+    if(!demandDateValue){
+
+        return getCurrentStock(item);
+
+    }
 
 
     let itemCode =
-        String(
-            item.code || ""
-        ).trim();
+        getItemCode(item);
+
+
+    let balance =
+        getOpeningStock(item);
 
 
     // =================================
-    // STOCK IN UP TO DEMAND DATE
+    // STOCK IN
     // =================================
 
     for(
@@ -874,73 +1015,23 @@ function getBalanceAtDate(
 
 
         let code =
-            String(
-                record.item_code || ""
-            ).trim();
+            getRecordItemCode(record);
+
+
+        if(code !== itemCode){
+            continue;
+        }
 
 
         if(
-            code !== itemCode
+            recordIsBeforeOrEqualDemandDate(
+                record,
+                demandDateValue
+            )
         ){
-
-            continue;
-
-        }
-
-
-        let recordDate =
-            getRecordDate(record);
-
-
-        if(!recordDate){
-
-            continue;
-
-        }
-
-
-        let recordTime =
-            getRecordTime(record);
-
-
-        let includeRecord = false;
-
-
-        if(
-            recordDate <
-            demandDate
-        ){
-
-            includeRecord = true;
-
-        }else if(
-            recordDate ===
-            demandDate
-        ){
-
-            if(hasTime){
-
-                includeRecord =
-                    recordTime <=
-                    demandTime;
-
-            }else{
-
-                // Date only:
-                // include complete day
-                includeRecord = true;
-
-            }
-
-        }
-
-
-        if(includeRecord){
 
             balance +=
-                Number(
-                    record.quantity || 0
-                );
+                getRecordQuantity(record);
 
         }
 
@@ -948,7 +1039,7 @@ function getBalanceAtDate(
 
 
     // =================================
-    // STOCK OUT UP TO DEMAND DATE
+    // STOCK OUT
     // =================================
 
     for(
@@ -962,83 +1053,35 @@ function getBalanceAtDate(
 
 
         let code =
-            String(
-                record.item_code || ""
-            ).trim();
+            getRecordItemCode(record);
+
+
+        if(code !== itemCode){
+            continue;
+        }
 
 
         if(
-            code !== itemCode
+            recordIsBeforeOrEqualDemandDate(
+                record,
+                demandDateValue
+            )
         ){
-
-            continue;
-
-        }
-
-
-        let recordDate =
-            getRecordDate(record);
-
-
-        if(!recordDate){
-
-            continue;
-
-        }
-
-
-        let recordTime =
-            getRecordTime(record);
-
-
-        let includeRecord = false;
-
-
-        if(
-            recordDate <
-            demandDate
-        ){
-
-            includeRecord = true;
-
-        }else if(
-            recordDate ===
-            demandDate
-        ){
-
-            if(hasTime){
-
-                includeRecord =
-                    recordTime <=
-                    demandTime;
-
-            }else{
-
-                // Date only:
-                // include complete day
-                includeRecord = true;
-
-            }
-
-        }
-
-
-        if(includeRecord){
 
             balance -=
-                Number(
-                    record.quantity || 0
-                );
+                getRecordQuantity(record);
 
         }
 
     }
 
 
+    // =================================
+    // NEVER SHOW NEGATIVE
+    // =================================
+
     if(balance < 0){
-
         balance = 0;
-
     }
 
 
@@ -1050,11 +1093,11 @@ function getBalanceAtDate(
 // =====================================
 // GET MONTHLY DISPLAY QUANTITY
 //
-// If month selected:
-//     Last Balance
+// MONTH SELECTED:
+//     LAST BALANCE
 //
-// If no month selected:
-//     Current Stock
+// NO MONTH:
+//     CURRENT STOCK
 // =====================================
 
 function getDisplayQuantity(
@@ -1062,12 +1105,20 @@ function getDisplayQuantity(
     selectedMonth
 ){
 
+    // =================================
+    // NO MONTH
+    // =================================
+
     if(!selectedMonth){
 
         return getCurrentStock(item);
 
     }
 
+
+    // =================================
+    // FIND SELECTED MONTH DEMAND
+    // =================================
 
     let demandRecord =
         getDemandRecordForMonth(
@@ -1077,12 +1128,20 @@ function getDisplayQuantity(
 
     if(!demandRecord){
 
-        // No demand record
-        // Keep old behavior
-        return getCurrentStock(item);
+        console.warn(
+            "No Demand Record Found:",
+            selectedMonth,
+            getItemCode(item)
+        );
+
+        return 0;
 
     }
 
+
+    // =================================
+    // GET DEMAND DATE
+    // =================================
 
     let demandDate =
         getDemandDate(
@@ -1092,15 +1151,37 @@ function getDisplayQuantity(
 
     if(!demandDate){
 
-        return getCurrentStock(item);
+        console.warn(
+            "Demand Date Missing:",
+            selectedMonth
+        );
+
+        return 0;
 
     }
 
 
-    return getBalanceAtDate(
-        item,
-        demandDate
+    // =================================
+    // LAST BALANCE
+    // =================================
+
+    let balance =
+        getBalanceAtDate(
+            item,
+            demandDate
+        );
+
+
+    console.log(
+        "LAST BALANCE:",
+        getItemCode(item),
+        selectedMonth,
+        demandDate,
+        balance
     );
+
+
+    return balance;
 
 }
 
@@ -1112,8 +1193,11 @@ function getDisplayQuantity(
 function getPurchaseRates(itemCode){
 
     let rates = [];
-
     let latestRecord = null;
+
+
+    let target =
+        String(itemCode || "").trim();
 
 
     for(
@@ -1127,40 +1211,30 @@ function getPurchaseRates(itemCode){
 
 
         let code =
-            String(
-                record.item_code || ""
-            ).trim();
+            getRecordItemCode(record);
 
 
-        if(
-            code !==
-            String(itemCode || "").trim()
-        ){
-
+        if(code !== target){
             continue;
-
         }
 
 
         let rate =
             Number(
-                record.unit_cost || 0
+                record.unit_cost ??
+                record.unitCost ??
+                record.rate ??
+                0
             );
 
 
         if(rate <= 0){
-
             continue;
-
         }
 
 
         rates.push(rate);
 
-
-        // =================================
-        // FIND LATEST
-        // =================================
 
         if(latestRecord === null){
 
@@ -1214,7 +1288,10 @@ function getPurchaseRates(itemCode){
 
         latestRate =
             Number(
-                latestRecord.unit_cost || 0
+                latestRecord.unit_cost ??
+                latestRecord.unitCost ??
+                latestRecord.rate ??
+                0
             );
 
     }
@@ -1223,12 +1300,12 @@ function getPurchaseRates(itemCode){
     return {
 
         minRate:
-            rates.length > 0
+            rates.length
             ? Math.min(...rates)
             : 0,
 
         maxRate:
-            rates.length > 0
+            rates.length
             ? Math.max(...rates)
             : 0,
 
@@ -1247,7 +1324,9 @@ function getPurchaseRates(itemCode){
 function getOpeningRate(item){
 
     return Number(
-        item.opening_cost || 0
+        item.opening_cost ??
+        item.openingCost ??
+        0
     );
 
 }
@@ -1269,7 +1348,6 @@ function getSupplier(item){
 
 // =====================================
 // GET APPROVED DEMAND
-// FROM DEMAND HISTORY
 // =====================================
 
 function getDemandForItem(
@@ -1279,6 +1357,12 @@ function getDemandForItem(
 ){
 
     let total = 0;
+
+
+    let targetCode =
+        String(
+            itemCode || ""
+        ).trim();
 
 
     for(
@@ -1302,7 +1386,9 @@ function getDemandForItem(
         if(
             selectedMonth &&
             demandMonth !==
-            String(selectedMonth).substring(0,7)
+            String(
+                selectedMonth
+            ).substring(0,7)
         ){
 
             continue;
@@ -1326,10 +1412,11 @@ function getDemandForItem(
 
 
         // =================================
-        // GET DEMAND ITEMS
+        // DEMAND ITEMS
         // =================================
 
         let demandItems =
+
             record.demand_items ??
             record.demandItems ??
             record.items ??
@@ -1337,10 +1424,9 @@ function getDemandForItem(
             [];
 
 
-        // JSON STRING ہو تو parse کریں
-
         if(
-            typeof demandItems === "string"
+            typeof demandItems ===
+            "string"
         ){
 
             try{
@@ -1360,7 +1446,9 @@ function getDemandForItem(
 
 
         if(
-            !Array.isArray(demandItems)
+            !Array.isArray(
+                demandItems
+            )
         ){
 
             continue;
@@ -1384,30 +1472,24 @@ function getDemandForItem(
 
             let code =
                 String(
-                    demandItem.itemCode ||
-                    demandItem.item_code ||
-                    demandItem.code ||
-                    demandItem.itemId ||
-                    demandItem.item_id ||
+
+                    demandItem.itemCode ??
+                    demandItem.item_code ??
+                    demandItem.code ??
+                    demandItem.itemId ??
+                    demandItem.item_id ??
                     ""
+
                 ).trim();
 
 
-            if(
-                code !==
-                String(itemCode || "").trim()
-            ){
-
+            if(code !== targetCode){
                 continue;
-
             }
 
 
-            // =================================
-            // APPROVED / FINAL DEMAND
-            // =================================
-
             let approvedQty =
+
                 demandItem.finalDemand ??
                 demandItem.final_demand ??
                 demandItem.approvedQty ??
@@ -1417,10 +1499,9 @@ function getDemandForItem(
                 0;
 
 
-            // اگر value "200 Liter" جیسی ہو
-
             if(
-                typeof approvedQty === "string"
+                typeof approvedQty ===
+                "string"
             ){
 
                 let match =
@@ -1470,18 +1551,34 @@ function loadYears(){
 
 
     if(!yearSelect){
-
         return;
-
     }
 
 
     let years = [];
 
 
-    // =================================
-    // STOCK IN YEARS
-    // =================================
+    function addYear(year){
+
+        year =
+            String(
+                year || ""
+            ).trim();
+
+
+        if(
+            /^\d{4}$/.test(year) &&
+            !years.includes(year)
+        ){
+
+            years.push(year);
+
+        }
+
+    }
+
+
+    // STOCK IN
 
     for(
         let i = 0;
@@ -1489,31 +1586,16 @@ function loadYears(){
         i++
     ){
 
-        let date =
+        addYear(
             getRecordDate(
                 stockInHistory[i]
-            );
-
-
-        let year =
-            date.substring(0,4);
-
-
-        if(
-            year &&
-            !years.includes(year)
-        ){
-
-            years.push(year);
-
-        }
+            ).substring(0,4)
+        );
 
     }
 
 
-    // =================================
-    // STOCK OUT YEARS
-    // =================================
+    // STOCK OUT
 
     for(
         let i = 0;
@@ -1521,31 +1603,16 @@ function loadYears(){
         i++
     ){
 
-        let date =
+        addYear(
             getRecordDate(
                 stockOutHistory[i]
-            );
-
-
-        let year =
-            date.substring(0,4);
-
-
-        if(
-            year &&
-            !years.includes(year)
-        ){
-
-            years.push(year);
-
-        }
+            ).substring(0,4)
+        );
 
     }
 
 
-    // =================================
-    // DEMAND HISTORY YEARS
-    // =================================
+    // DEMAND
 
     for(
         let i = 0;
@@ -1553,31 +1620,16 @@ function loadYears(){
         i++
     ){
 
-        let month =
+        addYear(
             getDemandMonth(
                 demandHistory[i]
-            );
-
-
-        let year =
-            month.substring(0,4);
-
-
-        if(
-            year &&
-            !years.includes(year)
-        ){
-
-            years.push(year);
-
-        }
+            ).substring(0,4)
+        );
 
     }
 
 
-    // =================================
-    // COST HISTORY YEARS
-    // =================================
+    // COST HISTORY
 
     for(
         let i = 0;
@@ -1585,20 +1637,9 @@ function loadYears(){
         i++
     ){
 
-        let year =
-            String(
-                costHistory[i].year || ""
-            );
-
-
-        if(
-            year &&
-            !years.includes(year)
-        ){
-
-            years.push(year);
-
-        }
+        addYear(
+            costHistory[i].year
+        );
 
     }
 
@@ -1675,23 +1716,17 @@ function showAllCost(){
 
 
     if(search){
-
         search.value = "";
-
     }
 
 
     if(month){
-
         month.value = "";
-
     }
 
 
     if(year){
-
         year.value = "";
-
     }
 
 
@@ -1752,9 +1787,7 @@ function showCostTable(
 
 
     if(!body){
-
         return;
-
     }
 
 
@@ -1778,22 +1811,17 @@ function showCostTable(
 
 
     let totalItems = 0;
-
     let totalAvailableQty = 0;
-
     let totalDemandQty = 0;
-
     let totalStockCost = 0;
-
     let totalDemandCost = 0;
 
     let categoryTotals = {};
-
     let supplierTotals = {};
 
 
     // =================================
-    // LOOP MASTER ITEMS
+    // ITEMS
     // =================================
 
     for(
@@ -1807,9 +1835,7 @@ function showCostTable(
 
 
         let code =
-            String(
-                item.code || ""
-            ).trim();
+            getItemCode(item);
 
 
         let itemName =
@@ -1862,7 +1888,7 @@ function showCostTable(
         // =================================
         // AVAILABLE QUANTITY
         //
-        // MONTH SELECTED:
+        // SELECTED MONTH:
         // LAST BALANCE
         //
         // NO MONTH:
@@ -2167,9 +2193,7 @@ function buildCategorySummary(
 
 
     if(!body){
-
         return;
-
     }
 
 
@@ -2230,19 +2254,11 @@ function buildCategorySummary(
             "%";
 
 
-        row.appendChild(
-            cell1
-        );
+        row.appendChild(cell1);
+        row.appendChild(cell2);
 
 
-        row.appendChild(
-            cell2
-        );
-
-
-        body.appendChild(
-            row
-        );
+        body.appendChild(row);
 
     }
 
@@ -2273,9 +2289,7 @@ function buildSupplierSummary(
 
 
     if(!body){
-
         return;
-
     }
 
 
@@ -2286,8 +2300,7 @@ function buildSupplierSummary(
         Object.keys(data).sort();
 
 
-    let supplierTotal =
-        0;
+    let supplierTotal = 0;
 
 
     for(
@@ -2355,24 +2368,12 @@ function buildSupplierSummary(
             "%";
 
 
-        row.appendChild(
-            cell1
-        );
+        row.appendChild(cell1);
+        row.appendChild(cell2);
+        row.appendChild(cell3);
 
 
-        row.appendChild(
-            cell2
-        );
-
-
-        row.appendChild(
-            cell3
-        );
-
-
-        body.appendChild(
-            row
-        );
+        body.appendChild(row);
 
     }
 
@@ -2396,7 +2397,6 @@ function buildSupplierSummary(
 
 // =====================================
 // ADD COST HISTORY
-// SAVE SELECTED MONTH SNAPSHOT
 // =====================================
 
 async function addCostHistory(){
@@ -2413,10 +2413,6 @@ async function addCostHistory(){
         : "";
 
 
-    // =================================
-    // MONTH REQUIRED
-    // =================================
-
     if(!selectedMonth){
 
         alert(
@@ -2428,10 +2424,6 @@ async function addCostHistory(){
     }
 
 
-    // =================================
-    // FIND DEMAND RECORD
-    // =================================
-
     let demandRecord =
         getDemandRecordForMonth(
             selectedMonth
@@ -2441,18 +2433,13 @@ async function addCostHistory(){
     if(!demandRecord){
 
         alert(
-            "اس Month کی Demand History موجود نہیں ہے۔\n\n" +
-            "Cost History save کرنے کے لیے پہلے اس Month کی Demand generate کریں۔"
+            "اس Month کی Demand History موجود نہیں ہے۔"
         );
 
         return;
 
     }
 
-
-    // =================================
-    // GET DEMAND DATE
-    // =================================
 
     let demandDate =
         getDemandDate(
@@ -2463,18 +2450,13 @@ async function addCostHistory(){
     if(!demandDate){
 
         alert(
-            "اس Month کی Demand میں Demand Date موجود نہیں ہے۔\n\n" +
-            "Last Balance calculate نہیں ہو سکتا۔"
+            "اس Month کی Demand Date موجود نہیں ہے۔"
         );
 
         return;
 
     }
 
-
-    // =================================
-    // CONFIRM
-    // =================================
 
     let monthParts =
         String(
@@ -2503,7 +2485,8 @@ async function addCostHistory(){
     let monthName =
         monthNames[
             Number(monthParts[1]) - 1
-        ] || selectedMonth;
+        ] ||
+        selectedMonth;
 
 
     let confirmSave =
@@ -2521,32 +2504,21 @@ async function addCostHistory(){
 
 
     if(!confirmSave){
-
         return;
-
     }
 
 
     // =================================
-    // BUILD COMPLETE SNAPSHOT
+    // SNAPSHOT
     // =================================
 
     let historyItems = [];
 
     let totalItems = 0;
-
     let totalStockCost = 0;
-
     let totalDemandQty = 0;
-
     let totalDemandCost = 0;
 
-
-    // =================================
-    // ALL ITEMS
-    // IMPORTANT:
-    // SEARCH FILTER IGNORE ہوگا
-    // =================================
 
     for(
         let i = 0;
@@ -2559,17 +2531,17 @@ async function addCostHistory(){
 
 
         let code =
-            String(
-                item.code || ""
-            ).trim();
+            getItemCode(item);
 
 
         if(!code){
-
             continue;
-
         }
 
+
+        // =================================
+        // LAST BALANCE
+        // =================================
 
         let lastBalance =
             getBalanceAtDate(
@@ -2755,7 +2727,7 @@ async function addCostHistory(){
     try{
 
         // =================================
-        // CHECK EXISTING MONTH
+        // CHECK EXISTING
         // =================================
 
         let existingResult =
@@ -2792,7 +2764,7 @@ async function addCostHistory(){
 
 
         // =================================
-        // UPDATE EXISTING
+        // UPDATE
         // =================================
 
         if(
@@ -2822,7 +2794,7 @@ async function addCostHistory(){
         }
 
         // =================================
-        // INSERT NEW
+        // INSERT
         // =================================
 
         else{
@@ -2845,18 +2817,13 @@ async function addCostHistory(){
             !saveResult.success
         ){
 
-            console.error(
-                "Cost History Save Error:",
-                saveResult.error
-            );
-
             throw saveResult.error;
 
         }
 
 
         // =================================
-        // REFRESH COST HISTORY
+        // REFRESH HISTORY
         // =================================
 
         let refreshResult =
@@ -2907,10 +2874,7 @@ async function addCostHistory(){
 
 
         alert(
-
-            "Cost History save نہیں ہو سکی۔\n\n" +
-            "Console میں error check کریں۔"
-
+            "Cost History save نہیں ہو سکی۔\n\nConsole میں error check کریں۔"
         );
 
     }
@@ -3050,9 +3014,7 @@ function printCostReport(){
 
 <head>
 
-<title>
-${title}
-</title>
+<title>${title}</title>
 
 <style>
 
@@ -3094,9 +3056,7 @@ tfoot td{
 @media print{
 
     @page{
-
         size:A4 landscape;
-
         margin:8mm;
     }
 
@@ -3197,7 +3157,6 @@ window.addEventListener(
 
 // =====================================
 // EXPORT COST REPORT TO XLSX
-// WITH COLORS
 // =====================================
 
 function exportCostToExcel(){
@@ -3215,10 +3174,6 @@ function exportCostToExcel(){
 
     }
 
-
-    // =====================================
-    // GET FILTERS
-    // =====================================
 
     let searchElement =
         document.getElementById(
@@ -3242,9 +3197,9 @@ function exportCostToExcel(){
         searchElement
         ? String(
             searchElement.value || ""
-        )
-        .trim()
-        .toLowerCase()
+          )
+          .trim()
+          .toLowerCase()
         : "";
 
 
@@ -3259,10 +3214,6 @@ function exportCostToExcel(){
         ? yearElement.value
         : "";
 
-
-    // =====================================
-    // EXCEL DATA
-    // =====================================
 
     let excelData = [];
 
@@ -3298,10 +3249,6 @@ function exportCostToExcel(){
     excelData.push([]);
 
 
-    // =====================================
-    // HEADERS
-    // =====================================
-
     excelData.push([
 
         "Category",
@@ -3320,38 +3267,15 @@ function exportCostToExcel(){
     ]);
 
 
-    // =====================================
-    // TOTALS
-    // =====================================
-
     let totalItems = 0;
-
     let totalAvailableQty = 0;
-
     let totalDemandQty = 0;
-
     let totalStockCost = 0;
-
     let totalDemandCost = 0;
 
-
-    // =====================================
-    // CATEGORY
-    // =====================================
-
     let categoryTotals = {};
-
-
-    // =====================================
-    // SUPPLIER
-    // =====================================
-
     let supplierTotals = {};
 
-
-    // =====================================
-    // LOOP ITEMS
-    // =====================================
 
     for(
         let i = 0;
@@ -3364,9 +3288,7 @@ function exportCostToExcel(){
 
 
         let code =
-            String(
-                item.code || ""
-            ).trim();
+            getItemCode(item);
 
 
         let itemName =
@@ -3383,10 +3305,6 @@ function exportCostToExcel(){
         let supplier =
             getSupplier(item);
 
-
-        // =================================
-        // SEARCH FILTER
-        // =================================
 
         if(searchText){
 
@@ -3417,10 +3335,7 @@ function exportCostToExcel(){
 
 
         // =================================
-        // AVAILABLE QUANTITY
-        //
-        // MONTH SELECTED:
-        // LAST BALANCE
+        // SAME DISPLAY QUANTITY
         // =================================
 
         let availableQty =
@@ -3429,10 +3344,6 @@ function exportCostToExcel(){
                 selectedMonth
             );
 
-
-        // =================================
-        // RATES
-        // =================================
 
         let rates =
             getPurchaseRates(code);
@@ -3454,10 +3365,6 @@ function exportCostToExcel(){
         }
 
 
-        // =================================
-        // DEMAND
-        // =================================
-
         let approvedDemand =
             getDemandForItem(
 
@@ -3470,10 +3377,6 @@ function exportCostToExcel(){
             );
 
 
-        // =================================
-        // COST
-        // =================================
-
         let availableCost =
             availableQty *
             latestRate;
@@ -3483,10 +3386,6 @@ function exportCostToExcel(){
             approvedDemand *
             latestRate;
 
-
-        // =================================
-        // TOTALS
-        // =================================
 
         totalItems++;
 
@@ -3503,16 +3402,11 @@ function exportCostToExcel(){
             approvedDemandCost;
 
 
-        // =================================
-        // CATEGORY TOTAL
-        // =================================
-
         if(
             !categoryTotals[category]
         ){
 
-            categoryTotals[category] =
-                0;
+            categoryTotals[category] = 0;
 
         }
 
@@ -3521,16 +3415,11 @@ function exportCostToExcel(){
             availableCost;
 
 
-        // =================================
-        // SUPPLIER TOTAL
-        // =================================
-
         if(
             !supplierTotals[supplier]
         ){
 
-            supplierTotals[supplier] =
-                0;
+            supplierTotals[supplier] = 0;
 
         }
 
@@ -3539,44 +3428,25 @@ function exportCostToExcel(){
             availableCost;
 
 
-        // =================================
-        // ADD ROW
-        // =================================
-
         excelData.push([
 
             category,
-
             code || "-",
-
             itemName || "-",
-
             supplier,
-
             openingRate,
-
             rates.minRate,
-
             rates.maxRate,
-
             latestRate,
-
             availableQty,
-
             approvedDemand,
-
             availableCost,
-
             approvedDemandCost
 
         ]);
 
     }
 
-
-    // =====================================
-    // NO DATA
-    // =====================================
 
     if(totalItems === 0){
 
@@ -3589,10 +3459,6 @@ function exportCostToExcel(){
     }
 
 
-    // =====================================
-    // TOTAL ROW
-    // =====================================
-
     let totalRowIndex =
         excelData.length;
 
@@ -3600,42 +3466,30 @@ function exportCostToExcel(){
     excelData.push([
 
         "TOTAL",
-
         "",
-
         "",
-
         "",
-
         "",
-
         "",
-
         "",
-
         "",
-
         totalAvailableQty,
-
         totalDemandQty,
-
         totalStockCost,
-
         totalDemandCost
 
     ]);
 
 
-    // =====================================
+    // =================================
     // CATEGORY SUMMARY
-    // =====================================
+    // =================================
 
     excelData.push([]);
 
     excelData.push([
         "CATEGORY SUMMARY"
     ]);
-
 
     excelData.push([
         "Category",
@@ -3666,19 +3520,14 @@ function exportCostToExcel(){
 
         let percentage =
             totalStockCost > 0
-            ? (
-                amount /
-                totalStockCost
-            )
+            ? amount / totalStockCost
             : 0;
 
 
         excelData.push([
 
             category,
-
             amount,
-
             percentage
 
         ]);
@@ -3689,24 +3538,21 @@ function exportCostToExcel(){
     excelData.push([
 
         "TOTAL",
-
         totalStockCost,
-
         1
 
     ]);
 
 
-    // =====================================
+    // =================================
     // SUPPLIER SUMMARY
-    // =====================================
+    // =================================
 
     excelData.push([]);
 
     excelData.push([
         "SUPPLIER COST SUMMARY"
     ]);
-
 
     excelData.push([
 
@@ -3739,19 +3585,14 @@ function exportCostToExcel(){
 
         let percentage =
             totalStockCost > 0
-            ? (
-                amount /
-                totalStockCost
-            )
+            ? amount / totalStockCost
             : 0;
 
 
         excelData.push([
 
             supplier,
-
             amount,
-
             percentage
 
         ]);
@@ -3762,17 +3603,15 @@ function exportCostToExcel(){
     excelData.push([
 
         "TOTAL",
-
         totalStockCost,
-
         1
 
     ]);
 
 
-    // =====================================
-    // CREATE WORKSHEET
-    // =====================================
+    // =================================
+    // WORKSHEET
+    // =================================
 
     let worksheet =
         XLSX.utils.aoa_to_sheet(
@@ -3780,43 +3619,24 @@ function exportCostToExcel(){
         );
 
 
-    // =====================================
-    // MERGE COMPANY TITLE
-    // =====================================
-
     worksheet["!merges"] = [
 
         {
-            s: {
-                r: 0,
-                c: 0
-            },
-
-            e: {
-                r: 0,
-                c: 11
-            }
+            s:{r:0,c:0},
+            e:{r:0,c:11}
         },
 
         {
-            s: {
-                r: 1,
-                c: 0
-            },
-
-            e: {
-                r: 1,
-                c: 11
-            }
+            s:{r:1,c:0},
+            e:{r:1,c:11}
         }
 
     ];
 
 
-    // =====================================
-    // HEADER ROW
-    // Row 7
-    // =====================================
+    // =================================
+    // HEADER
+    // =================================
 
     let mainHeaderRow = 6;
 
@@ -3830,11 +3650,8 @@ function exportCostToExcel(){
         let address =
             XLSX.utils.encode_cell({
 
-                r:
-                    mainHeaderRow,
-
-                c:
-                    c
+                r:mainHeaderRow,
+                c:c
 
             });
 
@@ -3845,77 +3662,51 @@ function exportCostToExcel(){
 
             worksheet[address].s = {
 
-                fill: {
-
-                    patternType:
-                        "solid",
-
-                    fgColor: {
-
-                        rgb:
-                            "12355B"
-
+                fill:{
+                    patternType:"solid",
+                    fgColor:{
+                        rgb:"12355B"
                     }
-
                 },
 
-                font: {
-
-                    bold:
-                        true,
-
-                    color: {
-
-                        rgb:
-                            "FFFFFF"
-
+                font:{
+                    bold:true,
+                    color:{
+                        rgb:"FFFFFF"
                     }
-
                 },
 
-                alignment: {
-
-                    horizontal:
-                        "center",
-
-                    vertical:
-                        "center",
-
-                    wrapText:
-                        true
-
+                alignment:{
+                    horizontal:"center",
+                    vertical:"center",
+                    wrapText:true
                 },
 
-                border: {
-
-                    top: {
-                        style: "thin",
-                        color: {
-                            rgb: "FFFFFF"
+                border:{
+                    top:{
+                        style:"thin",
+                        color:{
+                            rgb:"FFFFFF"
                         }
                     },
-
-                    bottom: {
-                        style: "thin",
-                        color: {
-                            rgb: "FFFFFF"
+                    bottom:{
+                        style:"thin",
+                        color:{
+                            rgb:"FFFFFF"
                         }
                     },
-
-                    left: {
-                        style: "thin",
-                        color: {
-                            rgb: "FFFFFF"
+                    left:{
+                        style:"thin",
+                        color:{
+                            rgb:"FFFFFF"
                         }
                     },
-
-                    right: {
-                        style: "thin",
-                        color: {
-                            rgb: "FFFFFF"
+                    right:{
+                        style:"thin",
+                        color:{
+                            rgb:"FFFFFF"
                         }
                     }
-
                 }
 
             };
@@ -3925,36 +3716,27 @@ function exportCostToExcel(){
     }
 
 
-    // =====================================
-    // ITEM ROW COLORS
-    // =====================================
+    // =================================
+    // ITEM ROWS
+    // =================================
 
-    let firstItemRow =
-        7;
-
+    let firstItemRow = 7;
 
     let lastItemRow =
         totalRowIndex - 1;
 
 
     for(
-        let r =
-            firstItemRow;
-
-        r <=
-            lastItemRow;
-
+        let r = firstItemRow;
+        r <= lastItemRow;
         r++
     ){
 
-        let currentStockAddress =
+        let quantityAddress =
             XLSX.utils.encode_cell({
 
-                r:
-                    r,
-
-                c:
-                    8
+                r:r,
+                c:8
 
             });
 
@@ -3962,18 +3744,17 @@ function exportCostToExcel(){
         let currentStock =
             Number(
                 worksheet[
-                    currentStockAddress
+                    quantityAddress
                 ]?.v || 0
             );
 
 
-        // Required stock based on demand
         let requiredStock =
             Number(
                 worksheet[
                     XLSX.utils.encode_cell({
-                        r: r,
-                        c: 9
+                        r:r,
+                        c:9
                     })
                 ]?.v || 0
             );
@@ -3987,10 +3768,6 @@ function exportCostToExcel(){
             "1E8449";
 
 
-        // =================================
-        // RED = VERY LOW
-        // =================================
-
         if(
             currentStock <=
             requiredStock * 0.5
@@ -4003,11 +3780,6 @@ function exportCostToExcel(){
                 "FFFFFF";
 
         }
-
-
-        // =================================
-        // YELLOW = LOW
-        // =================================
 
         else if(
             currentStock <=
@@ -4025,82 +3797,58 @@ function exportCostToExcel(){
 
         if(
             worksheet[
-                currentStockAddress
+                quantityAddress
             ]
         ){
 
             worksheet[
-                currentStockAddress
+                quantityAddress
             ].s = {
 
-                fill: {
-
-                    patternType:
-                        "solid",
-
-                    fgColor: {
-
-                        rgb:
-                            fillColor
-
+                fill:{
+                    patternType:"solid",
+                    fgColor:{
+                        rgb:fillColor
                     }
-
                 },
 
-                font: {
-
-                    bold:
-                        true,
-
-                    color: {
-
-                        rgb:
-                            fontColor
-
+                font:{
+                    bold:true,
+                    color:{
+                        rgb:fontColor
                     }
-
                 },
 
-                alignment: {
-
-                    horizontal:
-                        "center",
-
-                    vertical:
-                        "center"
-
+                alignment:{
+                    horizontal:"center",
+                    vertical:"center"
                 },
 
-                border: {
-
-                    top: {
-                        style: "thin",
-                        color: {
-                            rgb: "CCCCCC"
+                border:{
+                    top:{
+                        style:"thin",
+                        color:{
+                            rgb:"CCCCCC"
                         }
                     },
-
-                    bottom: {
-                        style: "thin",
-                        color: {
-                            rgb: "CCCCCC"
+                    bottom:{
+                        style:"thin",
+                        color:{
+                            rgb:"CCCCCC"
                         }
                     },
-
-                    left: {
-                        style: "thin",
-                        color: {
-                            rgb: "CCCCCC"
+                    left:{
+                        style:"thin",
+                        color:{
+                            rgb:"CCCCCC"
                         }
                     },
-
-                    right: {
-                        style: "thin",
-                        color: {
-                            rgb: "CCCCCC"
+                    right:{
+                        style:"thin",
+                        color:{
+                            rgb:"CCCCCC"
                         }
                     }
-
                 }
 
             };
@@ -4121,11 +3869,8 @@ function exportCostToExcel(){
             let address =
                 XLSX.utils.encode_cell({
 
-                    r:
-                        r,
-
-                    c:
-                        c
+                    r:r,
+                    c:c
 
                 });
 
@@ -4145,31 +3890,31 @@ function exportCostToExcel(){
 
                 worksheet[address].s.border = {
 
-                    top: {
-                        style: "thin",
-                        color: {
-                            rgb: "CCCCCC"
+                    top:{
+                        style:"thin",
+                        color:{
+                            rgb:"CCCCCC"
                         }
                     },
 
-                    bottom: {
-                        style: "thin",
-                        color: {
-                            rgb: "CCCCCC"
+                    bottom:{
+                        style:"thin",
+                        color:{
+                            rgb:"CCCCCC"
                         }
                     },
 
-                    left: {
-                        style: "thin",
-                        color: {
-                            rgb: "CCCCCC"
+                    left:{
+                        style:"thin",
+                        color:{
+                            rgb:"CCCCCC"
                         }
                     },
 
-                    right: {
-                        style: "thin",
-                        color: {
-                            rgb: "CCCCCC"
+                    right:{
+                        style:"thin",
+                        color:{
+                            rgb:"CCCCCC"
                         }
                     }
 
@@ -4182,9 +3927,9 @@ function exportCostToExcel(){
     }
 
 
-    // =====================================
-    // TOTAL ROW STYLE
-    // =====================================
+    // =================================
+    // TOTAL STYLE
+    // =================================
 
     for(
         let c = 0;
@@ -4195,11 +3940,8 @@ function exportCostToExcel(){
         let address =
             XLSX.utils.encode_cell({
 
-                r:
-                    totalRowIndex,
-
-                c:
-                    c
+                r:totalRowIndex,
+                c:c
 
             });
 
@@ -4210,67 +3952,47 @@ function exportCostToExcel(){
 
             worksheet[address].s = {
 
-                fill: {
-
-                    patternType:
-                        "solid",
-
-                    fgColor: {
-
-                        rgb:
-                            "E8EEF5"
-
+                fill:{
+                    patternType:"solid",
+                    fgColor:{
+                        rgb:"E8EEF5"
                     }
-
                 },
 
-                font: {
-
-                    bold:
-                        true
-
+                font:{
+                    bold:true
                 },
 
-                alignment: {
-
-                    horizontal:
-                        "center",
-
-                    vertical:
-                        "center"
-
+                alignment:{
+                    horizontal:"center",
+                    vertical:"center"
                 },
 
-                border: {
-
-                    top: {
-                        style: "thin",
-                        color: {
-                            rgb: "777777"
+                border:{
+                    top:{
+                        style:"thin",
+                        color:{
+                            rgb:"777777"
                         }
                     },
-
-                    bottom: {
-                        style: "thin",
-                        color: {
-                            rgb: "777777"
+                    bottom:{
+                        style:"thin",
+                        color:{
+                            rgb:"777777"
                         }
                     },
-
-                    left: {
-                        style: "thin",
-                        color: {
-                            rgb: "777777"
+                    left:{
+                        style:"thin",
+                        color:{
+                            rgb:"777777"
                         }
                     },
-
-                    right: {
-                        style: "thin",
-                        color: {
-                            rgb: "777777"
+                    right:{
+                        style:"thin",
+                        color:{
+                            rgb:"777777"
                         }
                     }
-
                 }
 
             };
@@ -4280,9 +4002,9 @@ function exportCostToExcel(){
     }
 
 
-    // =====================================
+    // =================================
     // NUMBER FORMATS
-    // =====================================
+    // =================================
 
     for(
         let r = 7;
@@ -4290,7 +4012,6 @@ function exportCostToExcel(){
         r++
     ){
 
-        // Rates
         for(
             let c = 4;
             c <= 7;
@@ -4300,11 +4021,8 @@ function exportCostToExcel(){
             let address =
                 XLSX.utils.encode_cell({
 
-                    r:
-                        r,
-
-                    c:
-                        c
+                    r:r,
+                    c:c
 
                 });
 
@@ -4314,14 +4032,13 @@ function exportCostToExcel(){
             ){
 
                 worksheet[address].z =
-                    '#,##0.00';
+                    "#,##0.00";
 
             }
 
         }
 
 
-        // Quantity
         for(
             let c = 8;
             c <= 9;
@@ -4331,11 +4048,8 @@ function exportCostToExcel(){
             let address =
                 XLSX.utils.encode_cell({
 
-                    r:
-                        r,
-
-                    c:
-                        c
+                    r:r,
+                    c:c
 
                 });
 
@@ -4345,14 +4059,13 @@ function exportCostToExcel(){
             ){
 
                 worksheet[address].z =
-                    '#,##0.00';
+                    "#,##0.00";
 
             }
 
         }
 
 
-        // Cost
         for(
             let c = 10;
             c <= 11;
@@ -4362,11 +4075,8 @@ function exportCostToExcel(){
             let address =
                 XLSX.utils.encode_cell({
 
-                    r:
-                        r,
-
-                    c:
-                        c
+                    r:r,
+                    c:c
 
                 });
 
@@ -4385,41 +4095,37 @@ function exportCostToExcel(){
     }
 
 
-    // =====================================
-    // COLUMN WIDTHS
-    // =====================================
+    // =================================
+    // WIDTH
+    // =================================
 
     worksheet["!cols"] = [
 
-        {wch: 18},
-        {wch: 14},
-        {wch: 30},
-        {wch: 25},
-        {wch: 15},
-        {wch: 15},
-        {wch: 15},
-        {wch: 15},
-        {wch: 20},
-        {wch: 20},
-        {wch: 20},
-        {wch: 25}
+        {wch:18},
+        {wch:14},
+        {wch:30},
+        {wch:25},
+        {wch:15},
+        {wch:15},
+        {wch:15},
+        {wch:15},
+        {wch:20},
+        {wch:20},
+        {wch:20},
+        {wch:25}
 
     ];
 
 
-    // =====================================
-    // FREEZE HEADER
-    // =====================================
-
     worksheet["!freeze"] = {
-        xSplit: 0,
-        ySplit: 7
+        xSplit:0,
+        ySplit:7
     };
 
 
-    // =====================================
-    // CREATE WORKBOOK
-    // =====================================
+    // =================================
+    // WORKBOOK
+    // =================================
 
     let workbook =
         XLSX.utils.book_new();
@@ -4428,17 +4134,15 @@ function exportCostToExcel(){
     XLSX.utils.book_append_sheet(
 
         workbook,
-
         worksheet,
-
         "Cost Report"
 
     );
 
 
-    // =====================================
+    // =================================
     // FILE NAME
-    // =====================================
+    // =================================
 
     let today =
         new Date();
@@ -4456,14 +4160,9 @@ function exportCostToExcel(){
         ".xlsx";
 
 
-    // =====================================
-    // DOWNLOAD
-    // =====================================
-
     XLSX.writeFile(
 
         workbook,
-
         fileName
 
     );
