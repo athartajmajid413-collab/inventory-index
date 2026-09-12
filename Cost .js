@@ -15,6 +15,7 @@ let stockOutHistory = [];
 
 let costHistory = [];
 
+let demandHistory = [];
 
 // =====================================
 // LOAD ALL DATA FROM SUPABASE
@@ -235,7 +236,40 @@ items.sort(function(a, b){
 
         console.log(
             "=====================================");
+        // =================================
+// LOAD DEMAND HISTORY
+// =================================
 
+let demandResult =
+    await supabaseRequest(
+        "demand_history",
+        "GET",
+        null,
+        "?select=*"
+    );
+
+
+if(!demandResult.success){
+
+    console.error(
+        "Demand History Load Error:",
+        demandResult.error
+    );
+
+    demandHistory = [];
+
+}else{
+
+    demandHistory =
+        demandResult.data || [];
+
+}
+
+
+console.log(
+    "Supabase Demand History:",
+    demandHistory
+);
 
         // =================================
         // LOAD YEARS
@@ -569,6 +603,11 @@ function getSupplier(item){
 // GET DEMAND FROM COST HISTORY
 // =====================================
 
+// =====================================
+// GET APPROVED DEMAND
+// FROM DEMAND HISTORY
+// =====================================
+
 function getDemandForItem(
     itemCode,
     selectedMonth,
@@ -580,12 +619,56 @@ function getDemandForItem(
 
     for(
         let i = 0;
-        i < costHistory.length;
+        i < demandHistory.length;
         i++
     ){
 
         let record =
-            costHistory[i];
+            demandHistory[i];
+
+
+        // =================================
+        // DEMAND MONTH
+        // =================================
+
+        let demandMonth =
+            String(
+                record.demand_month ||
+                record.demandMonth ||
+                record.month ||
+                ""
+            ).trim();
+
+
+        // اگر Demand Month موجود نہیں
+        // تو generate date سے fallback
+
+        if(!demandMonth){
+
+            let fallbackDate =
+                String(
+                    record.generate_date ||
+                    record.generateDate ||
+                    record.date ||
+                    ""
+                ).trim();
+
+
+            if(
+                /^\d{4}-\d{2}-\d{2}$/.test(
+                    fallbackDate
+                )
+            ){
+
+                demandMonth =
+                    fallbackDate.substring(
+                        0,
+                        7
+                    );
+
+            }
+
+        }
 
 
         // =================================
@@ -594,7 +677,8 @@ function getDemandForItem(
 
         if(
             selectedMonth &&
-            record.month !== selectedMonth
+            demandMonth.substring(0,7) !==
+            String(selectedMonth).substring(0,7)
         ){
 
             continue;
@@ -608,7 +692,7 @@ function getDemandForItem(
 
         if(
             selectedYear &&
-            String(record.year) !==
+            demandMonth.substring(0,4) !==
             String(selectedYear)
         ){
 
@@ -617,9 +701,19 @@ function getDemandForItem(
         }
 
 
-        let demandItems =
-            record.items || [];
+        // =================================
+        // GET DEMAND ITEMS
+        // =================================
 
+        let demandItems =
+            record.demand_items ??
+            record.demandItems ??
+            record.items ??
+            record.demands ??
+            [];
+
+
+        // JSON STRING ہو تو parse کریں
 
         if(
             typeof demandItems === "string"
@@ -650,6 +744,10 @@ function getDemandForItem(
         }
 
 
+        // =================================
+        // FIND ITEM
+        // =================================
+
         for(
             let j = 0;
             j < demandItems.length;
@@ -662,25 +760,69 @@ function getDemandForItem(
 
             let code =
                 String(
-                    demandItem.code ||
                     demandItem.itemCode ||
+                    demandItem.item_code ||
+                    demandItem.code ||
+                    demandItem.itemId ||
+                    demandItem.item_id ||
                     ""
                 ).trim();
 
 
             if(
-                code ===
+                code !==
                 String(itemCode || "").trim()
             ){
 
-                total +=
+                continue;
+
+            }
+
+
+            // =================================
+            // APPROVED / FINAL DEMAND
+            // =================================
+
+            let approvedQty =
+                demandItem.finalDemand ??
+                demandItem.final_demand ??
+                demandItem.approvedQty ??
+                demandItem.approved_qty ??
+                demandItem.approvedDemandQty ??
+                demandItem.approved_demand_qty ??
+                0;
+
+
+            // اگر value "200 Liter" جیسی ہو
+            // تو صرف number نکالیں
+
+            if(
+                typeof approvedQty === "string"
+            ){
+
+                let match =
+                    approvedQty.match(
+                        /-?\d+(?:\.\d+)?/
+                    );
+
+
+                approvedQty =
+                    match
+                    ? Number(match[0])
+                    : 0;
+
+            }else{
+
+                approvedQty =
                     Number(
-                        demandItem.approvedDemandQty ||
-                        demandItem.approved_demand_qty ||
-                        0
+                        approvedQty || 0
                     );
 
             }
+
+
+            total +=
+                approvedQty;
 
         }
 
@@ -690,7 +832,6 @@ function getDemandForItem(
     return total;
 
 }
-
 
 // =====================================
 // LOAD YEARS
