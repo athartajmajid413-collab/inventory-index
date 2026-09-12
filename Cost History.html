@@ -1,275 +1,242 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 
 <head>
 
-    <title>Cost History</title>
+<meta charset="UTF-8">
 
-    <link rel="stylesheet" href="Stock.css">
+<meta name="viewport"
+      content="width=device-width, initial-scale=1.0">
 
-    <style>
+<title>Cost History</title>
 
-        body {
-            margin: 0;
-            padding: 25px;
-            font-family: Arial, sans-serif;
-            background-color: #f2f5f9;
-        }
+<link rel="stylesheet"
+      href="Stock.css">
 
-        .company-name {
-            text-align: center;
-            font-size: 20px;
-            font-weight: bold;
-            color: #12355b;
-        }
+<style>
 
-        h1 {
-            text-align: center;
-            color: #12355b;
-        }
+body{
+    font-family:Arial,sans-serif;
+}
 
-        .controls {
-            background-color: white;
-            padding: 20px;
-            border-radius: 12px;
-            margin-bottom: 20px;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.10);
-        }
+.page-title{
+    text-align:center;
+    margin:20px 0;
+}
 
-        .controls label {
-            font-weight: bold;
-            margin-left: 10px;
-        }
+.controls{
+    display:flex;
+    flex-wrap:wrap;
+    gap:10px;
+    align-items:center;
+    margin:15px 0;
+}
 
-        .controls input,
-        .controls select {
-            padding: 8px;
-            margin: 5px;
-        }
+.controls input,
+.controls select{
+    padding:8px;
+    min-width:150px;
+}
 
-        button {
-            padding: 9px 16px;
-            border: none;
-            border-radius: 6px;
-            cursor: pointer;
-            background-color: #12355b;
-            color: white;
-            margin: 5px;
-        }
+button{
+    padding:8px 12px;
+    cursor:pointer;
+}
 
-        button:hover {
-            opacity: 0.9;
-        }
+.table-container{
+    width:100%;
+    overflow-x:auto;
+    margin-top:15px;
+}
 
-        .summary {
-            display: flex;
-            gap: 15px;
-            flex-wrap: wrap;
-            margin-bottom: 20px;
-        }
+table{
+    width:100%;
+    min-width:1100px;
+    border-collapse:collapse;
+}
 
-        .summary-card {
-            background-color: white;
-            padding: 18px;
-            border-radius: 10px;
-            min-width: 210px;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.10);
-        }
+th,
+td{
+    border:1px solid #ccc;
+    padding:8px;
+    text-align:center;
+    white-space:nowrap;
+}
 
-        .summary-card h3 {
-            margin: 0 0 8px 0;
-            color: #12355b;
-        }
+th{
+    background:#12355b;
+    color:white;
+}
 
-        .summary-card p {
-            margin: 0;
-            font-size: 18px;
-            font-weight: bold;
-        }
+.action-buttons{
+    display:flex;
+    gap:5px;
+    justify-content:center;
+    flex-wrap:wrap;
+}
 
-        .table-container {
-            width: 100%;
-            overflow-x: auto;
-            background-color: white;
-        }
+.action-buttons button{
+    padding:5px 8px;
+    font-size:12px;
+}
 
-        table {
-            width: 100%;
-            border-collapse: collapse;
-            min-width: 1000px;
-        }
+.summary-container{
+    display:flex;
+    flex-wrap:wrap;
+    gap:15px;
+    margin:20px 0;
+}
 
-        th {
-            background-color: #12355b;
-            color: white;
-            padding: 10px;
-            border: 1px solid #ddd;
-            white-space: nowrap;
-        }
+.summary-card{
+    flex:1;
+    min-width:180px;
+    padding:15px;
+    border:1px solid #ccc;
+    text-align:center;
+    border-radius:6px;
+}
 
-        td {
-            padding: 9px;
-            border: 1px solid #ddd;
-            white-space: nowrap;
-        }
+.summary-card h3{
+    margin:0 0 8px 0;
+}
 
-        tr:hover {
-            background-color: #f2f5f9;
-        }
+.summary-card div{
+    font-size:20px;
+    font-weight:bold;
+}
 
-        .total-row {
-            font-weight: bold;
-            background-color: #e8eef5;
-        }
+#loadingMessage{
+    text-align:center;
+    padding:20px;
+    font-weight:bold;
+}
 
-        .empty-message {
-            text-align: center;
-            padding: 25px;
-            font-weight: bold;
-        }
+@media print{
 
-        @media print {
+    .no-print{
+        display:none !important;
+    }
 
-            body {
-                background-color: white;
-                padding: 0;
-            }
+    table{
+        min-width:100%;
+        font-size:10px;
+    }
 
-            .controls,
-            .no-print {
-                display: none !important;
-            }
+    th,
+    td{
+        padding:5px;
+    }
 
-            .table-container {
-                overflow: visible;
-            }
+}
 
-            table {
-                min-width: 0;
-                font-size: 10px;
-            }
-
-            th,
-            td {
-                padding: 6px;
-            }
-
-            @page {
-                size: A4 landscape;
-                margin: 8mm;
-            }
-
-        }
-
-    </style>
+</style>
 
 </head>
 
 
 <body>
 
-
-<!-- =====================================
-     COMPANY
-===================================== -->
-
-<div class="company-name">
-
+<h2 style="text-align:center;">
     MECAS ENGINEERING PVT LIMITED SUNDAR
+</h2>
 
-</div>
-
-
-<h1>
-
+<h1 class="page-title">
     COST HISTORY
-
 </h1>
-<div>
-<button
-    type="button"
-    id="backToCostButton"
->
-    ⬅ Back to Cost
-</button>
-<button
-    type="button"
-    onclick="openYearHistory()"
->
-    📅 Year Wise History
-</button>
-<button
-    type="button"
-    onclick="window.location.href='Dashboard.html'"
->
-    🏠 Back to Dashboard
-</button>
-</div>
-<div class="controls">
-
-    <label>
-        Search Item:
-    </label>
-
-    <input
-        type="text"
-        id="historySearch"
-        placeholder="Item Code / Item Name"
-    >
 
 
-    <label>
-        Month:
-    </label>
-
-    <input
-        type="month"
-        id="historyMonth"
-    >
-
-
-    <button
-        type="button"
-        
-    >
-        🔎 Search
-    </button>
-
-
-    <button
-        type="button"
-        onclick="clearCostHistoryFilter()"
-    >
-        🔄 Clear Filter
-    </button>
-
-</div>
 <!-- =====================================
-     FILTER CONTROLS
+     TOP BUTTONS
 ===================================== -->
 
 <div class="controls no-print">
 
+    <button onclick="backToCost()">
+        Back to Cost
+    </button>
 
-    <label for="historyMonth">
+    <button onclick="openYearHistory()">
+        Year Wise History
+    </button>
 
-        Month:
+    <button onclick="goDashboard()">
+        Dashboard
+    </button>
 
-    </label>
+</div>
 
+
+<!-- =====================================
+     FILTERS
+===================================== -->
+
+<div class="controls no-print">
 
     <input
-        type="month"
+        type="text"
+        id="historySearch"
+        placeholder="Search..."
+        oninput="filterCostHistory()"
+    >
+
+    <select
         id="historyMonth"
         onchange="showCostHistory()"
     >
 
+        <option value="">
+            All Months
+        </option>
 
-    <label for="historyYear">
+        <option value="01">
+            January
+        </option>
 
-        Year:
+        <option value="02">
+            February
+        </option>
 
-    </label>
+        <option value="03">
+            March
+        </option>
+
+        <option value="04">
+            April
+        </option>
+
+        <option value="05">
+            May
+        </option>
+
+        <option value="06">
+            June
+        </option>
+
+        <option value="07">
+            July
+        </option>
+
+        <option value="08">
+            August
+        </option>
+
+        <option value="09">
+            September
+        </option>
+
+        <option value="10">
+            October
+        </option>
+
+        <option value="11">
+            November
+        </option>
+
+        <option value="12">
+            December
+        </option>
+
+    </select>
 
 
     <select
@@ -278,44 +245,35 @@
     >
 
         <option value="">
-
-            Select Year
-
+            All Years
         </option>
 
     </select>
 
 
-    <button
-        type="button"
-        onclick="showAllHistory()"
-    >
-
-        📋 Show All
-
+    <button onclick="showAllHistory()">
+        Show All
     </button>
 
 
-    <button
-        type="button"
-        onclick="saveCurrentCostHistory()"
-    >
-
-        💾 Save Current Cost
-
+    <button onclick="saveCurrentCostHistory()">
+        Save Current Cost
     </button>
 
 
-    <button
-        type="button"
-        onclick="printCostHistory()"
-    >
-
-        🖨️ Print History
-
+    <button onclick="printCostHistory()">
+        Print History
     </button>
 
+</div>
 
+
+<!-- =====================================
+     LOADING
+===================================== -->
+
+<div id="loadingMessage">
+    Loading Cost History...
 </div>
 
 
@@ -323,8 +281,7 @@
      SUMMARY
 ===================================== -->
 
-<div class="summary">
-
+<div class="summary-container">
 
     <div class="summary-card">
 
@@ -332,9 +289,9 @@
             Total Months
         </h3>
 
-        <p id="totalMonths">
+        <div id="totalMonths">
             0
-        </p>
+        </div>
 
     </div>
 
@@ -345,9 +302,9 @@
             Total Stock Cost
         </h3>
 
-        <p id="totalStockCost">
-            Rs. 0
-        </p>
+        <div id="totalStockCost">
+            0.00
+        </div>
 
     </div>
 
@@ -358,115 +315,105 @@
             Total Demand Cost
         </h3>
 
-        <p id="totalDemandCost">
-            Rs. 0
-        </p>
+        <div id="totalDemandCost">
+            0.00
+        </div>
 
     </div>
-
 
 </div>
 
 
 <!-- =====================================
-     HISTORY TABLE
+     TABLE
 ===================================== -->
 
 <div class="table-container">
 
+<table id="costHistoryTable">
 
-<table>
+<thead>
 
-    <thead>
+<tr>
 
-        <tr>
+    <th>
+        Year
+    </th>
 
-            <th>
-                Year
-            </th>
+    <th>
+        Month
+    </th>
 
-            <th>
-                Month
-            </th>
+    <th>
+        Total Items
+    </th>
 
-            <th>
-                Total Items
-            </th>
+    <th>
+        Available Stock Cost
+    </th>
 
-            <th>
-                Available Stock Cost
-            </th>
+    <th>
+        Approved Demand Qty
+    </th>
 
-            <th>
-                Approved Demand Qty
-            </th>
+    <th>
+        Approved Demand Cost
+    </th>
 
-            <th>
-                Approved Demand Cost
-            </th>
+    <th>
+        Saved Date
+    </th>
 
-            <th>
-                Saved Date
-            </th>
-            <th>
-                Action
-            </th>
+    <th>
+        Action
+    </th>
 
-        </tr>
+</tr>
 
-    </thead>
-
-
-    <tbody id="historyBody">
-
-    </tbody>
+</thead>
 
 
-    <tfoot>
+<tbody id="historyBody">
 
-        <tr class="total-row">
+</tbody>
 
-            <td colspan="3">
 
-                TOTAL
+<tfoot>
 
-            </td>
+<tr>
 
-            <td id="footerStockCost">
+    <th colspan="3">
+        TOTAL
+    </th>
 
-                Rs. 0
+    <th id="footerStockCost">
+        0.00
+    </th>
 
-            </td>
+    <th id="footerDemandQty">
+        0.00
+    </th>
 
-            <td id="footerDemandQty">
+    <th id="footerDemandCost">
+        0.00
+    </th>
 
-                0
+    <th>
+    </th>
 
-            </td>
+    <th>
+    </th>
 
-            <td id="footerDemandCost">
+</tr>
 
-                Rs. 0
-
-            </td>
-
-            <td>
-
-            </td>
-
-        </tr>
-
-    </tfoot>
-
+</tfoot>
 
 </table>
-
 
 </div>
 
 
 <script src="Cost History.js"></script>
-
 
 </body>
 
