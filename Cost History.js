@@ -1,56 +1,562 @@
-// =====================================
-// LOAD DATA
-// =====================================
-
-let items =
-    JSON.parse(localStorage.getItem("items")) || [];
-
-let history =
-    JSON.parse(localStorage.getItem("history")) || [];
-
-let demandHistory =
-    JSON.parse(localStorage.getItem("demandHistory")) || [];
-
-let costHistory =
-    JSON.parse(localStorage.getItem("costHistory")) || [];
+// =====================================================
+// COST HISTORY
+// SUPABASE CONNECTED VERSION
+// VIEW + EDIT + DELETE
+// =====================================================
 
 
-// =====================================
-// GET CURRENT MONTH
-// =====================================
+// =====================================================
+// SUPABASE CONFIG
+// =====================================================
 
-function getCurrentMonth(){
+const SUPABASE_URL =
+    "https://tncmmkyrpzlkupdnkyqm.supabase.co";
 
-    let today =
-        new Date();
+const SUPABASE_KEY =
+    "sb_publishable_e6j_EkJescicSS3nOOnscg_INwxeukT";
 
-    let year =
-        today.getFullYear();
+const COST_HISTORY_TABLE =
+    "cost_history";
 
-    let month =
-        String(
-            today.getMonth() + 1
-        ).padStart(2, "0");
 
-    return year + "-" + month;
+// =====================================================
+// DATA
+// =====================================================
+
+let items = [];
+
+let stockInHistory = [];
+
+let stockOutHistory = [];
+
+let demandHistory = [];
+
+let costHistory = [];
+
+
+// =====================================================
+// SUPABASE REQUEST
+// =====================================================
+
+async function supabaseRequest(
+    table,
+    method = "GET",
+    body = null,
+    query = ""
+){
+
+    try{
+
+        const options = {
+
+            method: method,
+
+            headers:{
+                "apikey": SUPABASE_KEY,
+                "Authorization":
+                    "Bearer " + SUPABASE_KEY,
+
+                "Content-Type":
+                    "application/json",
+
+                "Prefer":
+                    "return=representation"
+            }
+
+        };
+
+
+        if(body !== null){
+
+            options.body =
+                JSON.stringify(body);
+
+        }
+
+
+        const response =
+            await fetch(
+                SUPABASE_URL +
+                "/rest/v1/" +
+                table +
+                query,
+                options
+            );
+
+
+        const text =
+            await response.text();
+
+
+        let data = null;
+
+
+        try{
+
+            data =
+                text
+                ? JSON.parse(text)
+                : null;
+
+        }
+        catch(error){
+
+            data = text;
+
+        }
+
+
+        if(!response.ok){
+
+            console.error(
+                "Supabase Error:",
+                table,
+                data
+            );
+
+            return {
+
+                success:false,
+
+                error:data
+
+            };
+
+        }
+
+
+        return {
+
+            success:true,
+
+            data:data
+
+        };
+
+    }
+    catch(error){
+
+        console.error(
+            "Supabase Request Error:",
+            error
+        );
+
+        return {
+
+            success:false,
+
+            error:error.message
+
+        };
+
+    }
 
 }
 
 
-// =====================================
+// =====================================================
+// NUMBER HELPER
+// =====================================================
+
+function num(value){
+
+    if(
+        value === null ||
+        value === undefined ||
+        value === ""
+    ){
+
+        return 0;
+
+    }
+
+
+    if(typeof value === "number"){
+
+        return value;
+
+    }
+
+
+    let cleaned =
+        String(value)
+        .replace(/[^0-9.-]/g,"");
+
+
+    return Number(cleaned) || 0;
+
+}
+
+
+// =====================================================
+// ITEM CODE
+// =====================================================
+
+function getItemCode(item){
+
+    return String(
+
+        item.code ??
+        item.item_code ??
+        item.itemCode ??
+        item.id ??
+        ""
+
+    ).trim();
+
+}
+
+
+// =====================================================
+// ITEM NAME
+// =====================================================
+
+function getItemName(item){
+
+    return (
+
+        item.item_name ??
+        item.itemName ??
+        item.name ??
+        ""
+
+    );
+
+}
+
+
+// =====================================================
+// LOAD ALL DATA
+// =====================================================
+
+async function loadCostHistoryData(){
+
+    try{
+
+        setLoading(
+            "Loading Cost History from Supabase..."
+        );
+
+
+        // =============================================
+        // ITEMS
+        // =============================================
+
+        const itemResult =
+            await supabaseRequest(
+                "items",
+                "GET",
+                null,
+                "?select=*"
+            );
+
+
+        if(!itemResult.success){
+
+            throw new Error(
+                "Items load failed"
+            );
+
+        }
+
+
+        items =
+            itemResult.data || [];
+
+
+        // =============================================
+        // NUMERIC ITEM CODE SORT
+        // =============================================
+
+        items.sort(function(a,b){
+
+            const codeA =
+                parseInt(
+                    String(
+                        a.code ??
+                        a.item_code ??
+                        a.id ??
+                        ""
+                    )
+                    .replace(/\D/g,"")
+                ) || 0;
+
+
+            const codeB =
+                parseInt(
+                    String(
+                        b.code ??
+                        b.item_code ??
+                        b.id ??
+                        ""
+                    )
+                    .replace(/\D/g,"")
+                ) || 0;
+
+
+            return codeA - codeB;
+
+        });
+
+
+        // =============================================
+        // STOCK IN
+        // =============================================
+
+        const stockInResult =
+            await supabaseRequest(
+                "stock_in",
+                "GET",
+                null,
+                "?select=*"
+            );
+
+
+        if(stockInResult.success){
+
+            stockInHistory =
+                stockInResult.data || [];
+
+        }
+        else{
+
+            stockInHistory = [];
+
+            console.error(
+                "Stock In Error:",
+                stockInResult.error
+            );
+
+        }
+
+
+        // =============================================
+        // STOCK OUT
+        // =============================================
+
+        const stockOutResult =
+            await supabaseRequest(
+                "stock_issue",
+                "GET",
+                null,
+                "?select=*"
+            );
+
+
+        if(stockOutResult.success){
+
+            stockOutHistory =
+                stockOutResult.data || [];
+
+        }
+        else{
+
+            stockOutHistory = [];
+
+            console.error(
+                "Stock Out Error:",
+                stockOutResult.error
+            );
+
+        }
+
+
+        // =============================================
+        // DEMAND HISTORY
+        // =============================================
+
+        const demandResult =
+            await supabaseRequest(
+                "demand_history",
+                "GET",
+                null,
+                "?select=*&order=id.asc"
+            );
+
+
+        if(demandResult.success){
+
+            demandHistory =
+                demandResult.data || [];
+
+        }
+        else{
+
+            demandHistory = [];
+
+            console.error(
+                "Demand History Error:",
+                demandResult.error
+            );
+
+        }
+
+
+        // =============================================
+        // COST HISTORY
+        // =============================================
+
+        const costResult =
+            await supabaseRequest(
+                COST_HISTORY_TABLE,
+                "GET",
+                null,
+                "?select=*&order=month.desc"
+            );
+
+
+        if(!costResult.success){
+
+            throw new Error(
+                "Cost History table load failed: " +
+                JSON.stringify(
+                    costResult.error
+                )
+            );
+
+        }
+
+
+        costHistory =
+            costResult.data || [];
+
+
+        console.log(
+            "Items:",
+            items.length
+        );
+
+        console.log(
+            "Stock In:",
+            stockInHistory.length
+        );
+
+        console.log(
+            "Stock Out:",
+            stockOutHistory.length
+        );
+
+        console.log(
+            "Demand History:",
+            demandHistory.length
+        );
+
+        console.log(
+            "Cost History:",
+            costHistory.length
+        );
+
+
+        loadHistoryYears();
+
+        showCostHistory();
+
+        setLoading("");
+
+    }
+    catch(error){
+
+        console.error(
+            "Cost History Load Error:",
+            error
+        );
+
+
+        setLoading(
+            "❌ Cost History load failed"
+        );
+
+
+        alert(
+            "Cost History Supabase سے load نہیں ہو سکی۔\n\n" +
+            error.message
+        );
+
+    }
+
+}
+
+
+// =====================================================
+// LOADING MESSAGE
+// =====================================================
+
+function setLoading(message){
+
+    const element =
+        document.getElementById(
+            "loadingMessage"
+        );
+
+
+    if(!element){
+
+        return;
+
+    }
+
+
+    element.textContent =
+        message;
+
+
+    if(message === ""){
+
+        element.style.display =
+            "none";
+
+    }
+    else{
+
+        element.style.display =
+            "block";
+
+    }
+
+}
+
+
+// =====================================================
+// CURRENT MONTH
+// =====================================================
+
+function getCurrentMonth(){
+
+    const today =
+        new Date();
+
+
+    const year =
+        today.getFullYear();
+
+
+    const month =
+        String(
+            today.getMonth() + 1
+        ).padStart(2,"0");
+
+
+    return {
+
+        year:year,
+
+        month:month,
+
+        key:
+            year + "-" + month
+
+    };
+
+}
+
+
+// =====================================================
 // MONTH NAME
-// =====================================
+// =====================================================
 
 function getMonthName(month){
 
-    if(!month){
-        return "-";
-    }
-
-    let parts =
-        month.split("-");
-
-    let monthNames = [
+    const months = [
 
         "January",
         "February",
@@ -67,208 +573,146 @@ function getMonthName(month){
 
     ];
 
-    let monthNumber =
-        Number(parts[1]);
 
-    return (
-        monthNames[monthNumber - 1]
-        +
-        " "
-        +
-        parts[0]
-    );
+    let number =
+        Number(month);
+
+
+    if(number >= 1 && number <= 12){
+
+        return months[number - 1];
+
+    }
+
+
+    return month;
 
 }
 
 
-// =====================================
-// LOAD YEARS
-// =====================================
+// =====================================================
+// GET RECORD MONTH
+// =====================================================
 
-function loadHistoryYears(){
+function getRecordMonth(record){
 
-    let yearSelect =
-        document.getElementById("historyYear");
-
-
-    yearSelect.innerHTML =
-        '<option value="">Select Year</option>';
-
-
-    let years = [];
-
-
-    for(
-        let i = 0;
-        i < costHistory.length;
-        i++
+    if(
+        record.month &&
+        /^\d{4}-\d{2}$/.test(
+            String(record.month)
+        )
     ){
 
-        let record =
-            costHistory[i];
-
-
-        if(
+        return String(
             record.month
-        ){
-
-            let year =
-                record.month.substring(0,4);
-
-
-            if(
-                !years.includes(year)
-            ){
-
-                years.push(year);
-
-            }
-
-        }
-
-    }
-
-
-    years.sort();
-
-
-    for(
-        let i = 0;
-        i < years.length;
-        i++
-    ){
-
-        let option =
-            document.createElement("option");
-
-
-        option.value =
-            years[i];
-
-
-        option.textContent =
-            years[i];
-
-
-        yearSelect.appendChild(
-            option
         );
-
-    }
-
-}
-
-
-// =====================================
-// GET LATEST RATE
-// =====================================
-
-function getLatestRate(itemCode){
-
-    let latestRecord =
-        null;
-
-
-    for(
-        let i = 0;
-        i < history.length;
-        i++
-    ){
-
-        let record =
-            history[i];
-
-
-        if(
-
-            record.type ==
-            "Stock In"
-
-            &&
-
-            String(record.itemCode).trim() ==
-            String(itemCode).trim()
-
-        ){
-
-            if(
-
-                latestRecord == null
-
-                ||
-
-                record.date >
-                latestRecord.date
-
-                ||
-
-                (
-
-                    record.date ==
-                    latestRecord.date
-
-                    &&
-
-                    record.time >
-                    latestRecord.time
-
-                )
-
-            ){
-
-                latestRecord =
-                    record;
-
-            }
-
-        }
 
     }
 
 
     if(
-        latestRecord == null
+        record.year &&
+        record.month
     ){
 
-        return 0;
+        return (
+
+            String(record.year) +
+            "-" +
+            String(
+                record.month
+            ).padStart(2,"0")
+
+        );
 
     }
 
 
-    return Number(
-        latestRecord.unitCost || 0
+    return "";
+
+}
+
+
+// =====================================================
+// GET STOCK ITEM CODE
+// =====================================================
+
+function getStockItemCode(record){
+
+    return String(
+
+        record.item_code ??
+        record.itemCode ??
+        record.code ??
+        ""
+
+    ).trim();
+
+}
+
+
+// =====================================================
+// GET STOCK DATE
+// =====================================================
+
+function getStockDate(record){
+
+    return (
+
+        record.date ??
+        record.transaction_date ??
+        record.transactionDate ??
+        ""
+
     );
 
 }
 
 
-// =====================================
-// GET CURRENT STOCK
-// =====================================
+// =====================================================
+// GET STOCK TIME
+// =====================================================
 
-function getCurrentStock(item){
+function getStockTime(record){
 
-    let stock =
-        Number(
-            item.openingStock || 0
-        );
+    return (
+
+        record.time ??
+        record.transaction_time ??
+        record.transactionTime ??
+        ""
+
+    );
+
+}
+
+
+// =====================================================
+// GET LATEST RATE
+// =====================================================
+
+function getLatestRate(itemCode){
+
+    const code =
+        String(itemCode).trim();
+
+
+    let latest = null;
 
 
     for(
         let i = 0;
-        i < history.length;
+        i < stockInHistory.length;
         i++
     ){
 
-        let record =
-            history[i];
+        const record =
+            stockInHistory[i];
 
 
         if(
-
-            String(record.itemCode).trim() !=
-            String(item.code).trim()
-
+            getStockItemCode(record) !==
+            code
         ){
 
             continue;
@@ -277,29 +721,146 @@ function getCurrentStock(item){
 
 
         if(
-            record.type ==
-            "Stock In"
+            latest === null
         ){
 
-            stock =
-                stock +
-                Number(
-                    record.quantity || 0
-                );
+            latest = record;
+
+            continue;
 
         }
 
 
+        const currentDate =
+            String(
+                getStockDate(record)
+            );
+
+
+        const currentTime =
+            String(
+                getStockTime(record)
+            );
+
+
+        const latestDate =
+            String(
+                getStockDate(latest)
+            );
+
+
+        const latestTime =
+            String(
+                getStockTime(latest)
+            );
+
+
         if(
-            record.type ==
-            "Stock Issue"
+            currentDate + currentTime >
+            latestDate + latestTime
         ){
 
-            stock =
-                stock -
-                Number(
-                    record.quantity || 0
-                );
+            latest = record;
+
+        }
+
+    }
+
+
+    if(!latest){
+
+        return 0;
+
+    }
+
+
+    return num(
+
+        latest.unit_cost ??
+        latest.unitCost ??
+        0
+
+    );
+
+}
+
+
+// =====================================================
+// CURRENT STOCK
+// =====================================================
+
+function getCurrentStock(item){
+
+    const code =
+        getItemCode(item);
+
+
+    // ---------------------------------------------
+    // IMPORTANT:
+    // Supabase column is opening_Stock
+    // ---------------------------------------------
+
+    let stock =
+        num(
+
+            item.opening_Stock ??
+            item.openingStock ??
+            item.opening_stock ??
+            0
+
+        );
+
+
+    // =============================================
+    // STOCK IN
+    // =============================================
+
+    for(
+        let i = 0;
+        i < stockInHistory.length;
+        i++
+    ){
+
+        const record =
+            stockInHistory[i];
+
+
+        if(
+            getStockItemCode(record) ===
+            code
+        ){
+
+            stock += num(
+                record.quantity
+            );
+
+        }
+
+    }
+
+
+    // =============================================
+    // STOCK OUT
+    // =============================================
+
+    for(
+        let i = 0;
+        i < stockOutHistory.length;
+        i++
+    ){
+
+        const record =
+            stockOutHistory[i];
+
+
+        if(
+            getStockItemCode(record) ===
+            code
+        ){
+
+            stock -= num(
+                record.quantity
+            );
 
         }
 
@@ -318,17 +879,131 @@ function getCurrentStock(item){
 }
 
 
-// =====================================
-// GET MONTH DEMAND
-// =====================================
+// =====================================================
+// GET DEMAND MONTH
+// =====================================================
+
+function getDemandMonth(record){
+
+    return String(
+
+        record.demand_month ??
+        record.demandMonth ??
+        record.month ??
+        ""
+
+    ).trim();
+
+}
+
+
+// =====================================================
+// GET DEMAND ITEMS
+// =====================================================
+
+function getDemandItems(record){
+
+    let data =
+
+        record.demand_items ??
+        record.demandItems ??
+        record.items ??
+        record.demands ??
+        [];
+
+
+    if(typeof data === "string"){
+
+        try{
+
+            data =
+                JSON.parse(data);
+
+        }
+        catch(error){
+
+            data = [];
+
+        }
+
+    }
+
+
+    if(!Array.isArray(data)){
+
+        return [];
+
+    }
+
+
+    return data;
+
+}
+
+
+// =====================================================
+// GET DEMAND ITEM CODE
+// =====================================================
+
+function getDemandItemCode(item){
+
+    return String(
+
+        item.itemCode ??
+        item.item_code ??
+        item.code ??
+        item.itemId ??
+        item.item_id ??
+        ""
+
+    ).trim();
+
+}
+
+
+// =====================================================
+// GET DEMAND QUANTITY
+// =====================================================
+
+function getDemandQuantity(item){
+
+    const value =
+
+        item.final_demand ??
+        item.finalDemand ??
+        item.approved_qty ??
+        item.approvedQty ??
+        item.approvedDemandQty ??
+        item.approved_demand_qty ??
+        item.demand_qty ??
+        item.demandQty ??
+        item.demand_quantity ??
+        item.demandQuantity ??
+        item.quantity ??
+        item.qty ??
+        item.demand ??
+        0;
+
+
+    return num(value);
+
+}
+
+
+// =====================================================
+// MONTHLY DEMAND
+// =====================================================
 
 function getMonthlyDemand(
     itemCode,
     month
 ){
 
-    let demandQuantity =
-        0;
+    const code =
+        String(itemCode).trim();
+
+
+    let total = 0;
 
 
     for(
@@ -337,15 +1012,17 @@ function getMonthlyDemand(
         i++
     ){
 
-        let demandRecord =
+        const record =
             demandHistory[i];
 
 
+        const demandMonth =
+            getDemandMonth(record);
+
+
         if(
-
-            demandRecord.demandMonth !=
+            demandMonth !==
             month
-
         ){
 
             continue;
@@ -353,12 +1030,8 @@ function getMonthlyDemand(
         }
 
 
-        let demandItems =
-            demandRecord.demandItems
-            ||
-            demandRecord.items
-            ||
-            [];
+        const demandItems =
+            getDemandItems(record);
 
 
         for(
@@ -367,33 +1040,19 @@ function getMonthlyDemand(
             j++
         ){
 
-            let demandItem =
+            const demandItem =
                 demandItems[j];
 
 
             if(
-
-                String(
-                    demandItem.code
-                ).trim()
-
-                ==
-
-                String(
-                    itemCode
-                ).trim()
-
+                getDemandItemCode(
+                    demandItem
+                ) === code
             ){
 
-                demandQuantity =
-                    demandQuantity
-                    +
-                    Number(
-                        demandItem.finalDemand
-                        ||
-                        demandItem.demandQuantity
-                        ||
-                        0
+                total +=
+                    getDemandQuantity(
+                        demandItem
                     );
 
             }
@@ -403,42 +1062,27 @@ function getMonthlyDemand(
     }
 
 
-    return demandQuantity;
+    return total;
 
 }
 
 
-// =====================================
-// CREATE MONTHLY COST DATA
-// =====================================
+// =====================================================
+// CREATE MONTHLY COST RECORD
+// =====================================================
 
 function createMonthlyCostRecord(
     month
 ){
 
-    let totalItems =
-        0;
+    let totalStockCost = 0;
 
+    let totalDemandQty = 0;
 
-    let totalStockCost =
-        0;
+    let totalDemandCost = 0;
 
+    let itemDetails = [];
 
-    let totalDemandQty =
-        0;
-
-
-    let totalDemandCost =
-        0;
-
-
-    let itemDetails =
-        [];
-
-
-    // =================================
-    // ALL MASTER ITEMS
-    // =================================
 
     for(
         let i = 0;
@@ -446,80 +1090,113 @@ function createMonthlyCostRecord(
         i++
     ){
 
-        let item =
+        const item =
             items[i];
 
 
-        let availableQty =
+        const code =
+            getItemCode(item);
+
+
+        if(!code){
+
+            continue;
+
+        }
+
+
+        // =============================================
+        // CURRENT STOCK
+        // =============================================
+
+        const availableQuantity =
             getCurrentStock(item);
 
 
-        let rate =
-            getLatestRate(item.code);
+        // =============================================
+        // LATEST RATE
+        // =============================================
+
+        const rate =
+            getLatestRate(code);
 
 
-        let availableStockCost =
-            availableQty * rate;
+        // =============================================
+        // STOCK COST
+        // =============================================
+
+        const availableStockCost =
+            availableQuantity *
+            rate;
 
 
-        let approvedDemandQty =
+        // =============================================
+        // DEMAND
+        // =============================================
+
+        const approvedDemandQty =
             getMonthlyDemand(
-                item.code,
+                code,
                 month
             );
 
 
-        let approvedDemandCost =
-            approvedDemandQty * rate;
+        const approvedDemandCost =
+            approvedDemandQty *
+            rate;
 
 
-        totalItems++;
+        // =============================================
+        // TOTALS
+        // =============================================
 
-
-        totalStockCost =
-            totalStockCost
-            +
+        totalStockCost +=
             availableStockCost;
 
 
-        totalDemandQty =
-            totalDemandQty
-            +
+        totalDemandQty +=
             approvedDemandQty;
 
 
-        totalDemandCost =
-            totalDemandCost
-            +
+        totalDemandCost +=
             approvedDemandCost;
 
 
-        // =================================
-        // SAVE ITEM DETAIL
-        // =================================
+        // =============================================
+        // ITEM DETAIL
+        // =============================================
 
         itemDetails.push({
 
             category:
-                item.category || "-",
+                item.category || "",
 
             code:
-                item.code || "-",
+                code,
+
+            itemCode:
+                code,
 
             itemName:
-                item.itemName || "-",
+                getItemName(item),
 
             specification:
-                item.specification || "-",
+                item.specification || "",
 
             source:
-                item.source || "-",
+                item.source || "",
+
+            supplier:
+                item.supplier || "",
+
+            unit:
+                item.unit || "",
 
             rate:
                 rate,
 
             availableQuantity:
-                availableQty,
+                availableQuantity,
 
             availableStockCost:
                 availableStockCost,
@@ -535,13 +1212,21 @@ function createMonthlyCostRecord(
     }
 
 
-    let today =
-        new Date();
+    const parts =
+        month.split("-");
 
 
-    let saveDate =
-        today.toLocaleDateString(
-            "en-GB"
+    const year =
+        Number(parts[0]);
+
+
+    const monthNumber =
+        parts[1];
+
+
+    const monthName =
+        getMonthName(
+            monthNumber
         );
 
 
@@ -550,597 +1235,54 @@ function createMonthlyCostRecord(
         month:
             month,
 
-        monthName:
-            getMonthName(month),
+        month_name:
+            monthName,
 
         year:
-            month.substring(0,4),
+            year,
 
-        totalItems:
-            totalItems,
+        total_items:
+            itemDetails.length,
 
-        availableStockCost:
-            totalStockCost,
+        total_stock_cost:
+            Number(
+                totalStockCost.toFixed(2)
+            ),
 
-        approvedDemandQty:
-            totalDemandQty,
+        approved_demand_qty:
+            Number(
+                totalDemandQty.toFixed(2)
+            ),
 
-        approvedDemandCost:
-            totalDemandCost,
+        total_demand_cost:
+            Number(
+                totalDemandCost.toFixed(2)
+            ),
+
+        saved_date:
+            new Date().toISOString(),
 
         items:
-            itemDetails,
-
-        savedDate:
-            saveDate
+            itemDetails
 
     };
 
 }
 
 
-// =====================================
-// AUTO SAVE CURRENT MONTH
-// =====================================
-
-function autoSaveCurrentMonth(){
-
-    let currentMonth =
-        getCurrentMonth();
-
-
-    saveMonthlyCost(
-        currentMonth,
-        false
-    );
-
-}
-
-
-// =====================================
+// =====================================================
 // SAVE MONTHLY COST
-// =====================================
+// =====================================================
 
-function saveMonthlyCost(
+async function saveMonthlyCost(
     month,
-    showMessage
+    showMessage = true
 ){
 
-    let newRecord =
-        createMonthlyCostRecord(
-            month
-        );
-
-
-    // =================================
-    // CHECK EXISTING MONTH
-    // =================================
-
-    let existingIndex =
-        -1;
-
-
-    for(
-        let i = 0;
-        i < costHistory.length;
-        i++
-    ){
-
-        if(
-            costHistory[i].month ==
-            month
-        ){
-
-            existingIndex =
-                i;
-
-            break;
-
-        }
-
-    }
-
-
-    // =================================
-    // UPDATE EXISTING MONTH
-    // =================================
-
-    if(existingIndex != -1){
-
-        costHistory[
-            existingIndex
-        ] =
-            newRecord;
-
-    }
-
-    // =================================
-    // CREATE NEW MONTH
-    // =================================
-
-    else{
-
-        costHistory.push(
-            newRecord
-        );
-
-    }
-
-
-    // =================================
-    // SAVE LOCAL STORAGE
-    // =================================
-
-    localStorage.setItem(
-        "costHistory",
-        JSON.stringify(
-            costHistory
-        )
-    );
-
-
-    // =================================
-    // UPDATE YEAR LIST
-    // =================================
-
-    loadHistoryYears();
-
-
-    if(showMessage){
+    if(!month){
 
         alert(
-            "Cost History saved successfully!\n\n"
-            +
-            getMonthName(month)
-        );
-
-    }
-
-
-    showCostHistory();
-
-}
-
-
-// =====================================
-// MANUAL SAVE CURRENT COST
-// =====================================
-
-function saveCurrentCostHistory(){
-
-    let currentMonth =
-        getCurrentMonth();
-
-
-    saveMonthlyCost(
-        currentMonth,
-        true
-    );
-
-}
-
-
-// =====================================
-// SHOW COST HISTORY
-// =====================================
-
-function showCostHistory(){
-
-    let selectedMonth =
-        document.getElementById(
-            "historyMonth"
-        ).value;
-
-
-    let selectedYear =
-        document.getElementById(
-            "historyYear"
-        ).value;
-
-
-    let historyBody =
-        document.getElementById(
-            "historyBody"
-        );
-
-
-    historyBody.innerHTML =
-        "";
-
-
-    let totalMonths =
-        0;
-
-
-    let totalStockCost =
-        0;
-
-
-    let totalDemandQty =
-        0;
-
-
-    let totalDemandCost =
-        0;
-
-
-    // =================================
-    // SORT HISTORY
-    // =================================
-
-    let filteredHistory =
-        [];
-
-
-    for(
-        let i = 0;
-        i < costHistory.length;
-        i++
-    ){
-
-        let record =
-            costHistory[i];
-
-
-        // =============================
-        // MONTH FILTER
-        // =============================
-
-        if(
-
-            selectedMonth
-
-            &&
-
-            record.month !=
-            selectedMonth
-
-        ){
-
-            continue;
-
-        }
-
-
-        // =============================
-        // YEAR FILTER
-        // =============================
-
-        if(
-
-            selectedYear
-
-            &&
-
-            record.year !=
-            selectedYear
-
-        ){
-
-            continue;
-
-        }
-
-
-        filteredHistory.push(
-            record
-        );
-
-    }
-
-
-    filteredHistory.sort(
-        function(a,b){
-
-            return a.month.localeCompare(
-                b.month
-            );
-
-        }
-    );
-
-
-    // =================================
-    // NO RECORD
-    // =================================
-
-    if(
-        filteredHistory.length == 0
-    ){
-
-        let row =
-            document.createElement("tr");
-
-
-        let cell =
-            document.createElement("td");
-
-
-        cell.colSpan =
-            7;
-
-
-        cell.className =
-            "empty-message";
-
-
-        cell.textContent =
-            "No Cost History Found";
-
-
-        row.appendChild(cell);
-
-
-        historyBody.appendChild(row);
-
-
-    }
-
-
-    // =================================
-    // SHOW RECORDS
-    // =================================
-
-    for(
-        let i = 0;
-        i < filteredHistory.length;
-        i++
-    ){
-
-        let record =
-            filteredHistory[i];
-
-
-        totalMonths++;
-
-
-        totalStockCost =
-            totalStockCost
-            +
-            Number(
-                record.availableStockCost || 0
-            );
-
-
-        totalDemandQty =
-            totalDemandQty
-            +
-            Number(
-                record.approvedDemandQty || 0
-            );
-
-
-        totalDemandCost =
-            totalDemandCost
-            +
-            Number(
-                record.approvedDemandCost || 0
-            );
-
-
-        let row =
-            document.createElement("tr");
-
-
-        // YEAR
-
-        let cell1 =
-            document.createElement("td");
-
-        cell1.textContent =
-            record.year;
-
-        row.appendChild(cell1);
-
-
-        // MONTH
-
-        let cell2 =
-            document.createElement("td");
-
-        cell2.textContent =
-            record.monthName;
-
-        row.appendChild(cell2);
-
-
-        // TOTAL ITEMS
-
-        let cell3 =
-            document.createElement("td");
-
-        cell3.textContent =
-            record.totalItems;
-
-        row.appendChild(cell3);
-
-
-        // STOCK COST
-
-        let cell4 =
-            document.createElement("td");
-
-        cell4.textContent =
-            "Rs. "
-            +
-            Number(
-                record.availableStockCost || 0
-            ).toFixed(2);
-
-        row.appendChild(cell4);
-
-
-        // DEMAND QTY
-
-        let cell5 =
-            document.createElement("td");
-
-        cell5.textContent =
-            Number(
-                record.approvedDemandQty || 0
-            ).toFixed(2);
-
-        row.appendChild(cell5);
-
-
-        // DEMAND COST
-
-        let cell6 =
-            document.createElement("td");
-
-        cell6.textContent =
-            "Rs. "
-            +
-            Number(
-                record.approvedDemandCost || 0
-            ).toFixed(2);
-
-        row.appendChild(cell6);
-
-
-        // SAVED DATE
-
-        let cell7 =
-            document.createElement("td");
-
-        cell7.textContent =
-            record.savedDate || "-";
-
-        row.appendChild(cell7);
-
-
-        historyBody.appendChild(row);
-        // =================================
-// VIEW DETAILS BUTTON
-// =================================
-
-let cell8 =
-    document.createElement("td");
-
-
-let viewButton =
-    document.createElement("button");
-
-
-viewButton.type =
-    "button";
-
-
-viewButton.textContent =
-    "View Details";
-
-
-viewButton.onclick =
-    function(){
-
-        viewCostDetails(
-            record.month
-        );
-
-    };
-
-
-cell8.appendChild(
-    viewButton
-);
-
-
-row.appendChild(cell8);
-
-    }
-
-
-    // =================================
-    // SUMMARY
-    // =================================
-
-    document.getElementById(
-        "totalMonths"
-    ).textContent =
-        totalMonths;
-
-
-    document.getElementById(
-        "totalStockCost"
-    ).textContent =
-        "Rs. "
-        +
-        totalStockCost.toFixed(2);
-
-
-    document.getElementById(
-        "totalDemandCost"
-    ).textContent =
-        "Rs. "
-        +
-        totalDemandCost.toFixed(2);
-
-
-    // =================================
-    // FOOTER
-    // =================================
-
-    document.getElementById(
-        "footerStockCost"
-    ).textContent =
-        "Rs. "
-        +
-        totalStockCost.toFixed(2);
-
-
-    document.getElementById(
-        "footerDemandQty"
-    ).textContent =
-        totalDemandQty.toFixed(2);
-
-
-    document.getElementById(
-        "footerDemandCost"
-    ).textContent =
-        "Rs. "
-        +
-        totalDemandCost.toFixed(2);
-
-}
-
-
-// =====================================
-// SHOW ALL HISTORY
-// =====================================
-
-function showAllHistory(){
-
-    document.getElementById(
-        "historyMonth"
-    ).value =
-        "";
-
-
-    document.getElementById(
-        "historyYear"
-    ).value =
-        "";
-
-
-    showCostHistory();
-
-}
-
-
-// =====================================
-// PRINT COST HISTORY
-// =====================================
-
-function printCostHistory(){
-
-    let table =
-        document.querySelector("table");
-
-
-    if(!table){
-
-        alert(
-            "History table not found!"
+            "Please select a month."
         );
 
         return;
@@ -1148,278 +1290,1465 @@ function printCostHistory(){
     }
 
 
-    let month =
-        document.getElementById(
-            "historyMonth"
-        ).value;
+    try{
+
+        setLoading(
+            "Saving Cost History..."
+        );
 
 
-    let year =
+        const record =
+            createMonthlyCostRecord(
+                month
+            );
+
+
+        // =============================================
+        // CHECK EXISTING RECORD
+        // =============================================
+
+        const existingResult =
+            await supabaseRequest(
+
+                COST_HISTORY_TABLE,
+
+                "GET",
+
+                null,
+
+                "?select=id,month&month=eq." +
+                encodeURIComponent(month)
+
+            );
+
+
+        if(!existingResult.success){
+
+            throw new Error(
+                JSON.stringify(
+                    existingResult.error
+                )
+            );
+
+        }
+
+
+        const existing =
+            existingResult.data || [];
+
+
+        let result;
+
+
+        // =============================================
+        // UPDATE
+        // =============================================
+
+        if(existing.length > 0){
+
+            const id =
+                existing[0].id;
+
+
+            result =
+                await supabaseRequest(
+
+                    COST_HISTORY_TABLE,
+
+                    "PATCH",
+
+                    record,
+
+                    "?id=eq." + id
+
+                );
+
+        }
+
+        // =============================================
+        // INSERT
+        // =============================================
+
+        else{
+
+            result =
+                await supabaseRequest(
+
+                    COST_HISTORY_TABLE,
+
+                    "POST",
+
+                    record
+
+                );
+
+        }
+
+
+        if(!result.success){
+
+            throw new Error(
+                JSON.stringify(
+                    result.error
+                )
+            );
+
+        }
+
+
+        // =============================================
+        // RELOAD
+        // =============================================
+
+        await reloadCostHistory();
+
+
+        if(showMessage){
+
+            alert(
+                "Cost History successfully Supabase میں save ہو گئی۔"
+            );
+
+        }
+
+    }
+    catch(error){
+
+        console.error(
+            "Save Cost Error:",
+            error
+        );
+
+
+        alert(
+            "Cost History save نہیں ہوئی۔\n\n" +
+            error.message
+        );
+
+    }
+    finally{
+
+        setLoading("");
+
+    }
+
+}
+
+
+// =====================================================
+// SAVE CURRENT MONTH
+// =====================================================
+
+async function saveCurrentCostHistory(){
+
+    const current =
+        getCurrentMonth();
+
+
+    await saveMonthlyCost(
+        current.key,
+        true
+    );
+
+}
+
+
+// =====================================================
+// AUTO SAVE CURRENT MONTH
+// =====================================================
+
+async function autoSaveCurrentMonth(){
+
+    const current =
+        getCurrentMonth();
+
+
+    // ---------------------------------------------
+    // IMPORTANT:
+    // اگر current month already موجود ہے
+    // تو اسے automatically overwrite نہیں کریں گے۔
+    // ---------------------------------------------
+
+    const existing =
+        costHistory.find(
+            function(record){
+
+                return (
+                    getRecordMonth(record) ===
+                    current.key
+                );
+
+            }
+        );
+
+
+    if(existing){
+
+        return;
+
+    }
+
+
+    await saveMonthlyCost(
+        current.key,
+        false
+    );
+
+}
+
+
+// =====================================================
+// RELOAD COST HISTORY
+// =====================================================
+
+async function reloadCostHistory(){
+
+    const result =
+        await supabaseRequest(
+
+            COST_HISTORY_TABLE,
+
+            "GET",
+
+            null,
+
+            "?select=*&order=month.desc"
+
+        );
+
+
+    if(!result.success){
+
+        throw new Error(
+            JSON.stringify(
+                result.error
+            )
+        );
+
+    }
+
+
+    costHistory =
+        result.data || [];
+
+
+    loadHistoryYears();
+
+    showCostHistory();
+
+}
+
+
+// =====================================================
+// LOAD YEARS
+// =====================================================
+
+function loadHistoryYears(){
+
+    const select =
         document.getElementById(
             "historyYear"
-        ).value;
+        );
 
 
-    let title =
-        "COST HISTORY";
+    if(!select){
+
+        return;
+
+    }
+
+
+    const currentValue =
+        select.value;
+
+
+    select.innerHTML =
+        '<option value="">All Years</option>';
+
+
+    const years = [];
+
+
+    for(
+        let i = 0;
+        i < costHistory.length;
+        i++
+    ){
+
+        const record =
+            costHistory[i];
+
+
+        const month =
+            getRecordMonth(record);
+
+
+        const year =
+            month
+            ? month.substring(0,4)
+            : String(
+                record.year || ""
+            );
+
+
+        if(
+            year &&
+            !years.includes(year)
+        ){
+
+            years.push(year);
+
+        }
+
+    }
+
+
+    years.sort(
+        function(a,b){
+            return Number(b) -
+                   Number(a);
+        }
+    );
+
+
+    for(
+        let i = 0;
+        i < years.length;
+        i++
+    ){
+
+        const option =
+            document.createElement(
+                "option"
+            );
+
+
+        option.value =
+            years[i];
+
+
+        option.textContent =
+            years[i];
+
+
+        select.appendChild(
+            option
+        );
+
+    }
+
+
+    if(
+        years.includes(
+            currentValue
+        )
+    ){
+
+        select.value =
+            currentValue;
+
+    }
+
+}
+
+
+// =====================================================
+// SHOW COST HISTORY
+// =====================================================
+
+function showCostHistory(){
+
+    const body =
+        document.getElementById(
+            "historyBody"
+        );
+
+
+    if(!body){
+
+        return;
+
+    }
+
+
+    body.innerHTML = "";
+
+
+    const monthSelect =
+        document.getElementById(
+            "historyMonth"
+        );
+
+
+    const yearSelect =
+        document.getElementById(
+            "historyYear"
+        );
+
+
+    const selectedMonth =
+        monthSelect
+        ? monthSelect.value
+        : "";
+
+
+    const selectedYear =
+        yearSelect
+        ? yearSelect.value
+        : "";
+
+
+    let filteredHistory =
+        costHistory.filter(
+            function(record){
+
+                const month =
+                    getRecordMonth(
+                        record
+                    );
+
+
+                if(!month){
+
+                    return false;
+
+                }
+
+
+                const parts =
+                    month.split("-");
+
+
+                const year =
+                    parts[0];
+
+
+                const monthNumber =
+                    parts[1];
+
+
+                if(
+                    selectedMonth &&
+                    monthNumber !==
+                    selectedMonth
+                ){
+
+                    return false;
+
+                }
+
+
+                if(
+                    selectedYear &&
+                    year !==
+                    selectedYear
+                ){
+
+                    return false;
+
+                }
+
+
+                return true;
+
+            }
+        );
+
+
+    // =============================================
+    // SORT NEWEST FIRST
+    // =============================================
+
+    filteredHistory.sort(
+        function(a,b){
+
+            return getRecordMonth(b)
+                   .localeCompare(
+                       getRecordMonth(a)
+                   );
+
+        }
+    );
+
+
+    // =============================================
+    // NO RECORDS
+    // =============================================
+
+    if(
+        filteredHistory.length === 0
+    ){
+
+        const row =
+            document.createElement(
+                "tr"
+            );
+
+
+        const cell =
+            document.createElement(
+                "td"
+            );
+
+
+        cell.colSpan = 8;
+
+
+        cell.textContent =
+            "No Cost History Found";
+
+
+        row.appendChild(
+            cell
+        );
+
+
+        body.appendChild(
+            row
+        );
+
+
+        updateSummary([]);
+
+
+        return;
+
+    }
+
+
+    // =============================================
+    // ADD ROWS
+    // =============================================
+
+    for(
+        let i = 0;
+        i < filteredHistory.length;
+        i++
+    ){
+
+        addHistoryRow(
+            filteredHistory[i]
+        );
+
+    }
+
+
+    updateSummary(
+        filteredHistory
+    );
+
+}
+
+
+// =====================================================
+// ADD HISTORY ROW
+// =====================================================
+
+function addHistoryRow(record){
+
+    const body =
+        document.getElementById(
+            "historyBody"
+        );
+
+
+    const row =
+        document.createElement(
+            "tr"
+        );
+
+
+    const month =
+        getRecordMonth(
+            record
+        );
+
+
+    const parts =
+        month.split("-");
+
+
+    const year =
+        parts[0];
+
+
+    const monthNumber =
+        parts[1];
+
+
+    const monthName =
+        record.month_name ||
+        record.monthName ||
+        getMonthName(
+            monthNumber
+        );
+
+
+    // =============================================
+    // YEAR
+    // =============================================
+
+    addCell(
+        row,
+        year
+    );
+
+
+    // =============================================
+    // MONTH
+    // =============================================
+
+    addCell(
+        row,
+        monthName
+    );
+
+
+    // =============================================
+    // TOTAL ITEMS
+    // =============================================
+
+    addCell(
+        row,
+        num(
+            record.total_items ??
+            record.totalItems ??
+            0
+        )
+    );
+
+
+    // =============================================
+    // STOCK COST
+    // =============================================
+
+    addCell(
+        row,
+        num(
+            record.total_stock_cost ??
+            record.totalStockCost ??
+            record.availableStockCost ??
+            0
+        ).toFixed(2)
+    );
+
+
+    // =============================================
+    // DEMAND QTY
+    // =============================================
+
+    addCell(
+        row,
+        num(
+            record.approved_demand_qty ??
+            record.approvedDemandQty ??
+            0
+        ).toFixed(2)
+    );
+
+
+    // =============================================
+    // DEMAND COST
+    // =============================================
+
+    addCell(
+        row,
+        num(
+            record.total_demand_cost ??
+            record.totalDemandCost ??
+            record.approvedDemandCost ??
+            0
+        ).toFixed(2)
+    );
+
+
+    // =============================================
+    // SAVED DATE
+    // =============================================
+
+    const savedDate =
+        record.saved_date ||
+        record.savedDate ||
+        "";
+
+
+    let displayDate =
+        "-";
+
+
+    if(savedDate){
+
+        const date =
+            new Date(
+                savedDate
+            );
+
+
+        if(!isNaN(date.getTime())){
+
+            displayDate =
+                date.toLocaleString(
+                    "en-GB"
+                );
+
+        }
+        else{
+
+            displayDate =
+                savedDate;
+
+        }
+
+    }
+
+
+    addCell(
+        row,
+        displayDate
+    );
+
+
+    // =============================================
+    // ACTION
+    // =============================================
+
+    const actionCell =
+        document.createElement(
+            "td"
+        );
+
+
+    const actionDiv =
+        document.createElement(
+            "div"
+        );
+
+
+    actionDiv.className =
+        "action-buttons";
+
+
+    // ---------------------------------------------
+    // VIEW
+    // ---------------------------------------------
+
+    const viewButton =
+        document.createElement(
+            "button"
+        );
+
+
+    viewButton.type =
+        "button";
+
+
+    viewButton.textContent =
+        "👁️ View";
+
+
+    viewButton.onclick =
+        function(){
+
+            viewCostDetails(
+                month
+            );
+
+        };
+
+
+    // ---------------------------------------------
+    // EDIT
+    // ---------------------------------------------
+
+    const editButton =
+        document.createElement(
+            "button"
+        );
+
+
+    editButton.type =
+        "button";
+
+
+    editButton.textContent =
+        "✏️ Edit";
+
+
+    editButton.onclick =
+        function(){
+
+            editCostHistory(
+                record.id
+            );
+
+        };
+
+
+    // ---------------------------------------------
+    // DELETE
+    // ---------------------------------------------
+
+    const deleteButton =
+        document.createElement(
+            "button"
+        );
+
+
+    deleteButton.type =
+        "button";
+
+
+    deleteButton.textContent =
+        "🗑️ Delete";
+
+
+    deleteButton.onclick =
+        function(){
+
+            deleteCostHistory(
+                record.id,
+                month
+            );
+
+        };
+
+
+    actionDiv.appendChild(
+        viewButton
+    );
+
+
+    actionDiv.appendChild(
+        editButton
+    );
+
+
+    actionDiv.appendChild(
+        deleteButton
+    );
+
+
+    actionCell.appendChild(
+        actionDiv
+    );
+
+
+    row.appendChild(
+        actionCell
+    );
+
+
+    body.appendChild(
+        row
+    );
+
+}
+
+
+// =====================================================
+// ADD CELL
+// =====================================================
+
+function addCell(
+    row,
+    value
+){
+
+    const cell =
+        document.createElement(
+            "td"
+        );
+
+
+    cell.textContent =
+        value;
+
+
+    row.appendChild(
+        cell
+    );
+
+}
+
+
+// =====================================================
+// UPDATE SUMMARY
+// =====================================================
+
+function updateSummary(
+    records
+){
+
+    let stockCost = 0;
+
+    let demandQty = 0;
+
+    let demandCost = 0;
+
+
+    for(
+        let i = 0;
+        i < records.length;
+        i++
+    ){
+
+        const record =
+            records[i];
+
+
+        stockCost +=
+            num(
+                record.total_stock_cost ??
+                record.totalStockCost ??
+                record.availableStockCost ??
+                0
+            );
+
+
+        demandQty +=
+            num(
+                record.approved_demand_qty ??
+                record.approvedDemandQty ??
+                0
+            );
+
+
+        demandCost +=
+            num(
+                record.total_demand_cost ??
+                record.totalDemandCost ??
+                record.approvedDemandCost ??
+                0
+            );
+
+    }
+
+
+    document.getElementById(
+        "totalMonths"
+    ).textContent =
+        records.length;
+
+
+    document.getElementById(
+        "totalStockCost"
+    ).textContent =
+        stockCost.toFixed(2);
+
+
+    document.getElementById(
+        "totalDemandCost"
+    ).textContent =
+        demandCost.toFixed(2);
+
+
+    document.getElementById(
+        "footerStockCost"
+    ).textContent =
+        stockCost.toFixed(2);
+
+
+    document.getElementById(
+        "footerDemandQty"
+    ).textContent =
+        demandQty.toFixed(2);
+
+
+    document.getElementById(
+        "footerDemandCost"
+    ).textContent =
+        demandCost.toFixed(2);
+
+}
+
+
+// =====================================================
+// SHOW ALL
+// =====================================================
+
+function showAllHistory(){
+
+    const search =
+        document.getElementById(
+            "historySearch"
+        );
+
+
+    const month =
+        document.getElementById(
+            "historyMonth"
+        );
+
+
+    const year =
+        document.getElementById(
+            "historyYear"
+        );
+
+
+    if(search){
+
+        search.value = "";
+
+    }
 
 
     if(month){
 
-        title =
-            "COST HISTORY - "
-            +
-            getMonthName(month);
+        month.value = "";
 
     }
 
 
     if(year){
 
-        title =
-            "COST HISTORY - YEAR "
-            +
-            year;
+        year.value = "";
 
     }
 
 
-    let printWindow =
-        window.open(
-            "",
-            "",
-            "width=1400,height=900"
+    showCostHistory();
+
+}
+
+
+// =====================================================
+// SEARCH FILTER
+// =====================================================
+
+function filterCostHistory(){
+
+    const searchInput =
+        document.getElementById(
+            "historySearch"
         );
 
 
-    let printContent = `
+    if(!searchInput){
 
-<html>
+        return;
 
-<head>
-
-<title>
-${title}
-</title>
+    }
 
 
-<style>
+    const search =
+        searchInput.value
+        .trim()
+        .toLowerCase();
 
-body {
 
-    font-family:
-        Arial, sans-serif;
+    const rows =
+        document.querySelectorAll(
+            "#historyBody tr"
+        );
 
-    padding:
-        15px;
 
-}
+    rows.forEach(
+        function(row){
 
-h2 {
+            const text =
+                row.textContent
+                .toLowerCase();
 
-    text-align:
-        center;
 
-    margin-bottom:
-        5px;
+            if(
+                text.includes(search)
+            ){
 
-}
+                row.style.display =
+                    "";
 
-h1 {
+            }
+            else{
 
-    text-align:
-        center;
+                row.style.display =
+                    "none";
 
-    margin-top:
-        5px;
+            }
 
-}
-
-table {
-
-    width:
-        100%;
-
-    border-collapse:
-        collapse;
-
-    margin-top:
-        20px;
-
-    font-size:
-        10px;
+        }
+    );
 
 }
 
-th {
 
-    background:
-        #12355b;
+// =====================================================
+// EDIT COST HISTORY
+// =====================================================
 
-    color:
-        white;
+async function editCostHistory(
+    recordId
+){
 
-    padding:
-        7px;
+    const record =
+        costHistory.find(
+            function(item){
 
-    border:
-        1px solid #777;
+                return String(
+                    item.id
+                ) ===
+                String(recordId);
 
-}
+            }
+        );
 
-td {
 
-    padding:
-        7px;
+    if(!record){
 
-    border:
-        1px solid #777;
+        alert(
+            "Cost History record نہیں ملا۔"
+        );
 
-}
+        return;
 
-tfoot td {
+    }
 
-    font-weight:
-        bold;
 
-    background:
-        #e8eef5;
+    const month =
+        getRecordMonth(
+            record
+        );
 
-}
 
-.approval {
+    const currentStockCost =
+        num(
+            record.total_stock_cost ??
+            record.totalStockCost ??
+            0
+        );
 
-    display:
-        flex;
 
-    justify-content:
-        space-between;
+    const currentDemandQty =
+        num(
+            record.approved_demand_qty ??
+            record.approvedDemandQty ??
+            0
+        );
 
-    margin-top:
-        45px;
 
-    font-size:
-        13px;
+    const currentDemandCost =
+        num(
+            record.total_demand_cost ??
+            record.totalDemandCost ??
+            0
+        );
 
-}
 
-@media print {
+    // =============================================
+    // STOCK COST
+    // =============================================
 
-    @page {
+    const stockCostInput =
+        prompt(
 
-        size:
-            A4 landscape;
+            "Available Stock Cost:\n\n" +
+            "Month: " + month,
 
-        margin:
-            8mm;
+            currentStockCost
+
+        );
+
+
+    if(stockCostInput === null){
+
+        return;
+
+    }
+
+
+    const stockCost =
+        Number(
+            stockCostInput
+        );
+
+
+    if(
+        !Number.isFinite(stockCost) ||
+        stockCost < 0
+    ){
+
+        alert(
+            "Stock Cost درست number ہونا چاہیے۔"
+        );
+
+        return;
+
+    }
+
+
+    // =============================================
+    // DEMAND QTY
+    // =============================================
+
+    const demandQtyInput =
+        prompt(
+
+            "Approved Demand Quantity:",
+
+            currentDemandQty
+
+        );
+
+
+    if(demandQtyInput === null){
+
+        return;
+
+    }
+
+
+    const demandQty =
+        Number(
+            demandQtyInput
+        );
+
+
+    if(
+        !Number.isFinite(demandQty) ||
+        demandQty < 0
+    ){
+
+        alert(
+            "Demand Quantity درست number ہونا چاہیے۔"
+        );
+
+        return;
+
+    }
+
+
+    // =============================================
+    // DEMAND COST
+    // =============================================
+
+    const demandCostInput =
+        prompt(
+
+            "Approved Demand Cost:",
+
+            currentDemandCost
+
+        );
+
+
+    if(demandCostInput === null){
+
+        return;
+
+    }
+
+
+    const demandCost =
+        Number(
+            demandCostInput
+        );
+
+
+    if(
+        !Number.isFinite(demandCost) ||
+        demandCost < 0
+    ){
+
+        alert(
+            "Demand Cost درست number ہونا چاہیے۔"
+        );
+
+        return;
+
+    }
+
+
+    // =============================================
+    // UPDATE SUPABASE
+    // =============================================
+
+    try{
+
+        setLoading(
+            "Updating Cost History..."
+        );
+
+
+        const updateData = {
+
+            total_stock_cost:
+                Number(
+                    stockCost.toFixed(2)
+                ),
+
+            approved_demand_qty:
+                Number(
+                    demandQty.toFixed(2)
+                ),
+
+            total_demand_cost:
+                Number(
+                    demandCost.toFixed(2)
+                ),
+
+            saved_date:
+                new Date().toISOString()
+
+        };
+
+
+        const result =
+            await supabaseRequest(
+
+                COST_HISTORY_TABLE,
+
+                "PATCH",
+
+                updateData,
+
+                "?id=eq." +
+                encodeURIComponent(
+                    recordId
+                )
+
+            );
+
+
+        if(!result.success){
+
+            throw new Error(
+                JSON.stringify(
+                    result.error
+                )
+            );
+
+        }
+
+
+        await reloadCostHistory();
+
+
+        alert(
+            "Cost History successfully update ہو گئی۔"
+        );
+
+    }
+    catch(error){
+
+        console.error(
+            error
+        );
+
+
+        alert(
+            "Update failed.\n\n" +
+            error.message
+        );
+
+    }
+    finally{
+
+        setLoading("");
 
     }
 
 }
 
-</style>
 
-</head>
+// =====================================================
+// DELETE COST HISTORY
+// =====================================================
 
+async function deleteCostHistory(
+    recordId,
+    month
+){
 
-<body>
+    const confirmDelete =
+        confirm(
 
+            "کیا آپ واقعی " +
+            month +
+            " کی Cost History delete کرنا چاہتے ہیں؟\n\n" +
+            "یہ record Supabase سے بھی delete ہو گا۔"
 
-<h2>
-MECAS ENGINEERING PVT LIMITED SUNDAR
-</h2>
-
-
-<h1>
-${title}
-</h1>
-
-
-<p>
-Report Date:
-${new Date().toLocaleDateString("en-GB")}
-</p>
+        );
 
 
-${table.outerHTML}
+    if(!confirmDelete){
+
+        return;
+
+    }
 
 
-<div class="approval">
+    try{
 
-    <span>
-        Prepared By: __________________
-    </span>
-
-    <span>
-        Verified By: __________________
-    </span>
-
-    <span>
-        Approved By: __________________
-    </span>
-
-</div>
+        setLoading(
+            "Deleting Cost History..."
+        );
 
 
-</body>
+        const result =
+            await supabaseRequest(
 
-</html>
+                COST_HISTORY_TABLE,
 
-`;
+                "DELETE",
 
+                null,
 
-    printWindow.document.write(
-        printContent
-    );
+                "?id=eq." +
+                encodeURIComponent(
+                    recordId
+                )
 
-
-    printWindow.document.close();
-
-
-    printWindow.focus();
+            );
 
 
-    printWindow.print();
+        if(!result.success){
+
+            throw new Error(
+                JSON.stringify(
+                    result.error
+                )
+            );
+
+        }
+
+
+        await reloadCostHistory();
+
+
+        alert(
+            "Cost History successfully delete ہو گئی۔"
+        );
+
+    }
+    catch(error){
+
+        console.error(
+            error
+        );
+
+
+        alert(
+            "Delete failed.\n\n" +
+            error.message
+        );
+
+    }
+    finally{
+
+        setLoading("");
+
+    }
 
 }
 
 
-// =====================================
-// PAGE START
-// =====================================
+// =====================================================
+// VIEW DETAILS
+// =====================================================
 
-// پہلے موجودہ مہینے کا Cost
-// خود بخود History میں save/update ہوگا
-
-autoSaveCurrentMonth();
-
-
-// پھر Year list load ہوگی
-
-loadHistoryYears();
-
-
-// پھر History show ہوگی
-
-showCostHistory();
-function backToCost(){
-
-    window.location.href =
-        "Cost .html.";
-
-}
-document
-    .getElementById("backToCostButton")
-    .addEventListener("click", function(){
-
-        window.location.href = "Cost .html";
-
-    });
-   // =====================================
-// VIEW COST DETAILS
-// =====================================
-
-function viewCostDetails(month){
+function viewCostDetails(
+    month
+){
 
     localStorage.setItem(
         "selectedCostHistoryMonth",
@@ -1430,10 +2759,24 @@ function viewCostDetails(month){
     window.location.href =
         "Cost History Details.html";
 
-} 
-// =====================================
-// OPEN YEAR HISTORY
-// =====================================
+}
+
+
+// =====================================================
+// BACK TO COST
+// =====================================================
+
+function backToCost(){
+
+    window.location.href =
+        "Cost .html";
+
+}
+
+
+// =====================================================
+// YEAR HISTORY
+// =====================================================
 
 function openYearHistory(){
 
@@ -1441,203 +2784,226 @@ function openYearHistory(){
         "Cost Year History.html";
 
 }
-// =====================================
-// FILTER COST HISTORY
-// =====================================
-
-function filterCostHistory(){
-
-    let search =
-        document.getElementById(
-            "historySearch"
-        ).value
-        .trim()
-        .toLowerCase();
 
 
-    let selectedMonth =
-        document.getElementById(
-            "historyMonth"
-        ).value;
+// =====================================================
+// DASHBOARD
+// =====================================================
 
+function goDashboard(){
 
-    let rows =
-        document.querySelectorAll(
-            "#costHistoryBody tr"
-        );
-
-
-    for(
-        let i = 0;
-        i < rows.length;
-        i++
-    ){
-
-        let row =
-            rows[i];
-
-
-        // =================================
-        // GET ROW TEXT
-        // =================================
-
-        let rowText =
-            row.textContent.toLowerCase();
-
-
-        // =================================
-        // MONTH CHECK
-        // =================================
-
-        let monthMatch =
-            true;
-
-
-        if(selectedMonth){
-
-            monthMatch =
-                rowText.includes(
-                    getHistoryMonthText(
-                        selectedMonth
-                    ).toLowerCase()
-                );
-
-        }
-
-
-        // =================================
-        // SEARCH CHECK
-        // =================================
-
-        let searchMatch =
-            true;
-
-
-        if(search){
-
-            searchMatch =
-                rowText.includes(
-                    search
-                );
-
-        }
-
-
-        // =================================
-        // SHOW / HIDE
-        // =================================
-
-        if(
-            monthMatch &&
-            searchMatch
-        ){
-
-            row.style.display =
-                "";
-
-        }else{
-
-            row.style.display =
-                "none";
-
-        }
-
-    }
+    window.location.href =
+        "Dashboard.html";
 
 }
 
 
-// =====================================
-// MONTH TEXT
-// =====================================
+// =====================================================
+// PRINT
+// =====================================================
 
-function getHistoryMonthText(month){
+function printCostHistory(){
 
-    if(!month){
+    const table =
+        document.getElementById(
+            "costHistoryTable"
+        );
 
-        return "";
+
+    if(!table){
+
+        alert(
+            "Cost History table نہیں ملی۔"
+        );
+
+        return;
 
     }
 
 
-    let parts =
-        month.split("-");
+    const printWindow =
+        window.open(
+            "",
+            "",
+            "width=1400,height=900"
+        );
 
 
-    let monthNames = [
+    if(!printWindow){
 
-        "January",
-        "February",
-        "March",
-        "April",
-        "May",
-        "June",
-        "July",
-        "August",
-        "September",
-        "October",
-        "November",
-        "December"
+        alert(
+            "Please allow pop-ups for printing."
+        );
 
-    ];
+        return;
+
+    }
 
 
-    let monthNumber =
-        Number(parts[1]);
+    const tableClone =
+        table.cloneNode(true);
 
 
-    return (
+    // Remove Action column
+    const rows =
+        tableClone.querySelectorAll(
+            "tr"
+        );
 
-        monthNames[
-            monthNumber - 1
-        ]
 
-        +
+    rows.forEach(
+        function(row){
 
-        " "
+            if(row.cells.length > 0){
 
-        +
+                row.deleteCell(
+                    row.cells.length - 1
+                );
 
-        parts[0]
+            }
 
+        }
+    );
+
+
+    const html = `
+
+<!DOCTYPE html>
+
+<html>
+
+<head>
+
+<title>Cost History</title>
+
+<style>
+
+body{
+    font-family:Arial,sans-serif;
+    padding:20px;
+}
+
+h2,
+h1{
+    text-align:center;
+}
+
+table{
+    width:100%;
+    border-collapse:collapse;
+    margin-top:20px;
+}
+
+th,
+td{
+    border:1px solid #777;
+    padding:7px;
+    text-align:center;
+}
+
+th{
+    background:#12355b;
+    color:white;
+}
+
+@media print{
+
+    @page{
+        size:A4 landscape;
+        margin:10mm;
+    }
+
+}
+
+</style>
+
+</head>
+
+<body>
+
+<h2>
+MECAS ENGINEERING PVT LIMITED SUNDAR
+</h2>
+
+<h1>
+COST HISTORY
+</h1>
+
+${tableClone.outerHTML}
+
+</body>
+
+</html>
+
+`;
+
+
+    printWindow.document.open();
+
+    printWindow.document.write(
+        html
+    );
+
+    printWindow.document.close();
+
+
+    printWindow.focus();
+
+
+    setTimeout(
+        function(){
+
+            printWindow.print();
+
+        },
+        500
     );
 
 }
 
 
-// =====================================
-// CLEAR FILTER
-// =====================================
+// =====================================================
+// PAGE START
+// =====================================================
 
-function clearCostHistoryFilter(){
+document.addEventListener(
+    "DOMContentLoaded",
+    async function(){
 
-    document.getElementById(
-        "historySearch"
-    ).value =
-        "";
+        await loadCostHistoryData();
 
+        // ---------------------------------------------
+        // Current month automatic record
+        // صرف تب بنے گا جب current month موجود نہ ہو
+        // ---------------------------------------------
 
-    document.getElementById(
-        "historyMonth"
-    ).value =
-        "";
-
-
-    let rows =
-        document.querySelectorAll(
-            "#costHistoryBody tr"
-        );
-
-
-    for(
-        let i = 0;
-        i < rows.length;
-        i++
-    ){
-
-        rows[i].style.display =
-            "";
+        await autoSaveCurrentMonth();
 
     }
+);
 
-}
+
+// =====================================================
+// REFRESH WHEN PAGE VISIBLE
+// =====================================================
+
+document.addEventListener(
+    "visibilitychange",
+    async function(){
+
+        if(
+            document.visibilityState ===
+            "visible"
+        ){
+
+            await loadCostHistoryData();
+
+        }
+
+    }
+);
+
+
+console.log(
+    "✅ Cost History Supabase JS loaded successfully."
+);
