@@ -59,7 +59,11 @@
             padding: 8px;
             margin: 5px;
         }
-        .table-container {
+       /* =========================================
+   MONTHLY DEMAND TABLE
+   ========================================= */
+
+.table-container {
     width: 100%;
     max-width: 100%;
     max-height: 550px;
@@ -83,7 +87,9 @@
 }
 
 
-/* SCROLLBAR */
+/* =========================================
+   NORMAL TABLE SCROLLBAR
+   ========================================= */
 
 .table-container::-webkit-scrollbar {
     width: 12px;
@@ -92,15 +98,68 @@
 
 .table-container::-webkit-scrollbar-track {
     background: #f1f1f1;
-    border-radius: 10px;
 }
 
 .table-container::-webkit-scrollbar-thumb {
     background: #888;
-    border-radius: 10px;
+    border-radius: 8px;
 }
 
 .table-container::-webkit-scrollbar-thumb:hover {
+    background: #555;
+}
+
+
+/* =========================================
+   FIXED HORIZONTAL SCROLLBAR
+   ہمیشہ SCREEN کے نیچے رہے گا
+   ========================================= */
+
+#fixedHorizontalScrollbar {
+    position: fixed;
+
+    left: 0;
+    right: 0;
+    bottom: 0;
+
+    height: 18px;
+
+    overflow-x: auto;
+    overflow-y: hidden;
+
+    background: #f1f1f1;
+
+    border-top: 1px solid #ccc;
+
+    z-index: 99999;
+
+    display: none;
+}
+
+
+/* scrollbar کے اندر کا حصہ */
+
+#fixedHorizontalScrollbarContent {
+    height: 1px;
+}
+
+
+/* Fixed scrollbar */
+
+#fixedHorizontalScrollbar::-webkit-scrollbar {
+    height: 14px;
+}
+
+#fixedHorizontalScrollbar::-webkit-scrollbar-track {
+    background: #f1f1f1;
+}
+
+#fixedHorizontalScrollbar::-webkit-scrollbar-thumb {
+    background: #777;
+    border-radius: 8px;
+}
+
+#fixedHorizontalScrollbar::-webkit-scrollbar-thumb:hover {
     background: #555;
 }
 
@@ -326,7 +385,198 @@
 
 <script src="supabase.js"></script>
 <script src="Monthly Demand .js"></script>
+<script>
 
+/* =========================================
+   FIXED HORIZONTAL SCROLLBAR
+   ========================================= */
+
+document.addEventListener("DOMContentLoaded", function () {
+
+    const tableContainer =
+        document.querySelector(".table-container");
+
+    if (!tableContainer) {
+        return;
+    }
+
+
+    /* -----------------------------------------
+       Fixed scrollbar create کریں
+       ----------------------------------------- */
+
+    const fixedScrollbar =
+        document.createElement("div");
+
+    fixedScrollbar.id =
+        "fixedHorizontalScrollbar";
+
+
+    const scrollbarContent =
+        document.createElement("div");
+
+    scrollbarContent.id =
+        "fixedHorizontalScrollbarContent";
+
+
+    fixedScrollbar.appendChild(
+        scrollbarContent
+    );
+
+    document.body.appendChild(
+        fixedScrollbar
+    );
+
+
+    /* -----------------------------------------
+       Table width update
+       ----------------------------------------- */
+
+    function updateScrollbarWidth() {
+
+        scrollbarContent.style.width =
+            tableContainer.scrollWidth + "px";
+
+    }
+
+
+    /* -----------------------------------------
+       Table → Fixed Scrollbar
+       ----------------------------------------- */
+
+    tableContainer.addEventListener(
+        "scroll",
+        function () {
+
+            if (
+                fixedScrollbar.scrollLeft !==
+                tableContainer.scrollLeft
+            ) {
+
+                fixedScrollbar.scrollLeft =
+                    tableContainer.scrollLeft;
+
+            }
+
+        }
+    );
+
+
+    /* -----------------------------------------
+       Fixed Scrollbar → Table
+       ----------------------------------------- */
+
+    fixedScrollbar.addEventListener(
+        "scroll",
+        function () {
+
+            if (
+                tableContainer.scrollLeft !==
+                fixedScrollbar.scrollLeft
+            ) {
+
+                tableContainer.scrollLeft =
+                    fixedScrollbar.scrollLeft;
+
+            }
+
+        }
+    );
+
+
+    /* -----------------------------------------
+       Show / Hide scrollbar
+       صرف table کے سامنے ہونے پر
+       ----------------------------------------- */
+
+    function checkScrollbarVisibility() {
+
+        const rect =
+            tableContainer.getBoundingClientRect();
+
+
+        const tableVisible =
+            rect.bottom > 0 &&
+            rect.top < window.innerHeight;
+
+
+        const hasHorizontalScroll =
+            tableContainer.scrollWidth >
+            tableContainer.clientWidth;
+
+
+        if (
+            tableVisible &&
+            hasHorizontalScroll
+        ) {
+
+            fixedScrollbar.style.display =
+                "block";
+
+        } else {
+
+            fixedScrollbar.style.display =
+                "none";
+
+        }
+
+    }
+
+
+    /* -----------------------------------------
+       Scroll / Resize
+       ----------------------------------------- */
+
+    window.addEventListener(
+        "scroll",
+        checkScrollbarVisibility
+    );
+
+
+    window.addEventListener(
+        "resize",
+        function () {
+
+            updateScrollbarWidth();
+            checkScrollbarVisibility();
+
+        }
+    );
+
+
+    /* -----------------------------------------
+       Table size change
+       ----------------------------------------- */
+
+    if (window.ResizeObserver) {
+
+        const resizeObserver =
+            new ResizeObserver(function () {
+
+                updateScrollbarWidth();
+                checkScrollbarVisibility();
+
+            });
+
+        resizeObserver.observe(
+            tableContainer
+        );
+
+    }
+
+
+    /* -----------------------------------------
+       Initial
+       ----------------------------------------- */
+
+    updateScrollbarWidth();
+
+    checkScrollbarVisibility();
+
+
+});
+
+</script>
 
 </body>
 
