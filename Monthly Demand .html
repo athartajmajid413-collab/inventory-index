@@ -59,12 +59,50 @@
             padding: 8px;
             margin: 5px;
         }
-
         .table-container {
-            overflow-x: auto;
-            background-color: white;
-            border-radius: 10px;
-        }
+    width: 100%;
+    max-width: 100%;
+    max-height: 550px;
+
+    overflow-x: auto;
+    overflow-y: auto;
+
+    background-color: white;
+    border-radius: 10px;
+
+    position: relative;
+}
+
+
+/* TABLE */
+
+.table-container table {
+    width: max-content;
+    min-width: 100%;
+    border-collapse: collapse;
+}
+
+
+/* SCROLLBAR */
+
+.table-container::-webkit-scrollbar {
+    width: 12px;
+    height: 12px;
+}
+
+.table-container::-webkit-scrollbar-track {
+    background: #f1f1f1;
+    border-radius: 10px;
+}
+
+.table-container::-webkit-scrollbar-thumb {
+    background: #888;
+    border-radius: 10px;
+}
+
+.table-container::-webkit-scrollbar-thumb:hover {
+    background: #555;
+}
 
         table {
             width: 100%;
