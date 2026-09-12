@@ -1743,12 +1743,12 @@ function showCostReport(){
 
 function showCostTable(selectedMonth = "", selectedYear = "") {
 
-    const tbody = document.getElementById("costTableBody");
+    const tbody = document.getElementById("costBody");
 
-    if (!tbody) {
-        console.error("costTableBody not found");
-        return;
-    }
+   if (!tbody) {
+    console.error("costBody not found");
+    return;
+}
 
     tbody.innerHTML = "";
 
