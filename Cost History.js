@@ -13,7 +13,7 @@ const SUPABASE_URL =
     "https://tncmmkyrpzlkupdnkyqm.supabase.co";
 
 const SUPABASE_KEY =
-    "sb_publishable_e6j_EkJescicSS3nOOnscg_INwxeukT";
+    "sb_publishable_e6j_EkJescicSS3nEOnscg_INwxeukT";
 
 const COST_HISTORY_TABLE =
     "cost_history";
