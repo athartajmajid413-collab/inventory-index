@@ -363,48 +363,76 @@ function getDemandItemCode(item) {
 // First use the month saved during demand generation.
 // Only use generation date as fallback.
 // ==========================================================
+// ============================================================
+// DEMAND MONTH KEY
+// ============================================================
+// ==========================================================
+// DEMAND MONTH
+// IMPORTANT:
+// First use the month saved during demand generation.
+// Only use generation date as fallback.
+// ==========================================================
 
 function getDemandMonthKey(record) {
 
-    const possibleMonth =
+    if (!record) {
+        return "";
+    }
+
+    // Demand generate کرتے وقت محفوظ کیا گیا
+    // اصل demand month پہلے دیکھیں۔
+    const directMonth =
         record?.demand_month ??
         record?.demandMonth ??
         record?.demand_month_key ??
         record?.demandMonthKey ??
         record?.month_key ??
         record?.monthKey ??
-        record?.selected_month ??
-        record?.selectedMonth ??
-        record?.for_month ??
-        record?.forMonth ??
         null;
 
-    if (possibleMonth) {
+    if (directMonth !== null && directMonth !== undefined) {
 
-        const text = String(possibleMonth).trim();
+        const text =
+            String(directMonth).trim();
 
-        // YYYY-MM
+        // مثال: 2026-06
         if (/^\d{4}-\d{2}$/.test(text)) {
             return text;
         }
 
-        // YYYY-MM-DD
-        if (/^\d{4}-\d{2}-\d{2}/.test(text)) {
-            return text.substring(0, 7);
-        }
+        // اگر صرف month number محفوظ ہے:
+        // 6 یا 06
+        if (/^\d{1,2}$/.test(text)) {
 
-        // MM/YYYY
-        if (/^\d{1,2}\/\d{4}$/.test(text)) {
+            const month =
+                Number(text);
 
-            const parts = text.split("/");
+            if (month >= 1 && month <= 12) {
 
-            return `${parts[1]}-${String(
-                Number(parts[0])
-            ).padStart(2, "0")}`;
+                // Demand record کی year معلوم کریں
+                const recordDate =
+                    getDateOnly(
+                        record?.generate_date ??
+                        record?.generateDate ??
+                        record?.date ??
+                        record?.created_at ??
+                        ""
+                    );
+
+                if (recordDate.length >= 4) {
+
+                    return (
+                        recordDate.substring(0, 4) +
+                        "-" +
+                        String(month).padStart(2, "0")
+                    );
+                }
+            }
         }
     }
 
-    // Fallback only if no dedicated demand month exists
+    // اگر الگ demand month محفوظ نہیں ہے
+    // تو generation date کو fallback کے طور پر استعمال کریں۔
     return getMonthKeyFromDate(
         record?.generate_date ??
         record?.generateDate ??
@@ -413,7 +441,6 @@ function getDemandMonthKey(record) {
         ""
     );
 }
-
 
 function demandRecordMatchesSelectedPeriod(record) {
 
@@ -435,25 +462,37 @@ function demandRecordMatchesSelectedPeriod(record) {
     return demandMonth === getSelectedMonthKey();
 }
 
+// ============================================================
+// FIND DEMAND RECORD FOR SELECTED MONTH
+// ============================================================
+
+// ==========================================================
+// FIND DEMAND RECORD FOR SELECTED MONTH
+// ==========================================================
 
 function getSelectedDemandRecord() {
 
-    const matching = demandHistory
-        .filter(record => demandRecordMatchesSelectedPeriod(record))
-        .sort((a, b) => {
+    const selectedMonth =
+        getSelectedMonthKey();
 
-            const aDate =
-                getDemandMonthKey(a) ||
-                getRecordDate(a) ||
-                "";
+    const matching =
+        demandHistory
+            .filter(record => {
 
-            const bDate =
-                getDemandMonthKey(b) ||
-                getRecordDate(b) ||
-                "";
+                return demandRecordMatchesSelectedPeriod(
+                    record
+                );
+            })
+            .sort((a, b) => {
 
-            return bDate.localeCompare(aDate);
-        });
+                const da =
+                    getDemandMonthKey(a) || "";
+
+                const db =
+                    getDemandMonthKey(b) || "";
+
+                return db.localeCompare(da);
+            });
 
     return matching.length
         ? matching[0]
