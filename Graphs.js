@@ -338,34 +338,53 @@ function getSelectedMonthNumber() {
     );
 }
 
+// ============================================================
+// UPDATE MONTH LABEL
+// ============================================================
+// IMPORTANT:
+// monthLabel اب پورا Month filter/container ہے۔
+// اس کے اندر موجود monthSelect کو textContent سے replace
+// نہیں کرنا، ورنہ Month dropdown غائب ہو جاتا ہے.
+// ============================================================
 
 function updateMonthLabel() {
 
-    const label =
-        document.getElementById("monthLabel");
+    const monthSelect =
+        document.getElementById("monthSelect");
 
-    if (!label) return;
+    const yearSelect =
+        document.getElementById("yearSelect");
 
-    const monthKey = getSelectedMonthKey();
+    // Month dropdown موجود نہ ہو تو کچھ نہ کریں
+    if (!monthSelect) {
+        return;
+    }
 
-    const parts = monthKey.split("-");
+    // صرف selected value کو صحیح رکھیں
+    const month =
+        Number(monthSelect.value);
 
-    if (parts.length !== 2) return;
+    if (
+        !month ||
+        month < 1 ||
+        month > 12
+    ) {
+        return;
+    }
 
-    const year = Number(parts[0]);
+    // Year صرف validation / synchronization کے لیے
+    const year =
+        yearSelect && yearSelect.value
+            ? Number(yearSelect.value)
+            : new Date().getFullYear();
 
-    const month = Number(parts[1]);
+    if (!year) {
+        return;
+    }
 
-    const date =
-        new Date(year, month - 1, 1);
-
-    label.textContent =
-        date.toLocaleString("en-US", {
-            month: "long",
-            year: "numeric"
-        });
+    // یہاں monthLabel کا textContent تبدیل نہیں کرنا۔
+    // monthSelect کو بالکل untouched رہنے دیں۔
 }
-
 
 // ============================================================
 // SUPABASE DATA LOADERS
