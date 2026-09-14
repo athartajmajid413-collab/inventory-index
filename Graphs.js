@@ -3503,27 +3503,38 @@ function handleYearChange() {
 
 function changePeriodType() {
 
-    const period =
-        getPeriodType();
+    const periodType =
+        document.getElementById("periodType");
 
-    const monthGroup =
-        document.getElementById(
-            "monthFilterGroup"
-        );
+    const monthFilterGroup =
+        document.getElementById("monthFilterGroup");
 
-
-    if (monthGroup) {
-
-        monthGroup.style.display =
-            period === "year"
-                ? "none"
-                : "";
+    if (!periodType || !monthFilterGroup) {
+        return;
     }
 
+    // -------------------------------
+    // YEAR SELECTED
+    // -------------------------------
+    if (periodType.value === "year") {
 
+        // Month dropdown completely hide
+        monthFilterGroup.style.display = "none";
+
+    }
+
+    // -------------------------------
+    // MONTH SELECTED
+    // -------------------------------
+    else {
+
+        // Month dropdown show again
+        monthFilterGroup.style.display = "";
+    }
+
+    // Graphs دوبارہ update کریں
     updateGraphs();
 }
-
 
 // ============================================================
 // SUPABASE LOAD ITEMS
