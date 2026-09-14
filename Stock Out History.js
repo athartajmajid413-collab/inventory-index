@@ -346,6 +346,55 @@ function showHistory(){
 
 
 // =====================================
+// CREATE EDIT INPUT
+// =====================================
+
+function createEditInput(
+    type,
+    value,
+    className
+){
+
+    let input =
+        document.createElement(
+            "input"
+        );
+
+
+    input.type =
+        type;
+
+
+    input.value =
+        value ?? "";
+
+
+    if(className){
+
+        input.className =
+            className;
+
+    }
+
+
+    input.style.width =
+        "100%";
+
+
+    input.style.boxSizing =
+        "border-box";
+
+
+    input.style.padding =
+        "5px";
+
+
+    return input;
+
+}
+
+
+// =====================================
 // ADD HISTORY ROW
 // =====================================
 
@@ -377,7 +426,9 @@ function addHistoryRow(record){
 
         record.department || "-",
 
-        record.quantity || 0
+        Number(
+            record.quantity || 0
+        )
 
     ];
 
@@ -416,7 +467,7 @@ function addHistoryRow(record){
 
 
     // =================================
-    // EDIT
+    // EDIT BUTTON
     // =================================
 
     let editButton =
@@ -429,10 +480,15 @@ function addHistoryRow(record){
         "Edit";
 
 
+    editButton.className =
+        "edit-btn";
+
+
     editButton.onclick =
         function(){
 
-            editHistory(
+            editHistoryRow(
+                row,
                 record
             );
 
@@ -440,7 +496,7 @@ function addHistoryRow(record){
 
 
     // =================================
-    // DELETE
+    // DELETE BUTTON
     // =================================
 
     let deleteButton =
@@ -451,6 +507,10 @@ function addHistoryRow(record){
 
     deleteButton.textContent =
         "Delete";
+
+
+    deleteButton.className =
+        "delete-btn";
 
 
     deleteButton.onclick =
@@ -496,28 +556,651 @@ function addHistoryRow(record){
 
 
 // =====================================
-// EDIT HISTORY
+// EDIT HISTORY ROW - INLINE EDIT
 // =====================================
 
-function editHistory(record){
+function editHistoryRow(
+    row,
+    record
+){
 
-    if(!record){
+    if(
+        !row ||
+        !record
+    ){
 
         return;
 
     }
 
 
-    // Save Supabase record ID
-    localStorage.setItem(
-        "editStockOutId",
-        record.id
+    // =================================
+    // CLEAR CURRENT ROW
+    // =================================
+
+    row.innerHTML = "";
+
+
+    // =================================
+    // DATE
+    // =================================
+
+    let dateCell =
+        document.createElement(
+            "td"
+        );
+
+
+    let dateInput =
+        createEditInput(
+            "date",
+            record.date || ""
+        );
+
+
+    dateCell.appendChild(
+        dateInput
     );
 
 
-    // Open Stock Out page
-    window.location.href =
-        "Stock out .html";
+    row.appendChild(
+        dateCell
+    );
+
+
+    // =================================
+    // TIME
+    // =================================
+
+    let timeCell =
+        document.createElement(
+            "td"
+        );
+
+
+    let timeValue =
+        String(
+            record.time || ""
+        );
+
+
+    // If Supabase returns HH:MM:SS,
+    // time input uses HH:MM
+
+    if(
+        timeValue.length >= 5
+    ){
+
+        timeValue =
+            timeValue.substring(
+                0,
+                5
+            );
+
+    }
+
+
+    let timeInput =
+        createEditInput(
+            "time",
+            timeValue
+        );
+
+
+    timeCell.appendChild(
+        timeInput
+    );
+
+
+    row.appendChild(
+        timeCell
+    );
+
+
+    // =================================
+    // ITEM CODE
+    // =================================
+
+    let itemCodeCell =
+        document.createElement(
+            "td"
+        );
+
+
+    let itemCodeInput =
+        createEditInput(
+            "text",
+            record.item_code || ""
+        );
+
+
+    itemCodeCell.appendChild(
+        itemCodeInput
+    );
+
+
+    row.appendChild(
+        itemCodeCell
+    );
+
+
+    // =================================
+    // ITEM NAME
+    // =================================
+
+    let itemNameCell =
+        document.createElement(
+            "td"
+        );
+
+
+    let itemNameInput =
+        createEditInput(
+            "text",
+            record.item_name || ""
+        );
+
+
+    itemNameCell.appendChild(
+        itemNameInput
+    );
+
+
+    row.appendChild(
+        itemNameCell
+    );
+
+
+    // =================================
+    // UNIT
+    // =================================
+
+    let unitCell =
+        document.createElement(
+            "td"
+        );
+
+
+    let unitInput =
+        createEditInput(
+            "text",
+            record.unit || ""
+        );
+
+
+    unitCell.appendChild(
+        unitInput
+    );
+
+
+    row.appendChild(
+        unitCell
+    );
+
+
+    // =================================
+    // SOURCE
+    // =================================
+
+    let sourceCell =
+        document.createElement(
+            "td"
+        );
+
+
+    let sourceInput =
+        createEditInput(
+            "text",
+            record.source || ""
+        );
+
+
+    sourceCell.appendChild(
+        sourceInput
+    );
+
+
+    row.appendChild(
+        sourceCell
+    );
+
+
+    // =================================
+    // SUPPLIER
+    // =================================
+
+    let supplierCell =
+        document.createElement(
+            "td"
+        );
+
+
+    let supplierInput =
+        createEditInput(
+            "text",
+            record.supplier || ""
+        );
+
+
+    supplierCell.appendChild(
+        supplierInput
+    );
+
+
+    row.appendChild(
+        supplierCell
+    );
+
+
+    // =================================
+    // LOCATION
+    // =================================
+
+    let locationCell =
+        document.createElement(
+            "td"
+        );
+
+
+    let locationInput =
+        createEditInput(
+            "text",
+            record.location || ""
+        );
+
+
+    locationCell.appendChild(
+        locationInput
+    );
+
+
+    row.appendChild(
+        locationCell
+    );
+
+
+    // =================================
+    // DEPARTMENT
+    // =================================
+
+    let departmentCell =
+        document.createElement(
+            "td"
+        );
+
+
+    let departmentInput =
+        createEditInput(
+            "text",
+            record.department || ""
+        );
+
+
+    departmentCell.appendChild(
+        departmentInput
+    );
+
+
+    row.appendChild(
+        departmentCell
+    );
+
+
+    // =================================
+    // QUANTITY
+    // =================================
+
+    let quantityCell =
+        document.createElement(
+            "td"
+        );
+
+
+    let quantityInput =
+        createEditInput(
+            "number",
+            record.quantity || 0
+        );
+
+
+    quantityInput.step =
+        "any";
+
+
+    quantityCell.appendChild(
+        quantityInput
+    );
+
+
+    row.appendChild(
+        quantityCell
+    );
+
+
+    // =================================
+    // ACTION CELL
+    // =================================
+
+    let actionCell =
+        document.createElement(
+            "td"
+        );
+
+
+    // =================================
+    // UPDATE BUTTON
+    // =================================
+
+    let updateButton =
+        document.createElement(
+            "button"
+        );
+
+
+    updateButton.textContent =
+        "Update";
+
+
+    updateButton.className =
+        "edit-btn";
+
+
+    updateButton.onclick =
+        async function(){
+
+            await updateHistoryRecord(
+                record,
+                row,
+                dateInput,
+                timeInput,
+                itemCodeInput,
+                itemNameInput,
+                unitInput,
+                sourceInput,
+                supplierInput,
+                locationInput,
+                departmentInput,
+                quantityInput
+            );
+
+        };
+
+
+    // =================================
+    // CANCEL BUTTON
+    // =================================
+
+    let cancelButton =
+        document.createElement(
+            "button"
+        );
+
+
+    cancelButton.textContent =
+        "Cancel";
+
+
+    cancelButton.className =
+        "delete-btn";
+
+
+    cancelButton.onclick =
+        function(){
+
+            showHistory();
+
+        };
+
+
+    actionCell.appendChild(
+        updateButton
+    );
+
+
+    actionCell.appendChild(
+        cancelButton
+    );
+
+
+    row.appendChild(
+        actionCell
+    );
+
+}
+
+
+// =====================================
+// UPDATE HISTORY RECORD
+// =====================================
+
+async function updateHistoryRecord(
+    record,
+    row,
+    dateInput,
+    timeInput,
+    itemCodeInput,
+    itemNameInput,
+    unitInput,
+    sourceInput,
+    supplierInput,
+    locationInput,
+    departmentInput,
+    quantityInput
+){
+
+    if(
+        !record ||
+        !record.id
+    ){
+
+        alert(
+            "Stock Out record ID nahi mila!"
+        );
+
+        return;
+
+    }
+
+
+    // =================================
+    // GET VALUES
+    // =================================
+
+    let date =
+        dateInput.value.trim();
+
+
+    let time =
+        timeInput.value.trim();
+
+
+    let itemCode =
+        itemCodeInput.value.trim();
+
+
+    let itemName =
+        itemNameInput.value.trim();
+
+
+    let unit =
+        unitInput.value.trim();
+
+
+    let source =
+        sourceInput.value.trim();
+
+
+    let supplier =
+        supplierInput.value.trim();
+
+
+    let location =
+        locationInput.value.trim();
+
+
+    let department =
+        departmentInput.value.trim();
+
+
+    let quantity =
+        Number(
+            quantityInput.value
+        );
+
+
+    // =================================
+    // VALIDATION
+    // =================================
+
+    if(!date){
+
+        alert(
+            "Date enter karein!"
+        );
+
+        return;
+
+    }
+
+
+    if(!time){
+
+        alert(
+            "Time enter karein!"
+        );
+
+        return;
+
+    }
+
+
+    if(!itemCode){
+
+        alert(
+            "Item Code enter karein!"
+        );
+
+        return;
+
+    }
+
+
+    if(!itemName){
+
+        alert(
+            "Item Name enter karein!"
+        );
+
+        return;
+
+    }
+
+
+    if(
+        !Number.isFinite(quantity) ||
+        quantity < 0
+    ){
+
+        alert(
+            "Quantity sahi enter karein!"
+        );
+
+        return;
+
+    }
+
+
+    // =================================
+    // UPDATE DATA
+    // =================================
+
+    let updateData = {
+
+        date:
+            date,
+
+        time:
+            time,
+
+        item_code:
+            itemCode,
+
+        item_name:
+            itemName,
+
+        unit:
+            unit,
+
+        source:
+            source,
+
+        supplier:
+            supplier,
+
+        location:
+            location,
+
+        department:
+            department,
+
+        quantity:
+            quantity
+
+    };
+
+
+    console.log(
+        "Updating Stock Out Record:",
+        record.id,
+        updateData
+    );
+
+
+    // =================================
+    // SUPABASE UPDATE
+    // =================================
+
+    let result =
+        await supabaseRequest(
+            "stock_issue",
+            "PATCH",
+            updateData,
+            "?id=eq." +
+            record.id
+        );
+
+
+    if(!result.success){
+
+        console.error(
+            "Stock Out Update Error:",
+            result.error
+        );
+
+
+        alert(
+            "Stock Out Entry update nahi hui!\n\n" +
+            JSON.stringify(
+                result.error
+            )
+        );
+
+
+        return;
+
+    }
+
+
+    // =================================
+    // SUCCESS
+    // =================================
+
+    alert(
+        "Stock Out Entry Updated Successfully!"
+    );
+
+
+    await loadHistory();
 
 }
 
