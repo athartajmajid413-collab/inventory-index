@@ -410,6 +410,53 @@ function filterHistory(){
 
 
 // =====================================
+// CREATE INPUT
+// =====================================
+
+function createEditInput(
+    type,
+    value,
+    className
+){
+
+    let input =
+        document.createElement(
+            "input"
+        );
+
+
+    input.type =
+        type;
+
+
+    input.value =
+        value == null
+        ? ""
+        : value;
+
+
+    input.className =
+        className || "history-edit-input";
+
+
+    input.style.width =
+        "100%";
+
+
+    input.style.boxSizing =
+        "border-box";
+
+
+    input.style.padding =
+        "5px";
+
+
+    return input;
+
+}
+
+
+// =====================================
 // ADD HISTORY ROW
 // =====================================
 
@@ -438,6 +485,10 @@ function addHistoryRow(record){
             )
         );
 
+
+    // =====================================
+    // NORMAL VIEW CELLS
+    // =====================================
 
     let values = [
 
@@ -492,7 +543,7 @@ function addHistoryRow(record){
 
 
     // =====================================
-    // ACTION
+    // ACTION CELL
     // =====================================
 
     let actionCell =
@@ -522,14 +573,10 @@ function addHistoryRow(record){
     editButton.onclick =
         function(){
 
-            localStorage.setItem(
-                "editStockInRecord",
-                JSON.stringify(record)
+            editHistoryRow(
+                row,
+                record
             );
-
-
-            window.location.href =
-                "Stock In .html";
 
         };
 
@@ -641,6 +688,725 @@ function addHistoryRow(record){
 
 
 // =====================================
+// EDIT HISTORY ROW
+// =====================================
+
+function editHistoryRow(
+    row,
+    record
+){
+
+    // =====================================
+    // CLEAR EXISTING CELLS
+    // =====================================
+
+    row.innerHTML = "";
+
+
+    // =====================================
+    // DATE
+    // =====================================
+
+    let dateCell =
+        document.createElement(
+            "td"
+        );
+
+
+    let dateInput =
+        createEditInput(
+            "date",
+            record.date || ""
+        );
+
+
+    dateCell.appendChild(
+        dateInput
+    );
+
+
+    row.appendChild(
+        dateCell
+    );
+
+
+    // =====================================
+    // TIME
+    // =====================================
+
+    let timeCell =
+        document.createElement(
+            "td"
+        );
+
+
+    let timeInput =
+        createEditInput(
+            "time",
+            record.time || ""
+        );
+
+
+    timeCell.appendChild(
+        timeInput
+    );
+
+
+    row.appendChild(
+        timeCell
+    );
+
+
+    // =====================================
+    // ITEM CODE
+    // =====================================
+
+    let itemCodeCell =
+        document.createElement(
+            "td"
+        );
+
+
+    let itemCodeInput =
+        createEditInput(
+            "text",
+            record.item_code || ""
+        );
+
+
+    itemCodeCell.appendChild(
+        itemCodeInput
+    );
+
+
+    row.appendChild(
+        itemCodeCell
+    );
+
+
+    // =====================================
+    // ITEM NAME
+    // =====================================
+
+    let itemNameCell =
+        document.createElement(
+            "td"
+        );
+
+
+    let itemNameInput =
+        createEditInput(
+            "text",
+            record.item_name || ""
+        );
+
+
+    itemNameCell.appendChild(
+        itemNameInput
+    );
+
+
+    row.appendChild(
+        itemNameCell
+    );
+
+
+    // =====================================
+    // UNIT
+    // =====================================
+
+    let unitCell =
+        document.createElement(
+            "td"
+        );
+
+
+    let unitInput =
+        createEditInput(
+            "text",
+            record.unit || ""
+        );
+
+
+    unitCell.appendChild(
+        unitInput
+    );
+
+
+    row.appendChild(
+        unitCell
+    );
+
+
+    // =====================================
+    // SOURCE
+    // =====================================
+
+    let sourceCell =
+        document.createElement(
+            "td"
+        );
+
+
+    let sourceInput =
+        createEditInput(
+            "text",
+            record.source || ""
+        );
+
+
+    sourceCell.appendChild(
+        sourceInput
+    );
+
+
+    row.appendChild(
+        sourceCell
+    );
+
+
+    // =====================================
+    // SUPPLIER
+    // =====================================
+
+    let supplierCell =
+        document.createElement(
+            "td"
+        );
+
+
+    let supplierInput =
+        createEditInput(
+            "text",
+            record.supplier || ""
+        );
+
+
+    supplierCell.appendChild(
+        supplierInput
+    );
+
+
+    row.appendChild(
+        supplierCell
+    );
+
+
+    // =====================================
+    // LOCATION
+    // =====================================
+
+    let locationCell =
+        document.createElement(
+            "td"
+        );
+
+
+    let locationInput =
+        createEditInput(
+            "text",
+            record.location || ""
+        );
+
+
+    locationCell.appendChild(
+        locationInput
+    );
+
+
+    row.appendChild(
+        locationCell
+    );
+
+
+    // =====================================
+    // QUANTITY
+    // =====================================
+
+    let quantityCell =
+        document.createElement(
+            "td"
+        );
+
+
+    let quantityInput =
+        createEditInput(
+            "number",
+            record.quantity || 0
+        );
+
+
+    quantityInput.step =
+        "any";
+
+
+    quantityCell.appendChild(
+        quantityInput
+    );
+
+
+    row.appendChild(
+        quantityCell
+    );
+
+
+    // =====================================
+    // UNIT COST
+    // =====================================
+
+    let unitCostCell =
+        document.createElement(
+            "td"
+        );
+
+
+    let unitCostInput =
+        createEditInput(
+            "number",
+            record.unit_cost || 0
+        );
+
+
+    unitCostInput.step =
+        "any";
+
+
+    unitCostCell.appendChild(
+        unitCostInput
+    );
+
+
+    row.appendChild(
+        unitCostCell
+    );
+
+
+    // =====================================
+    // TOTAL COST
+    // =====================================
+
+    let totalCostCell =
+        document.createElement(
+            "td"
+        );
+
+
+    let totalCostValue =
+        document.createElement(
+            "span"
+        );
+
+
+    totalCostValue.textContent =
+        (
+            Number(
+                quantityInput.value || 0
+            ) *
+            Number(
+                unitCostInput.value || 0
+            )
+        ).toFixed(2);
+
+
+    totalCostCell.appendChild(
+        totalCostValue
+    );
+
+
+    row.appendChild(
+        totalCostCell
+    );
+
+
+    // =====================================
+    // UPDATE TOTAL COST LIVE
+    // =====================================
+
+    function updateTotalCost(){
+
+        let quantity =
+            Number(
+                quantityInput.value || 0
+            );
+
+
+        let unitCost =
+            Number(
+                unitCostInput.value || 0
+            );
+
+
+        totalCostValue.textContent =
+            (
+                quantity *
+                unitCost
+            ).toFixed(2);
+
+    }
+
+
+    quantityInput.addEventListener(
+        "input",
+        updateTotalCost
+    );
+
+
+    unitCostInput.addEventListener(
+        "input",
+        updateTotalCost
+    );
+
+
+    // =====================================
+    // ACTION CELL
+    // =====================================
+
+    let actionCell =
+        document.createElement(
+            "td"
+        );
+
+
+    // =====================================
+    // UPDATE BUTTON
+    // =====================================
+
+    let updateButton =
+        document.createElement(
+            "button"
+        );
+
+
+    updateButton.textContent =
+        "Update";
+
+
+    updateButton.className =
+        "edit-btn";
+
+
+    updateButton.onclick =
+        async function(){
+
+            await updateHistoryRecord(
+                record,
+                row,
+                dateInput,
+                timeInput,
+                itemCodeInput,
+                itemNameInput,
+                unitInput,
+                sourceInput,
+                supplierInput,
+                locationInput,
+                quantityInput,
+                unitCostInput
+            );
+
+        };
+
+
+    // =====================================
+    // CANCEL BUTTON
+    // =====================================
+
+    let cancelButton =
+        document.createElement(
+            "button"
+        );
+
+
+    cancelButton.textContent =
+        "Cancel";
+
+
+    cancelButton.className =
+        "delete-btn";
+
+
+    cancelButton.style.marginLeft =
+        "5px";
+
+
+    cancelButton.onclick =
+        function(){
+
+            filterHistory();
+
+        };
+
+
+    actionCell.appendChild(
+        updateButton
+    );
+
+
+    actionCell.appendChild(
+        cancelButton
+    );
+
+
+    row.appendChild(
+        actionCell
+    );
+
+}
+
+
+// =====================================
+// UPDATE HISTORY RECORD IN SUPABASE
+// =====================================
+
+async function updateHistoryRecord(
+
+    record,
+    row,
+    dateInput,
+    timeInput,
+    itemCodeInput,
+    itemNameInput,
+    unitInput,
+    sourceInput,
+    supplierInput,
+    locationInput,
+    quantityInput,
+    unitCostInput
+
+){
+
+    // =====================================
+    // GET VALUES
+    // =====================================
+
+    let date =
+        dateInput.value;
+
+
+    let time =
+        timeInput.value;
+
+
+    let itemCode =
+        itemCodeInput.value.trim();
+
+
+    let itemName =
+        itemNameInput.value.trim();
+
+
+    let unit =
+        unitInput.value.trim();
+
+
+    let source =
+        sourceInput.value.trim();
+
+
+    let supplier =
+        supplierInput.value.trim();
+
+
+    let location =
+        locationInput.value.trim();
+
+
+    let quantity =
+        Number(
+            quantityInput.value
+        );
+
+
+    let unitCost =
+        Number(
+            unitCostInput.value
+        );
+
+
+    // =====================================
+    // VALIDATION
+    // =====================================
+
+    if(!date){
+
+        alert(
+            "Date enter karein!"
+        );
+
+        return;
+
+    }
+
+
+    if(!time){
+
+        alert(
+            "Time enter karein!"
+        );
+
+        return;
+
+    }
+
+
+    if(!itemCode){
+
+        alert(
+            "Item Code enter karein!"
+        );
+
+        return;
+
+    }
+
+
+    if(!itemName){
+
+        alert(
+            "Item Name enter karein!"
+        );
+
+        return;
+
+    }
+
+
+    if(
+        isNaN(quantity) ||
+        quantity < 0
+    ){
+
+        alert(
+            "Quantity theek enter karein!"
+        );
+
+        return;
+
+    }
+
+
+    if(
+        isNaN(unitCost) ||
+        unitCost < 0
+    ){
+
+        alert(
+            "Unit Cost theek enter karein!"
+        );
+
+        return;
+
+    }
+
+
+    // =====================================
+    // CALCULATE TOTAL COST
+    // =====================================
+
+    let totalCost =
+        quantity *
+        unitCost;
+
+
+    // =====================================
+    // UPDATE OBJECT
+    // =====================================
+
+    let updateData = {
+
+        date:
+            date,
+
+        time:
+            time,
+
+        item_code:
+            itemCode,
+
+        item_name:
+            itemName,
+
+        unit:
+            unit,
+
+        source:
+            source,
+
+        supplier:
+            supplier,
+
+        location:
+            location,
+
+        quantity:
+            quantity,
+
+        unit_cost:
+            unitCost,
+
+        total_cost:
+            totalCost
+
+    };
+
+
+    console.log(
+        "Updating Stock In:",
+        record.id,
+        updateData
+    );
+
+
+    // =====================================
+    // UPDATE SUPABASE
+    // =====================================
+
+    let result =
+        await supabaseRequest(
+            "stock_in",
+            "PATCH",
+            updateData,
+            "?id=eq." +
+            record.id
+        );
+
+
+    if(!result.success){
+
+        console.error(
+            "Stock In Update Error:",
+            result.error
+        );
+
+
+        alert(
+            "Stock In Entry update nahi hui!"
+        );
+
+
+        return;
+
+    }
+
+
+    // =====================================
+    // SUCCESS
+    // =====================================
+
+    alert(
+        "Stock In Entry Successfully Updated!"
+    );
+
+
+    // =====================================
+    // RELOAD HISTORY
+    // =====================================
+
+    await loadHistory();
+
+}
+
+
+// =====================================
 // CLEAR FILTERS
 // =====================================
 
@@ -725,4 +1491,3 @@ function clearFilters(){
     await loadHistory();
 
 })();
-
