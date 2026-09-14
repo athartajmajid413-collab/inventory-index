@@ -240,13 +240,6 @@ function getMonthKeyFromDate(dateValue) {
 }
 
 
-// ============================================================
-// SELECTED MONTH
-// ============================================================
-
-
-
-
 function getSelectedMonthKey() {
 
     const monthSelect =
@@ -255,61 +248,12 @@ function getSelectedMonthKey() {
     const yearSelect =
         document.getElementById("yearSelect");
 
+    // ---------------------------------------------
+    // 1. پہلے LocalStorage کا محفوظ month دیکھیں
+    // ---------------------------------------------
 
-    // Month Select موجود ہو تو اسی کی value استعمال کریں
-    if (
-        monthSelect &&
-        monthSelect.value
-    ) {
-
-        let monthValue =
-            String(monthSelect.value).trim();
-
-
-        // اگر value پہلے ہی YYYY-MM ہے
-        if (
-            /^\d{4}-\d{2}$/.test(monthValue)
-        ) {
-
-            return monthValue;
-        }
-
-
-        // اگر value صرف month number ہے
-        // مثال: 01, 02, 03 ... 12
-        if (
-            /^\d{1,2}$/.test(monthValue)
-        ) {
-
-            const month =
-                monthValue.padStart(2, "0");
-
-
-            let year =
-                new Date().getFullYear();
-
-
-            if (
-                yearSelect &&
-                yearSelect.value
-            ) {
-
-                year =
-                    Number(yearSelect.value);
-            }
-
-
-            return `${year}-${month}`;
-        }
-    }
-
-
-    // LocalStorage fallback
     const stored =
-        localStorage.getItem(
-            "dashboardSelectedMonth"
-        );
-
+        localStorage.getItem("dashboardSelectedMonth");
 
     if (
         stored &&
@@ -320,10 +264,47 @@ function getSelectedMonthKey() {
     }
 
 
-    return getTodayMonthKey();
+    // ---------------------------------------------
+    // 2. اگر LocalStorage میں کچھ نہیں تو
+    //    HTML monthSelect سے month لیں
+    // ---------------------------------------------
+
+    let month =
+        monthSelect
+            ? Number(monthSelect.value)
+            : new Date().getMonth() + 1;
+
+
+    if (
+        !month ||
+        month < 1 ||
+        month > 12
+    ) {
+
+        month =
+            new Date().getMonth() + 1;
+    }
+
+
+    // ---------------------------------------------
+    // 3. Year select سے year لیں
+    // ---------------------------------------------
+
+    let year =
+        yearSelect && yearSelect.value
+            ? Number(yearSelect.value)
+            : new Date().getFullYear();
+
+
+    if (!year) {
+
+        year =
+            new Date().getFullYear();
+    }
+
+
+    return `${year}-${String(month).padStart(2, "0")}`;
 }
-
-
 // ============================================================
 // YEAR / MONTH SELECTOR
 // ============================================================
@@ -3127,7 +3108,6 @@ function handleMonthChange() {
     const yearSelect =
         document.getElementById("yearSelect");
 
-
     if (
         !monthSelect ||
         !monthSelect.value
@@ -3137,46 +3117,31 @@ function handleMonthChange() {
     }
 
 
-    let monthValue =
-        String(monthSelect.value).trim();
-
-
-    let year =
-        new Date().getFullYear();
+    // HTML میں month values 1 تا 12 ہیں
+    const month =
+        Number(monthSelect.value);
 
 
     if (
-        yearSelect &&
-        yearSelect.value
+        month < 1 ||
+        month > 12
     ) {
 
-        year =
-            Number(yearSelect.value);
+        return;
     }
 
 
-    let monthKey;
+    const year =
+        yearSelect && yearSelect.value
+            ? Number(yearSelect.value)
+            : new Date().getFullYear();
 
 
-    // اگر monthSelect کی value YYYY-MM ہے
-    if (
-        /^\d{4}-\d{2}$/.test(monthValue)
-    ) {
-
-        monthKey =
-            monthValue;
-
-    }
-
-    // اگر صرف 01-12 ہے
-    else {
-
-        monthKey =
-            `${year}-${monthValue.padStart(2, "0")}`;
-    }
+    const monthKey =
+        `${year}-${String(month).padStart(2, "0")}`;
 
 
-    // صرف selected month یاد رکھیں
+    // Selected month محفوظ کریں
     localStorage.setItem(
         "dashboardSelectedMonth",
         monthKey
@@ -3187,25 +3152,19 @@ function handleMonthChange() {
 
     updateGraphs();
 }
-
-
 // ============================================================
 // YEAR CHANGE
 // ============================================================
 
 function handleYearChange() {
 
-    const yearSelect =
-        document.getElementById("yearSelect");
-
     const monthSelect =
         document.getElementById("monthSelect");
 
+    const yearSelect =
+        document.getElementById("yearSelect");
 
-    if (
-        !yearSelect ||
-        !yearSelect.value
-    ) {
+    if (!yearSelect) {
 
         return;
     }
@@ -3215,59 +3174,36 @@ function handleYearChange() {
         Number(yearSelect.value);
 
 
+    if (!year) {
+
+        return;
+    }
+
+
     let month =
-        "01";
+        monthSelect
+            ? Number(monthSelect.value)
+            : new Date().getMonth() + 1;
 
 
     if (
-        monthSelect &&
-        monthSelect.value
+        !month ||
+        month < 1 ||
+        month > 12
     ) {
 
-        const value =
-            String(
-                monthSelect.value
-            ).trim();
-
-
-        // اگر month value YYYY-MM ہے
-        if (
-            /^\d{4}-\d{2}$/.test(value)
-        ) {
-
-            month =
-                value.substring(5, 7);
-
-        } else {
-
-            // صرف month number
-            month =
-                value.padStart(2, "0");
-        }
+        month = 1;
     }
 
 
     const monthKey =
-        `${year}-${month}`;
+        `${year}-${String(month).padStart(2, "0")}`;
 
 
     localStorage.setItem(
         "dashboardSelectedMonth",
         monthKey
     );
-
-
-    // اگر HTML کا monthSelect صرف 01-12 لیتا ہے
-    if (
-        monthSelect &&
-        !/^\d{4}-\d{2}$/.test(
-            String(monthSelect.value)
-        )
-    ) {
-
-        monthSelect.value =
-            month;
-    }
 
 
     updateMonthLabel();
@@ -3469,7 +3405,79 @@ async function startGraphs() {
 
 
     populateYearSelect();
+// ---------------------------------------------
+// Restore saved Year + Month selection
+// ---------------------------------------------
 
+const savedMonthKey =
+    localStorage.getItem("dashboardSelectedMonth");
+
+const monthSelect =
+    document.getElementById("monthSelect");
+
+const yearSelect =
+    document.getElementById("yearSelect");
+
+
+if (
+    savedMonthKey &&
+    /^\d{4}-\d{2}$/.test(savedMonthKey)
+) {
+
+    const [
+        savedYear,
+        savedMonth
+    ] = savedMonthKey.split("-");
+
+
+    // Year restore
+    if (yearSelect) {
+
+        yearSelect.value =
+            savedYear;
+    }
+
+
+    // Month restore
+    if (monthSelect) {
+
+        monthSelect.value =
+            String(Number(savedMonth));
+    }
+}
+else {
+
+    // پہلی دفعہ current month رکھیں
+
+    const now =
+        new Date();
+
+    const currentYear =
+        now.getFullYear();
+
+    const currentMonth =
+        now.getMonth() + 1;
+
+
+    if (yearSelect) {
+
+        yearSelect.value =
+            String(currentYear);
+    }
+
+
+    if (monthSelect) {
+
+        monthSelect.value =
+            String(currentMonth);
+    }
+
+
+    localStorage.setItem(
+        "dashboardSelectedMonth",
+        `${currentYear}-${String(currentMonth).padStart(2, "0")}`
+    );
+}
     populateItemSelect();
 
     updateMonthLabel();
