@@ -1,11 +1,45 @@
 // ============================================================
 // GRAPHS.JS - SUPABASE VERSION
-// Separate Graphs:
-// All
-// Stock In
-// Stock Out
-// Demand
-// Department
+// ============================================================
+// Graph Modes:
+//
+// ALL
+//   1. Stock In Quantity
+//   2. Stock Out Quantity
+//   3. Stock In vs Demand
+//   4. Stock In Cost
+//   5. Stock Out Cost
+//   6. Department Wise Analysis
+//
+// STOCK IN
+//   1. Stock In Quantity
+//   2. Stock In vs Demand
+//   3. Stock In Cost
+//
+// STOCK OUT
+//   1. Stock Out Quantity
+//   2. Stock Out vs Cost Analysis
+//
+// DEMAND
+//   1. Demand Quantity
+//
+// DEPARTMENT
+//   1. Department Wise Stock In
+//   2. Department Wise Stock Out
+//   3. Department Wise Cost
+//
+// DATA SOURCE:
+//   items          -> Supabase
+//   stock_in       -> Supabase
+//   stock_issue    -> Supabase
+//   demand_history -> Supabase
+//
+// LocalStorage is used ONLY for UI selections.
+// ============================================================
+
+
+// ============================================================
+// GLOBAL DATA
 // ============================================================
 
 let items = [];
@@ -15,11 +49,18 @@ let demandHistory = [];
 
 let currentGraphMode = "all";
 
+
+// ============================================================
+// CHART VARIABLES
+// ============================================================
+
 let stockInChart = null;
 let stockOutChart = null;
 let stockInDemandChart = null;
 let stockInCostChart = null;
 let stockOutCostChart = null;
+
+let stockOutVsCostChart = null;
 let demandChart = null;
 
 let departmentStockInChart = null;
@@ -31,63 +72,107 @@ let departmentCostChart = null;
 // BASIC HELPERS
 // ============================================================
 
-function cleanCode(value) {
-    return String(value ?? "").trim();
-}
-
-
 function safeNumber(value) {
+
+    if (value === null || value === undefined || value === "") {
+        return 0;
+    }
+
     const n = Number(value);
+
     return Number.isFinite(n) ? n : 0;
 }
 
 
+function cleanCode(value) {
+
+    if (value === null || value === undefined) {
+        return "";
+    }
+
+    return String(value)
+        .trim()
+        .toUpperCase();
+}
+
+
 function getItemCode(item) {
+
+    if (!item) return "";
+
     return cleanCode(
-        item?.code ??
-        item?.item_code ??
-        item?.itemCode ??
+        item.code ??
+        item.item_code ??
+        item.itemCode ??
         ""
     );
 }
 
 
 function getItemName(item) {
+
+    if (!item) return "";
+
     return String(
-        item?.item_name ??
-        item?.itemName ??
-        item?.name ??
+        item.item_name ??
+        item.itemName ??
+        item.name ??
         ""
     ).trim();
 }
 
 
 function getItemUnit(item) {
+
+    if (!item) return "";
+
     return String(
-        item?.unit ??
-        item?.packed_unit ??
+        item.unit ??
+        item.packed_unit ??
         ""
     ).trim();
 }
 
 
 function getRecordItemCode(record) {
+
+    if (!record) return "";
+
     return cleanCode(
-        record?.item_code ??
-        record?.itemCode ??
-        record?.code ??
+        record.item_code ??
+        record.itemCode ??
+        record.code ??
         ""
     );
 }
 
 
 function getRecordItemName(record) {
+
+    if (!record) return "";
+
     return String(
-        record?.item_name ??
-        record?.itemName ??
-        record?.name ??
+        record.item_name ??
+        record.itemName ??
+        record.name ??
         ""
     ).trim();
+}
+
+
+function getRecordDepartment(record) {
+
+    if (!record) return "";
+
+    const value =
+        record.department ??
+        record.Department ??
+        record.dept ??
+        "";
+
+    const text = String(value).trim();
+
+    return text || "Not Assigned";
 }
 
 
@@ -95,125 +180,221 @@ function getRecordItemName(record) {
 // DATE HELPERS
 // ============================================================
 
+function getDateOnly(value) {
+
+    if (!value) return null;
+
+    const text = String(value).trim();
+
+    // YYYY-MM-DD
+    const match = text.match(/^(\d{4})-(\d{2})-(\d{2})/);
+
+    if (match) {
+
+        return (
+            match[1] +
+            "-" +
+            match[2] +
+            "-" +
+            match[3]
+        );
+    }
+
+    const d = new Date(value);
+
+    if (Number.isNaN(d.getTime())) {
+        return null;
+    }
+
+    const y = d.getFullYear();
+
+    const m = String(d.getMonth() + 1).padStart(2, "0");
+
+    const day = String(d.getDate()).padStart(2, "0");
+
+    return `${y}-${m}-${day}`;
+}
+
+
 function getRecordDate(record) {
-    return (
-        record?.date ??
-        record?.generate_date ??
-        record?.generateDate ??
+
+    if (!record) return null;
+
+    return getDateOnly(
+        record.date ??
+        record.generate_date ??
+        record.generateDate ??
+        record.created_at ??
         null
     );
 }
 
 
-/*
-   Important:
-   YYYY-MM-DD ko directly new Date() karne se timezone ki wajah
-   se kabhi kabhi previous date aa sakti hai.
-*/
-function getDateOnly(value) {
+function getMonthKeyFromDate(dateValue) {
 
-    if (!value) return null;
-
-    if (typeof value === "string") {
-
-        const match = value.match(
-            /^(\d{4})-(\d{2})-(\d{2})/
-        );
-
-        if (match) {
-
-            return new Date(
-                Number(match[1]),
-                Number(match[2]) - 1,
-                Number(match[3])
-            );
-        }
-    }
-
-    const date = new Date(value);
-
-    if (Number.isNaN(date.getTime())) {
-        return null;
-    }
-
-    return new Date(
-        date.getFullYear(),
-        date.getMonth(),
-        date.getDate()
-    );
-}
-
-
-function dateToKey(date) {
+    const date = getDateOnly(dateValue);
 
     if (!date) return "";
 
-    const y = date.getFullYear();
-    const m = String(date.getMonth() + 1).padStart(2, "0");
-    const d = String(date.getDate()).padStart(2, "0");
-
-    return `${y}-${m}-${d}`;
+    return date.substring(0, 7);
 }
 
+
+// ============================================================
+// TODAY / SELECTED MONTH
+// ============================================================
 
 function getTodayMonthKey() {
 
     const d = new Date();
 
-    return `${d.getFullYear()}-${String(
-        d.getMonth() + 1
-    ).padStart(2, "0")}`;
+    const y = d.getFullYear();
+
+    const m = String(d.getMonth() + 1).padStart(2, "0");
+
+    return `${y}-${m}`;
+}
+
+
+function getSelectedMonthKey() {
+
+    const monthSelect =
+        document.getElementById("monthSelect");
+
+    if (
+        monthSelect &&
+        monthSelect.value &&
+        /^\d{4}-\d{2}$/.test(monthSelect.value)
+    ) {
+
+        return monthSelect.value;
+    }
+
+
+    const stored =
+        localStorage.getItem("dashboardSelectedMonth");
+
+    if (
+        stored &&
+        /^\d{4}-\d{2}$/.test(stored)
+    ) {
+
+        return stored;
+    }
+
+
+    return getTodayMonthKey();
 }
 
 
 // ============================================================
-// DATA LOADING
+// YEAR / MONTH SELECTOR
+// ============================================================
+
+function getSelectedYear() {
+
+    const yearSelect =
+        document.getElementById("yearSelect");
+
+    if (
+        yearSelect &&
+        yearSelect.value
+    ) {
+
+        return Number(yearSelect.value);
+    }
+
+
+    const monthKey = getSelectedMonthKey();
+
+    return Number(monthKey.substring(0, 4));
+}
+
+
+function getSelectedMonthNumber() {
+
+    const monthKey = getSelectedMonthKey();
+
+    return Number(
+        monthKey.substring(5, 7)
+    );
+}
+
+
+function updateMonthLabel() {
+
+    const label =
+        document.getElementById("monthLabel");
+
+    if (!label) return;
+
+    const monthKey = getSelectedMonthKey();
+
+    const parts = monthKey.split("-");
+
+    if (parts.length !== 2) return;
+
+    const year = Number(parts[0]);
+
+    const month = Number(parts[1]);
+
+    const date =
+        new Date(year, month - 1, 1);
+
+    label.textContent =
+        date.toLocaleString("en-US", {
+            month: "long",
+            year: "numeric"
+        });
+}
+
+
+// ============================================================
+// SUPABASE DATA LOADERS
 // ============================================================
 
 async function loadItems() {
 
     try {
 
-        const result = await supabaseRequest(
-            "items",
-            "GET",
-            null,
-            "?select=*"
-        );
+        const result =
+            await supabaseRequest(
+                "items",
+                "GET",
+                null,
+                "?select=*"
+            );
 
-        items = Array.isArray(result)
-            ? result
+
+        if (!result || !result.success) {
+
+            console.error(
+                "Graphs - Items loading error:",
+                result?.error
+            );
+
+            items = [];
+
+            return;
+        }
+
+
+        items = Array.isArray(result.data)
+            ? result.data
             : [];
 
-        // SI1, SI2, SI3 ... SI10
-        items.sort((a, b) => {
 
-            const codeA = getItemCode(a);
-            const codeB = getItemCode(b);
-
-            const numA = parseInt(
-                codeA.replace(/\D/g, ""),
-                10
-            );
-
-            const numB = parseInt(
-                codeB.replace(/\D/g, ""),
-                10
-            );
-
-            if (
-                Number.isFinite(numA) &&
-                Number.isFinite(numB)
-            ) {
-                return numA - numB;
-            }
-
-            return codeA.localeCompare(codeB);
-        });
+        console.log(
+            "Graphs - Supabase Items:",
+            items.length
+        );
 
     } catch (error) {
 
-        console.error("Items loading error:", error);
+        console.error(
+            "Graphs - loadItems error:",
+            error
+        );
 
         items = [];
     }
@@ -224,20 +405,45 @@ async function loadStockIn() {
 
     try {
 
-        const result = await supabaseRequest(
-            "stock_in",
-            "GET",
-            null,
-            "?select=*&order=id.asc"
-        );
+        const result =
+            await supabaseRequest(
+                "stock_in",
+                "GET",
+                null,
+                "?select=*"
+            );
 
-        stockInData = Array.isArray(result)
-            ? result
-            : [];
+
+        if (!result || !result.success) {
+
+            console.error(
+                "Graphs - Stock In loading error:",
+                result?.error
+            );
+
+            stockInData = [];
+
+            return;
+        }
+
+
+        stockInData =
+            Array.isArray(result.data)
+                ? result.data
+                : [];
+
+
+        console.log(
+            "Graphs - Supabase Stock In:",
+            stockInData.length
+        );
 
     } catch (error) {
 
-        console.error("Stock In loading error:", error);
+        console.error(
+            "Graphs - loadStockIn error:",
+            error
+        );
 
         stockInData = [];
     }
@@ -248,20 +454,45 @@ async function loadStockOut() {
 
     try {
 
-        const result = await supabaseRequest(
-            "stock_issue",
-            "GET",
-            null,
-            "?select=*&order=id.asc"
-        );
+        const result =
+            await supabaseRequest(
+                "stock_issue",
+                "GET",
+                null,
+                "?select=*"
+            );
 
-        stockOutData = Array.isArray(result)
-            ? result
-            : [];
+
+        if (!result || !result.success) {
+
+            console.error(
+                "Graphs - Stock Out loading error:",
+                result?.error
+            );
+
+            stockOutData = [];
+
+            return;
+        }
+
+
+        stockOutData =
+            Array.isArray(result.data)
+                ? result.data
+                : [];
+
+
+        console.log(
+            "Graphs - Supabase Stock Out:",
+            stockOutData.length
+        );
 
     } catch (error) {
 
-        console.error("Stock Out loading error:", error);
+        console.error(
+            "Graphs - loadStockOut error:",
+            error
+        );
 
         stockOutData = [];
     }
@@ -272,21 +503,43 @@ async function loadDemandHistory() {
 
     try {
 
-        const result = await supabaseRequest(
-            "demand_history",
-            "GET",
-            null,
-            "?select=*&order=id.asc"
-        );
+        const result =
+            await supabaseRequest(
+                "demand_history",
+                "GET",
+                null,
+                "?select=*"
+            );
 
-        demandHistory = Array.isArray(result)
-            ? result
-            : [];
+
+        if (!result || !result.success) {
+
+            console.error(
+                "Graphs - Demand History loading error:",
+                result?.error
+            );
+
+            demandHistory = [];
+
+            return;
+        }
+
+
+        demandHistory =
+            Array.isArray(result.data)
+                ? result.data
+                : [];
+
+
+        console.log(
+            "Graphs - Supabase Demand History:",
+            demandHistory.length
+        );
 
     } catch (error) {
 
         console.error(
-            "Demand History loading error:",
+            "Graphs - loadDemandHistory error:",
             error
         );
 
@@ -295,411 +548,59 @@ async function loadDemandHistory() {
 }
 
 
-async function loadAllGraphData() {
-
-    await Promise.all([
-        loadItems(),
-        loadStockIn(),
-        loadStockOut(),
-        loadDemandHistory()
-    ]);
-
-    loadItemSelect();
-    loadYears();
-    changePeriodType();
-
-    updateGraphs();
-}
-
-
 // ============================================================
-// ITEM SELECT
+// DEBUG DATA
 // ============================================================
 
-function loadItemSelect() {
+function logGraphData() {
 
-    const select = document.getElementById(
-        "itemSelect"
+    console.log(
+        "================ GRAPHS DATA ================"
     );
 
-    if (!select) return;
-
-    const oldValue =
-        localStorage.getItem(
-            "dashboardSelectedItem"
-        ) || "all";
-
-    select.innerHTML = "";
-
-    const allOption =
-        document.createElement("option");
-
-    allOption.value = "all";
-    allOption.textContent = "All Items";
-
-    select.appendChild(allOption);
-
-    items.forEach(item => {
-
-        const code = getItemCode(item);
-
-        if (!code) return;
-
-        const option =
-            document.createElement("option");
-
-        option.value = code;
-
-        option.textContent =
-            `${code} - ${getItemName(item)}`;
-
-        select.appendChild(option);
-    });
-
-    const exists = [
-        ...select.options
-    ].some(
-        option => option.value === oldValue
+    console.log(
+        "Items:",
+        items
     );
 
-    select.value = exists
-        ? oldValue
-        : "all";
-
-    select.addEventListener(
-        "change",
-        updateGraphs
+    console.log(
+        "Stock In:",
+        stockInData
     );
 
-    updateItemInfo();
-}
-
-
-// ============================================================
-// YEARS
-// ============================================================
-
-function loadYears() {
-
-    const select =
-        document.getElementById(
-            "yearSelect"
-        );
-
-    if (!select) return;
-
-    const years = new Set();
-
-    [...stockInData, ...stockOutData]
-        .forEach(record => {
-
-            const date =
-                getDateOnly(
-                    getRecordDate(record)
-                );
-
-            if (date) {
-                years.add(
-                    date.getFullYear()
-                );
-            }
-        });
-
-    demandHistory.forEach(record => {
-
-        const date =
-            getDateOnly(
-                getRecordDate(record)
-            );
-
-        if (date) {
-            years.add(
-                date.getFullYear()
-            );
-        }
-    });
-
-    const currentYear =
-        new Date().getFullYear();
-
-    years.add(currentYear);
-
-    const sortedYears =
-        [...years].sort(
-            (a, b) => b - a
-        );
-
-    const oldValue =
-        select.value;
-
-    select.innerHTML = "";
-
-    sortedYears.forEach(year => {
-
-        const option =
-            document.createElement("option");
-
-        option.value = year;
-        option.textContent = year;
-
-        select.appendChild(option);
-    });
-
-    if (
-        sortedYears.includes(
-            Number(oldValue)
-        )
-    ) {
-        select.value = oldValue;
-    } else {
-        select.value = currentYear;
-    }
-
-    select.onchange = updateGraphs;
-}
-
-
-// ============================================================
-// PERIOD
-// ============================================================
-
-function changePeriodType() {
-
-    const periodType =
-        document.getElementById(
-            "periodType"
-        );
-
-    const monthLabel =
-        document.getElementById(
-            "monthLabel"
-        );
-
-    const monthSelect =
-        document.getElementById(
-            "monthSelect"
-        );
-
-    if (!periodType) return;
-
-    if (periodType.value === "year") {
-
-        if (monthLabel) {
-            monthLabel.style.display =
-                "none";
-        }
-
-        if (monthSelect) {
-            monthSelect.style.display =
-                "none";
-        }
-
-    } else {
-
-        if (monthLabel) {
-            monthLabel.style.display =
-                "block";
-        }
-
-        if (monthSelect) {
-            monthSelect.style.display =
-                "block";
-        }
-    }
-
-    updateGraphs();
-}
-
-
-function getSelectedYear() {
-
-    const select =
-        document.getElementById(
-            "yearSelect"
-        );
-
-    return Number(
-        select?.value ||
-        new Date().getFullYear()
+    console.log(
+        "Stock Out:",
+        stockOutData
     );
-}
 
-
-function getSelectedMonth() {
-
-    const select =
-        document.getElementById(
-            "monthSelect"
-        );
-
-    return Number(
-        select?.value ||
-        new Date().getMonth() + 1
-    );
-}
-
-
-// ============================================================
-// DEMAND DATE / CYCLE
-// ============================================================
-
-function getDemandRecordDate(record) {
-
-    return getDateOnly(
-        getRecordDate(record)
-    );
-}
-
-
-function getSelectedDemandRecord() {
-
-    const year =
-        getSelectedYear();
-
-    const month =
-        getSelectedMonth();
-
-    const records =
-        demandHistory.filter(record => {
-
-            const date =
-                getDemandRecordDate(
-                    record
-                );
-
-            if (!date) return false;
-
-            return (
-                date.getFullYear() === year &&
-                date.getMonth() + 1 === month
-            );
-        });
-
-    if (!records.length) {
-        return null;
-    }
-
-    records.sort((a, b) => {
-
-        const dateA =
-            getDemandRecordDate(a);
-
-        const dateB =
-            getDemandRecordDate(b);
-
-        const timeA =
-            dateA ? dateA.getTime() : 0;
-
-        const timeB =
-            dateB ? dateB.getTime() : 0;
-
-        if (timeA !== timeB) {
-            return timeB - timeA;
-        }
-
-        return (
-            safeNumber(b.id) -
-            safeNumber(a.id)
-        );
-    });
-
-    return records[0];
-}
-
-
-function getNextDemandDate(currentDate) {
-
-    if (!currentDate) {
-        return null;
-    }
-
-    const currentTime =
-        currentDate.getTime();
-
-    const futureDates =
+    console.log(
+        "Demand History:",
         demandHistory
-            .map(record =>
-                getDemandRecordDate(record)
-            )
-            .filter(date =>
-                date &&
-                date.getTime() >
-                currentTime
-            )
-            .sort(
-                (a, b) =>
-                    a.getTime() -
-                    b.getTime()
-            );
+    );
 
-    return futureDates.length
-        ? futureDates[0]
-        : null;
-}
+    console.log(
+        "Counts:",
+        {
+            items: items.length,
+            stockIn: stockInData.length,
+            stockOut: stockOutData.length,
+            demand: demandHistory.length
+        }
+    );
 
+    console.log(
+        "Selected Month:",
+        getSelectedMonthKey()
+    );
 
-function getActiveDemandCycle() {
+    console.log(
+        "Current Graph Mode:",
+        currentGraphMode
+    );
 
-    const currentDemand =
-        getSelectedDemandRecord();
-
-    if (!currentDemand) {
-
-        return {
-            currentDemand: null,
-            startDate: null,
-            endDate: null
-        };
-    }
-
-    const startDate =
-        getDemandRecordDate(
-            currentDemand
-        );
-
-    const endDate =
-        getNextDemandDate(
-            startDate
-        );
-
-    return {
-        currentDemand,
-        startDate,
-        endDate
-    };
-}
-
-
-function dateIsInsideDemandCycle(
-    dateValue,
-    cycle
-) {
-
-    const date =
-        getDateOnly(dateValue);
-
-    if (!date || !cycle.startDate) {
-        return false;
-    }
-
-    const time =
-        date.getTime();
-
-    const start =
-        cycle.startDate.getTime();
-
-    if (time < start) {
-        return false;
-    }
-
-    if (
-        cycle.endDate &&
-        time >= cycle.endDate.getTime()
-    ) {
-        return false;
-    }
-
-    return true;
+    console.log(
+        "=============================================="
+    );
 }
 
 
@@ -707,81 +608,297 @@ function dateIsInsideDemandCycle(
 // DEMAND HELPERS
 // ============================================================
 
-function getDemandValue(record) {
-
-    const fields = [
-        "finalDemand",
-        "final_demand",
-        "approvedQty",
-        "approved_qty",
-        "quantity",
-        "demandQuantity",
-        "demand_quantity"
-    ];
-
-    for (const field of fields) {
-
-        if (
-            record?.[field] !== null &&
-            record?.[field] !== undefined &&
-            record?.[field] !== ""
-        ) {
-
-            return safeNumber(
-                record[field]
-            );
-        }
-    }
-
-    return 0;
-}
-
-
 function getDemandItems(record) {
 
     if (!record) return [];
 
-    let data =
+
+    let value =
         record.demand_items ??
         record.demandItems ??
         record.items ??
         [];
 
-    if (typeof data === "string") {
+
+    if (typeof value === "string") {
 
         try {
-            data = JSON.parse(data);
-        } catch {
+
+            value = JSON.parse(value);
+
+        } catch (error) {
+
+            console.warn(
+                "Unable to parse demand items:",
+                value
+            );
+
             return [];
         }
     }
 
-    return Array.isArray(data)
-        ? data
-        : [];
+
+    if (Array.isArray(value)) {
+
+        return value;
+    }
+
+
+    if (
+        value &&
+        typeof value === "object"
+    ) {
+
+        return Object.values(value);
+    }
+
+
+    return [];
 }
 
 
-function getDemandForItem(itemCode) {
+function getDemandValue(item) {
 
-    const record =
+    if (!item) return 0;
+
+
+    return safeNumber(
+        item.finalDemand ??
+        item.final_demand ??
+        item.approvedQty ??
+        item.approved_qty ??
+        item.quantity ??
+        item.demandQty ??
+        item.demand_qty ??
+        item.demand ??
+        item.qty ??
+        0
+    );
+}
+
+
+function getDemandItemCode(item) {
+
+    if (!item) return "";
+
+    return cleanCode(
+        item.code ??
+        item.item_code ??
+        item.itemCode ??
+        ""
+    );
+}
+
+
+// ============================================================
+// FIND DEMAND RECORD FOR SELECTED MONTH
+// ============================================================
+
+function getDemandRecordDate(record) {
+
+    return getDateOnly(
+        record?.generate_date ??
+        record?.generateDate ??
+        record?.date ??
+        record?.created_at ??
+        null
+    );
+}
+
+
+function getSelectedDemandRecord() {
+
+    const monthKey =
+        getSelectedMonthKey();
+
+
+    const matching =
+        demandHistory
+            .filter(record => {
+
+                const date =
+                    getDemandRecordDate(record);
+
+                if (!date) return false;
+
+                return date.startsWith(monthKey);
+            })
+            .sort((a, b) => {
+
+                const da =
+                    getDemandRecordDate(a) || "";
+
+                const db =
+                    getDemandRecordDate(b) || "";
+
+                return db.localeCompare(da);
+            });
+
+
+    return matching.length
+        ? matching[0]
+        : null;
+}
+
+
+function getNextDemandDate() {
+
+    const selectedMonth =
+        getSelectedMonthKey();
+
+
+    const selectedRecord =
         getSelectedDemandRecord();
 
-    if (!record) return 0;
+
+    if (!selectedRecord) {
+
+        return null;
+    }
+
+
+    const selectedDate =
+        getDemandRecordDate(
+            selectedRecord
+        );
+
+
+    if (!selectedDate) {
+
+        return null;
+    }
+
+
+    const laterRecords =
+        demandHistory
+            .map(record => {
+
+                return {
+                    record,
+                    date:
+                        getDemandRecordDate(record)
+                };
+            })
+            .filter(x => {
+
+                return (
+                    x.date &&
+                    x.date > selectedDate
+                );
+            })
+            .sort((a, b) =>
+                a.date.localeCompare(b.date)
+            );
+
+
+    if (!laterRecords.length) {
+
+        return null;
+    }
+
+
+    return laterRecords[0].date;
+}
+
+
+function dateIsInsideDemandCycle(dateValue) {
+
+    const date =
+        getDateOnly(dateValue);
+
+    if (!date) return false;
+
+
+    const selectedRecord =
+        getSelectedDemandRecord();
+
+
+    // اگر selected month کی demand موجود نہیں
+    // تو selected month کو ہی cycle سمجھیں
+    if (!selectedRecord) {
+
+        return (
+            getMonthKeyFromDate(dateValue) ===
+            getSelectedMonthKey()
+        );
+    }
+
+
+    const startDate =
+        getDemandRecordDate(
+            selectedRecord
+        );
+
+
+    if (!startDate) {
+
+        return (
+            getMonthKeyFromDate(dateValue) ===
+            getSelectedMonthKey()
+        );
+    }
+
+
+    const nextDate =
+        getNextDemandDate();
+
+
+    if (date < startDate) {
+
+        return false;
+    }
+
+
+    if (
+        nextDate &&
+        date >= nextDate
+    ) {
+
+        return false;
+    }
+
+
+    return true;
+}
+
+
+// ============================================================
+// GET DEMAND FOR ITEM
+// ============================================================
+
+function getDemandForItem(code) {
+
+    const targetCode =
+        cleanCode(code);
+
+
+    const selectedRecord =
+        getSelectedDemandRecord();
+
+
+    if (!selectedRecord) {
+
+        return 0;
+    }
+
 
     const demandItems =
-        getDemandItems(record);
+        getDemandItems(
+            selectedRecord
+        );
+
 
     let total = 0;
 
+
     demandItems.forEach(item => {
 
-        const code =
-            getRecordItemCode(item);
+        const itemCode =
+            getDemandItemCode(item);
+
 
         if (
-            code ===
-            cleanCode(itemCode)
+            itemCode === targetCode
         ) {
 
             total +=
@@ -789,151 +906,197 @@ function getDemandForItem(itemCode) {
         }
     });
 
+
     return total;
 }
 
 
 // ============================================================
-// STOCK IN / OUT CYCLE
+// FILTER STOCK DATA BY DEMAND CYCLE
 // ============================================================
 
-function getCycleStockIn(
-    itemCode,
-    cycle
-) {
+function getCycleStockInData() {
 
-    let total = 0;
+    return stockInData.filter(record => {
 
-    stockInData.forEach(record => {
+        const date =
+            getRecordDate(record);
 
-        if (
-            getRecordItemCode(record) !==
-            cleanCode(itemCode)
-        ) {
-            return;
-        }
-
-        if (
-            !dateIsInsideDemandCycle(
-                getRecordDate(record),
-                cycle
-            )
-        ) {
-            return;
-        }
-
-        total += safeNumber(
-            record.quantity
-        );
+        return date &&
+            dateIsInsideDemandCycle(date);
     });
-
-    return total;
 }
 
 
-function getCycleStockOut(
-    itemCode,
-    cycle
-) {
+function getCycleStockOutData() {
 
-    let total = 0;
+    return stockOutData.filter(record => {
 
-    stockOutData.forEach(record => {
+        const date =
+            getRecordDate(record);
 
-        if (
-            getRecordItemCode(record) !==
-            cleanCode(itemCode)
-        ) {
-            return;
-        }
-
-        if (
-            !dateIsInsideDemandCycle(
-                getRecordDate(record),
-                cycle
-            )
-        ) {
-            return;
-        }
-
-        total += safeNumber(
-            record.quantity
-        );
+        return date &&
+            dateIsInsideDemandCycle(date);
     });
-
-    return total;
 }
 
 
 // ============================================================
-// STOCK IN COST
+// COST HELPERS
 // ============================================================
 
 function getStockInRecordCost(record) {
 
+    if (!record) return 0;
+
+
     const totalCost =
-        record?.total_cost ??
-        record?.totalCost;
-
-    if (
-        totalCost !== undefined &&
-        totalCost !== null &&
-        totalCost !== ""
-    ) {
-
-        return safeNumber(
-            totalCost
+        safeNumber(
+            record.total_cost ??
+            record.totalCost ??
+            0
         );
+
+
+    if (totalCost > 0) {
+
+        return totalCost;
     }
+
 
     const quantity =
         safeNumber(
-            record?.quantity
+            record.quantity ??
+            record.qty ??
+            0
         );
 
-    const unitCost =
+
+    const rate =
         safeNumber(
-            record?.unit_cost ??
-            record?.unitCost ??
-            record?.rate
+            record.unit_cost ??
+            record.unitCost ??
+            record.rate ??
+            record.cost ??
+            0
         );
 
-    return quantity * unitCost;
+
+    return quantity * rate;
 }
 
 
-function getCyclePurchaseCost(
-    itemCode,
-    cycle
-) {
+function getStockInRate(record) {
+
+    if (!record) return 0;
+
+
+    return safeNumber(
+        record.unit_cost ??
+        record.unitCost ??
+        record.rate ??
+        record.cost ??
+        0
+    );
+}
+
+
+function getCyclePurchaseCost(code) {
+
+    const targetCode =
+        cleanCode(code);
+
 
     let total = 0;
 
-    stockInData.forEach(record => {
 
-        if (
-            getRecordItemCode(record) !==
-            cleanCode(itemCode)
-        ) {
-            return;
-        }
+    getCycleStockInData()
+        .forEach(record => {
 
-        if (
-            !dateIsInsideDemandCycle(
-                getRecordDate(record),
-                cycle
-            )
-        ) {
-            return;
-        }
+            if (
+                getRecordItemCode(record) ===
+                targetCode
+            ) {
 
-        total +=
-            getStockInRecordCost(
-                record
-            );
-    });
+                total +=
+                    getStockInRecordCost(record);
+            }
+        });
+
 
     return total;
+}
+
+
+// ============================================================
+// STOCK OUT RATE
+// ============================================================
+
+function getStockInRateForItemOnDate(
+    code,
+    issueDate
+) {
+
+    const targetCode =
+        cleanCode(code);
+
+
+    const targetDate =
+        getDateOnly(issueDate);
+
+
+    const records =
+        stockInData
+            .filter(record => {
+
+                if (
+                    getRecordItemCode(record) !==
+                    targetCode
+                ) {
+
+                    return false;
+                }
+
+
+                const date =
+                    getRecordDate(record);
+
+
+                if (!date) return false;
+
+
+                if (
+                    targetDate &&
+                    date > targetDate
+                ) {
+
+                    return false;
+                }
+
+
+                return true;
+            })
+            .sort((a, b) => {
+
+                const da =
+                    getRecordDate(a) || "";
+
+                const db =
+                    getRecordDate(b) || "";
+
+                return db.localeCompare(da);
+            });
+
+
+    if (!records.length) {
+
+        return 0;
+    }
+
+
+    return getStockInRate(
+        records[0]
+    );
 }
 
 
@@ -941,231 +1104,125 @@ function getCyclePurchaseCost(
 // STOCK OUT COST
 // ============================================================
 
-/*
-   Stock Out table mein agar cost/rate saved hai
-   to wahi use hoga.
-
-   Agar cost saved nahi hai to issue date se pehle
-   latest Stock In rate use kiya jayega.
-*/
-
-function getStockInRateForItemOnDate(
-    itemCode,
-    issueDate
-) {
-
-    const issue =
-        getDateOnly(issueDate);
-
-    const matching =
-        stockInData.filter(record => {
-
-            if (
-                getRecordItemCode(record) !==
-                cleanCode(itemCode)
-            ) {
-                return false;
-            }
-
-            const date =
-                getDateOnly(
-                    getRecordDate(record)
-                );
-
-            if (!date) return false;
-
-            if (!issue) return true;
-
-            return (
-                date.getTime() <=
-                issue.getTime()
-            );
-        });
-
-    matching.sort((a, b) => {
-
-        const dateA =
-            getDateOnly(
-                getRecordDate(a)
-            );
-
-        const dateB =
-            getDateOnly(
-                getRecordDate(b)
-            );
-
-        const timeA =
-            dateA ? dateA.getTime() : 0;
-
-        const timeB =
-            dateB ? dateB.getTime() : 0;
-
-        if (timeA !== timeB) {
-            return timeB - timeA;
-        }
-
-        return (
-            safeNumber(b.id) -
-            safeNumber(a.id)
-        );
-    });
-
-    if (matching.length) {
-
-        return safeNumber(
-            matching[0]?.unit_cost ??
-            matching[0]?.unitCost ??
-            matching[0]?.rate
-        );
-    }
-
-    // اگر issue date se pehle rate نہ ملے
-    // تو latest Stock In rate use کریں
-    const allMatching =
-        stockInData.filter(
-            record =>
-                getRecordItemCode(record) ===
-                cleanCode(itemCode)
-        );
-
-    allMatching.sort(
-        (a, b) =>
-            safeNumber(b.id) -
-            safeNumber(a.id)
-    );
-
-    if (allMatching.length) {
-
-        return safeNumber(
-            allMatching[0]?.unit_cost ??
-            allMatching[0]?.unitCost ??
-            allMatching[0]?.rate
-        );
-    }
-
-    return 0;
-}
-
-
 function getStockOutRecordCost(record) {
 
-    const totalCost =
-        record?.total_cost ??
-        record?.totalCost ??
-        record?.issue_cost ??
-        record?.issueCost;
+    if (!record) return 0;
 
-    if (
-        totalCost !== undefined &&
-        totalCost !== null &&
-        totalCost !== ""
-    ) {
 
-        return safeNumber(
-            totalCost
+    const savedTotal =
+        safeNumber(
+            record.total_cost ??
+            record.totalCost ??
+            0
         );
+
+
+    if (savedTotal > 0) {
+
+        return savedTotal;
     }
+
 
     const quantity =
         safeNumber(
-            record?.quantity
+            record.quantity ??
+            record.qty ??
+            0
         );
+
 
     const savedRate =
-        record?.unit_cost ??
-        record?.unitCost ??
-        record?.rate ??
-        record?.cost;
-
-    if (
-        savedRate !== undefined &&
-        savedRate !== null &&
-        savedRate !== ""
-    ) {
-
-        return (
-            quantity *
-            safeNumber(savedRate)
+        safeNumber(
+            record.unit_cost ??
+            record.unitCost ??
+            record.rate ??
+            record.cost ??
+            0
         );
+
+
+    if (savedRate > 0) {
+
+        return quantity * savedRate;
     }
 
-    const rate =
+
+    const code =
+        getRecordItemCode(record);
+
+
+    const date =
+        getRecordDate(record);
+
+
+    const latestRate =
         getStockInRateForItemOnDate(
-            getRecordItemCode(record),
-            getRecordDate(record)
+            code,
+            date
         );
 
-    return quantity * rate;
+
+    return quantity * latestRate;
 }
 
 
-function getCycleStockOutCost(
-    itemCode,
-    cycle
-) {
+function getCycleStockOutCost(code) {
+
+    const targetCode =
+        cleanCode(code);
+
 
     let total = 0;
 
-    stockOutData.forEach(record => {
 
-        if (
-            getRecordItemCode(record) !==
-            cleanCode(itemCode)
-        ) {
-            return;
-        }
+    getCycleStockOutData()
+        .forEach(record => {
 
-        if (
-            !dateIsInsideDemandCycle(
-                getRecordDate(record),
-                cycle
-            )
-        ) {
-            return;
-        }
+            if (
+                getRecordItemCode(record) ===
+                targetCode
+            ) {
 
-        total +=
-            getStockOutRecordCost(
-                record
-            );
-    });
+                total +=
+                    getStockOutRecordCost(record);
+            }
+        });
+
 
     return total;
 }
 
 
 // ============================================================
-// GRAPH ITEM DATA
+// CREATE ITEM GRAPH DATA
 // ============================================================
 
 function createGraphData() {
 
-    const select =
-        document.getElementById(
-            "itemSelect"
-        );
+    const cycleStockIn =
+        getCycleStockInData();
 
-    const selectedCode =
-        select?.value || "all";
+    const cycleStockOut =
+        getCycleStockOutData();
 
-    const selectedItems =
-        selectedCode === "all"
-            ? items
-            : items.filter(
-                item =>
-                    getItemCode(item) ===
-                    cleanCode(selectedCode)
-            );
 
-    const cycle =
-        getActiveDemandCycle();
+    const map = new Map();
 
-    return selectedItems.map(item => {
+
+    // --------------------------------------------------------
+    // Add Master List Items
+    // --------------------------------------------------------
+
+    items.forEach(item => {
 
         const code =
             getItemCode(item);
 
-        return {
+
+        if (!code) return;
+
+
+        map.set(code, {
 
             code,
 
@@ -1175,116 +1232,74 @@ function createGraphData() {
             unit:
                 getItemUnit(item),
 
-            stockIn:
-                getCycleStockIn(
-                    code,
-                    cycle
-                ),
+            stockIn: 0,
 
-            stockOut:
-                getCycleStockOut(
-                    code,
-                    cycle
-                ),
+            stockOut: 0,
 
             demand:
-                getDemandForItem(
-                    code
-                ),
+                getDemandForItem(code),
 
-            stockInCost:
-                getCyclePurchaseCost(
-                    code,
-                    cycle
-                ),
+            stockInCost: 0,
 
-            stockOutCost:
-                getCycleStockOutCost(
-                    code,
-                    cycle
-                )
-        };
+            stockOutCost: 0
+
+        });
     });
-}
 
 
-// ============================================================
-// DEPARTMENT DATA
-// ============================================================
+    // --------------------------------------------------------
+    // Stock In
+    // --------------------------------------------------------
 
-function getDepartment(record) {
+    cycleStockIn.forEach(record => {
 
-    const department =
-        record?.department ??
-        record?.Department ??
-        record?.dept ??
-        record?.dept_name ??
-        record?.deptName ??
-        "";
-
-    const value =
-        String(department).trim();
-
-    return value || "Not Assigned";
-}
+        const code =
+            getRecordItemCode(record);
 
 
-function createDepartmentGraphData() {
+        if (!code) return;
 
-    const cycle =
-        getActiveDemandCycle();
 
-    const map = new Map();
+        if (!map.has(code)) {
 
-    function getDepartmentRow(
-        department
-    ) {
+            map.set(code, {
 
-        if (!map.has(department)) {
+                code,
 
-            map.set(
-                department,
-                {
-                    department,
-                    stockIn: 0,
-                    stockOut: 0,
-                    stockInCost: 0,
-                    stockOutCost: 0
-                }
-            );
+                name:
+                    getRecordItemName(record),
+
+                unit:
+                    String(
+                        record.unit ?? ""
+                    ),
+
+                stockIn: 0,
+
+                stockOut: 0,
+
+                demand:
+                    getDemandForItem(code),
+
+                stockInCost: 0,
+
+                stockOutCost: 0
+
+            });
         }
 
-        return map.get(department);
-    }
-
-
-    // --------------------------
-    // STOCK IN
-    // --------------------------
-
-    stockInData.forEach(record => {
-
-        if (
-            !dateIsInsideDemandCycle(
-                getRecordDate(record),
-                cycle
-            )
-        ) {
-            return;
-        }
-
-        const department =
-            getDepartment(record);
 
         const row =
-            getDepartmentRow(
-                department
-            );
+            map.get(code);
+
 
         row.stockIn +=
             safeNumber(
-                record.quantity
+                record.quantity ??
+                record.qty ??
+                0
             );
+
 
         row.stockInCost +=
             getStockInRecordCost(
@@ -1293,33 +1308,59 @@ function createDepartmentGraphData() {
     });
 
 
-    // --------------------------
-    // STOCK OUT
-    // --------------------------
+    // --------------------------------------------------------
+    // Stock Out
+    // --------------------------------------------------------
 
-    stockOutData.forEach(record => {
+    cycleStockOut.forEach(record => {
 
-        if (
-            !dateIsInsideDemandCycle(
-                getRecordDate(record),
-                cycle
-            )
-        ) {
-            return;
+        const code =
+            getRecordItemCode(record);
+
+
+        if (!code) return;
+
+
+        if (!map.has(code)) {
+
+            map.set(code, {
+
+                code,
+
+                name:
+                    getRecordItemName(record),
+
+                unit:
+                    String(
+                        record.unit ?? ""
+                    ),
+
+                stockIn: 0,
+
+                stockOut: 0,
+
+                demand:
+                    getDemandForItem(code),
+
+                stockInCost: 0,
+
+                stockOutCost: 0
+
+            });
         }
 
-        const department =
-            getDepartment(record);
 
         const row =
-            getDepartmentRow(
-                department
-            );
+            map.get(code);
+
 
         row.stockOut +=
             safeNumber(
-                record.quantity
+                record.quantity ??
+                record.qty ??
+                0
             );
+
 
         row.stockOutCost +=
             getStockOutRecordCost(
@@ -1328,364 +1369,175 @@ function createDepartmentGraphData() {
     });
 
 
-    return [...map.values()];
-}
+    // --------------------------------------------------------
+    // Recalculate Demand
+    // --------------------------------------------------------
+
+    map.forEach(row => {
+
+        row.demand =
+            getDemandForItem(
+                row.code
+            );
+    });
 
 
-// ============================================================
-// SUMMARY
-// ============================================================
+    // --------------------------------------------------------
+    // Numeric Item Code Sorting
+    // SI1, SI2, SI3 ... SI10
+    // --------------------------------------------------------
 
-function updateSummary(data) {
+    return Array.from(
+        map.values()
+    ).sort((a, b) => {
 
-    const stockIn =
-        data.reduce(
-            (sum, row) =>
-                sum + safeNumber(row.stockIn),
-            0
-        );
+        const aMatch =
+            String(a.code).match(/\d+/);
 
-    const stockOut =
-        data.reduce(
-            (sum, row) =>
-                sum + safeNumber(row.stockOut),
-            0
-        );
-
-    const demand =
-        data.reduce(
-            (sum, row) =>
-                sum + safeNumber(row.demand),
-            0
-        );
-
-    const cost =
-        data.reduce(
-            (sum, row) =>
-                sum +
-                safeNumber(row.stockInCost),
-            0
-        );
+        const bMatch =
+            String(b.code).match(/\d+/);
 
 
-    const elIn =
-        document.getElementById(
-            "summaryStockIn"
-        );
+        if (
+            aMatch &&
+            bMatch
+        ) {
 
-    const elOut =
-        document.getElementById(
-            "summaryStockOut"
-        );
-
-    const elDemand =
-        document.getElementById(
-            "summaryDemand"
-        );
-
-    const elCost =
-        document.getElementById(
-            "summaryCost"
-        );
-
-
-    if (elIn) {
-        elIn.textContent =
-            stockIn.toLocaleString();
-    }
-
-    if (elOut) {
-        elOut.textContent =
-            stockOut.toLocaleString();
-    }
-
-    if (elDemand) {
-        elDemand.textContent =
-            demand.toLocaleString();
-    }
-
-    if (elCost) {
-        elCost.textContent =
-            stockInCostText(cost);
-    }
-}
-
-
-function stockInCostText(value) {
-
-    return Number(value || 0)
-        .toLocaleString(
-            undefined,
-            {
-                minimumFractionDigits: 0,
-                maximumFractionDigits: 2
-            }
-        );
-}
-
-
-// ============================================================
-// ITEM INFO
-// ============================================================
-
-function updateItemInfo() {
-
-    const el =
-        document.getElementById(
-            "itemInfo"
-        );
-
-    if (!el) return;
-
-    const select =
-        document.getElementById(
-            "itemSelect"
-        );
-
-    const selectedCode =
-        select?.value || "all";
-
-    const cycle =
-        getActiveDemandCycle();
-
-    if (selectedCode === "all") {
-
-        let cycleText =
-            "Demand Cycle: Not Available";
-
-        if (cycle.startDate) {
-
-            cycleText =
-                `Demand Cycle: ${dateToKey(
-                    cycle.startDate
-                )}`;
-
-            if (cycle.endDate) {
-
-                cycleText +=
-                    ` → ${dateToKey(
-                        cycle.endDate
-                    )}`;
-            }
+            return (
+                Number(aMatch[0]) -
+                Number(bMatch[0])
+            );
         }
 
-        el.innerHTML =
-            `<strong>All Items</strong><br>
-             ${cycleText}`;
 
-        return;
-    }
-
-
-    const item =
-        items.find(
-            item =>
-                getItemCode(item) ===
-                cleanCode(selectedCode)
-        );
-
-    if (!item) {
-
-        el.textContent =
-            "Item not found.";
-
-        return;
-    }
-
-
-    let cycleText =
-        "Demand Cycle: Not Available";
-
-    if (cycle.startDate) {
-
-        cycleText =
-            `Demand Cycle: ${dateToKey(
-                cycle.startDate
-            )}`;
-
-        if (cycle.endDate) {
-
-            cycleText +=
-                ` → ${dateToKey(
-                    cycle.endDate
-                )}`;
-        }
-    }
-
-
-    el.innerHTML =
-        `<strong>${getItemCode(item)}</strong>
-         - ${getItemName(item)}
-         <br>
-         Unit: ${getItemUnit(item)}
-         <br>
-         ${cycleText}`;
-}
-
-
-// ============================================================
-// DATA TABLE
-// ============================================================
-
-function buildDataTable(data) {
-
-    const tbody =
-        document.getElementById(
-            "graphDataBody"
-        );
-
-    if (!tbody) return;
-
-    tbody.innerHTML = "";
-
-    data.forEach(row => {
-
-        const tr =
-            document.createElement("tr");
-
-        tr.innerHTML = `
-            <td>${row.code}</td>
-            <td>${row.name}</td>
-            <td>${row.unit}</td>
-            <td>${safeNumber(
-                row.stockIn
-            ).toLocaleString()}</td>
-            <td>${safeNumber(
-                row.stockOut
-            ).toLocaleString()}</td>
-            <td>${safeNumber(
-                row.demand
-            ).toLocaleString()}</td>
-            <td>${safeNumber(
-                row.stockInCost
-            ).toLocaleString()}</td>
-        `;
-
-        tbody.appendChild(tr);
+        return String(a.code)
+            .localeCompare(
+                String(b.code)
+            );
     });
 }
 
 
 // ============================================================
-// CHART OPTIONS
+// DEPARTMENT DATA
 // ============================================================
 
-function commonChartOptions() {
+function createDepartmentData() {
 
-    return {
+    const cycleStockIn =
+        getCycleStockInData();
 
-        responsive: true,
+    const cycleStockOut =
+        getCycleStockOutData();
 
-        maintainAspectRatio: false,
 
-        interaction: {
-            mode: "index",
-            intersect: false
-        },
+    const map = new Map();
 
-        plugins: {
 
-            legend: {
-                position: "top"
-            },
+    function getDepartmentRow(
+        department
+    ) {
 
-            tooltip: {
-                callbacks: {
+        const dept =
+            department || "Not Assigned";
 
-                    label: function(context) {
 
-                        const value =
-                            context.parsed?.y ??
-                            context.parsed?.x ??
-                            0;
+        if (!map.has(dept)) {
 
-                        return `${context.dataset.label}: ${Number(
-                            value
-                        ).toLocaleString()}`;
-                    }
-                }
-            }
+            map.set(dept, {
+
+                department: dept,
+
+                stockIn: 0,
+
+                stockOut: 0,
+
+                stockInCost: 0,
+
+                stockOutCost: 0
+
+            });
         }
-    };
-}
 
 
-function horizontalBarOptions(
-    titleText,
-    unitText = ""
-) {
-
-    const options =
-        commonChartOptions();
-
-    options.indexAxis = "y";
-
-    options.plugins.title = {
-        display: true,
-        text: titleText,
-        font: {
-            size: 17,
-            weight: "bold"
-        }
-    };
-
-    options.scales = {
-
-        x: {
-            beginAtZero: true,
-
-            title: {
-                display: true,
-                text: unitText
-            }
-        },
-
-        y: {
-            ticks: {
-                autoSkip: false
-            }
-        }
-    };
-
-    return options;
-}
+        return map.get(dept);
+    }
 
 
-function verticalBarOptions(
-    titleText,
-    yTitle
-) {
+    // --------------------------------------------------------
+    // Stock In Department
+    // --------------------------------------------------------
 
-    const options =
-        commonChartOptions();
+    cycleStockIn.forEach(record => {
 
-    options.plugins.title = {
-        display: true,
-        text: titleText,
-        font: {
-            size: 17,
-            weight: "bold"
-        }
-    };
+        const dept =
+            getRecordDepartment(
+                record
+            );
 
-    options.scales = {
 
-        y: {
-            beginAtZero: true,
+        const row =
+            getDepartmentRow(dept);
 
-            title: {
-                display: true,
-                text: yTitle
-            }
-        }
-    };
 
-    return options;
+        row.stockIn +=
+            safeNumber(
+                record.quantity ??
+                record.qty ??
+                0
+            );
+
+
+        row.stockInCost +=
+            getStockInRecordCost(
+                record
+            );
+    });
+
+
+    // --------------------------------------------------------
+    // Stock Out Department
+    // --------------------------------------------------------
+
+    cycleStockOut.forEach(record => {
+
+        const dept =
+            getRecordDepartment(
+                record
+            );
+
+
+        const row =
+            getDepartmentRow(dept);
+
+
+        row.stockOut +=
+            safeNumber(
+                record.quantity ??
+                record.qty ??
+                0
+            );
+
+
+        row.stockOutCost +=
+            getStockOutRecordCost(
+                record
+            );
+    });
+
+
+    return Array.from(
+        map.values()
+    ).sort((a, b) =>
+        a.department.localeCompare(
+            b.department
+        )
+    );
 }
 
 
 // ============================================================
-// CHART DESTROY
+// DESTROY CHART
 // ============================================================
 
 function destroyChart(chart) {
@@ -1693,8 +1545,11 @@ function destroyChart(chart) {
     if (chart) {
 
         try {
+
             chart.destroy();
+
         } catch (error) {
+
             console.warn(
                 "Chart destroy warning:",
                 error
@@ -1702,11 +1557,68 @@ function destroyChart(chart) {
         }
     }
 
+
     return null;
 }
 
 
-function destroyAllCharts() {
+// ============================================================
+// HIDE ALL GRAPH SECTIONS
+// ============================================================
+
+function hideAllGraphSections() {
+
+    const sections = [
+
+        "stockInSection",
+        "stockOutSection",
+        "stockInDemandSection",
+        "stockInCostSection",
+        "stockOutCostSection",
+        "stockOutVsCostSection",
+        "demandSection",
+
+        "departmentStockInSection",
+        "departmentStockOutSection",
+        "departmentCostSection"
+
+    ];
+
+
+    sections.forEach(id => {
+
+        const section =
+            document.getElementById(id);
+
+        if (section) {
+
+            section.style.display = "none";
+        }
+    });
+}
+
+
+// ============================================================
+// SHOW SECTION
+// ============================================================
+
+function showSection(id) {
+
+    const section =
+        document.getElementById(id);
+
+    if (section) {
+
+        section.style.display = "";
+    }
+}
+
+
+// ============================================================
+// CLEAR CHARTS
+// ============================================================
+
+function clearAllCharts() {
 
     stockInChart =
         destroyChart(stockInChart);
@@ -1723,97 +1635,96 @@ function destroyAllCharts() {
     stockOutCostChart =
         destroyChart(stockOutCostChart);
 
+    stockOutVsCostChart =
+        destroyChart(stockOutVsCostChart);
+
     demandChart =
         destroyChart(demandChart);
 
     departmentStockInChart =
-        destroyChart(
-            departmentStockInChart
-        );
+        destroyChart(departmentStockInChart);
 
     departmentStockOutChart =
-        destroyChart(
-            departmentStockOutChart
-        );
+        destroyChart(departmentStockOutChart);
 
     departmentCostChart =
-        destroyChart(
-            departmentCostChart
-        );
+        destroyChart(departmentCostChart);
 }
 
 
 // ============================================================
-// SECTION VISIBILITY
+// CHART OPTIONS
 // ============================================================
 
-function hideAllGraphSections() {
+function getCommonOptions(
+    title,
+    yTitle
+) {
 
-    const ids = [
+    return {
 
-        "stockInSection",
-        "stockOutSection",
-        "stockInDemandSection",
-        "stockInCostSection",
-        "stockOutCostSection",
-        "demandSection",
+        responsive: true,
 
-        "departmentStockInSection",
-        "departmentStockOutSection",
-        "departmentCostSection"
-    ];
+        maintainAspectRatio: false,
 
-    ids.forEach(id => {
+        plugins: {
 
-        const el =
-            document.getElementById(id);
+            legend: {
 
-        if (el) {
-            el.style.display = "none";
+                display: true,
+
+                position: "top"
+
+            },
+
+            title: {
+
+                display: true,
+
+                text: title
+
+            }
+
+        },
+
+        scales: {
+
+            x: {
+
+                ticks: {
+
+                    autoSkip: false,
+
+                    maxRotation: 60,
+
+                    minRotation: 30
+
+                }
+
+            },
+
+            y: {
+
+                beginAtZero: true,
+
+                title: {
+
+                    display: true,
+
+                    text: yTitle
+
+                }
+
+            }
+
         }
-    });
-}
 
-
-function showSection(id) {
-
-    const el =
-        document.getElementById(id);
-
-    if (el) {
-        el.style.display = "block";
-    }
+    };
 }
 
 
 // ============================================================
-// GRAPH MODE
-// ============================================================
-
-function setGraphMode(mode) {
-
-    currentGraphMode =
-        mode || "all";
-
-    document
-        .querySelectorAll(
-            ".graph-mode-btn"
-        )
-        .forEach(button => {
-
-            button.classList.toggle(
-                "active",
-                button.dataset.mode ===
-                currentGraphMode
-            );
-        });
-
-    updateGraphs();
-}
-
-
-// ============================================================
-// STOCK IN GRAPH
+// STOCK IN QUANTITY GRAPH
 // ============================================================
 
 function drawStockInChart(data) {
@@ -1825,14 +1736,24 @@ function drawStockInChart(data) {
 
     if (!canvas) return;
 
+
     stockInChart =
-        destroyChart(stockInChart);
+        destroyChart(
+            stockInChart
+        );
+
 
     const labels =
-        data.map(
-            row =>
-                `${row.code} - ${row.name}`
+        data.map(row =>
+            row.code
         );
+
+
+    const values =
+        data.map(row =>
+            row.stockIn
+        );
+
 
     stockInChart =
         new Chart(
@@ -1848,30 +1769,33 @@ function drawStockInChart(data) {
                     datasets: [
 
                         {
+
                             label:
                                 "Stock In Quantity",
 
-                            data:
-                                data.map(
-                                    row =>
-                                        row.stockIn
-                                )
+                            data: values,
+
+                            borderWidth: 1
+
                         }
+
                     ]
+
                 },
 
                 options:
-                    horizontalBarOptions(
+                    getCommonOptions(
                         "📥 Stock In Quantity",
                         "Quantity"
                     )
+
             }
         );
 }
 
 
 // ============================================================
-// STOCK OUT GRAPH
+// STOCK OUT QUANTITY GRAPH
 // ============================================================
 
 function drawStockOutChart(data) {
@@ -1883,14 +1807,24 @@ function drawStockOutChart(data) {
 
     if (!canvas) return;
 
+
     stockOutChart =
-        destroyChart(stockOutChart);
+        destroyChart(
+            stockOutChart
+        );
+
 
     const labels =
-        data.map(
-            row =>
-                `${row.code} - ${row.name}`
+        data.map(row =>
+            row.code
         );
+
+
+    const values =
+        data.map(row =>
+            row.stockOut
+        );
+
 
     stockOutChart =
         new Chart(
@@ -1906,23 +1840,26 @@ function drawStockOutChart(data) {
                     datasets: [
 
                         {
+
                             label:
                                 "Stock Out Quantity",
 
-                            data:
-                                data.map(
-                                    row =>
-                                        row.stockOut
-                                )
+                            data: values,
+
+                            borderWidth: 1
+
                         }
+
                     ]
+
                 },
 
                 options:
-                    horizontalBarOptions(
+                    getCommonOptions(
                         "📤 Stock Out Quantity",
                         "Quantity"
                     )
+
             }
         );
 }
@@ -1941,16 +1878,18 @@ function drawStockInDemandChart(data) {
 
     if (!canvas) return;
 
+
     stockInDemandChart =
         destroyChart(
             stockInDemandChart
         );
 
+
     const labels =
-        data.map(
-            row =>
-                `${row.code} - ${row.name}`
+        data.map(row =>
+            row.code
         );
+
 
     stockInDemandChart =
         new Chart(
@@ -1966,6 +1905,7 @@ function drawStockInDemandChart(data) {
                     datasets: [
 
                         {
+
                             label:
                                 "Stock In",
 
@@ -1973,10 +1913,14 @@ function drawStockInDemandChart(data) {
                                 data.map(
                                     row =>
                                         row.stockIn
-                                )
+                                ),
+
+                            borderWidth: 1
+
                         },
 
                         {
+
                             label:
                                 "Demand",
 
@@ -1984,16 +1928,22 @@ function drawStockInDemandChart(data) {
                                 data.map(
                                     row =>
                                         row.demand
-                                )
+                                ),
+
+                            borderWidth: 1
+
                         }
+
                     ]
+
                 },
 
                 options:
-                    horizontalBarOptions(
+                    getCommonOptions(
                         "📊 Stock In vs Demand",
                         "Quantity"
                     )
+
             }
         );
 }
@@ -2012,16 +1962,12 @@ function drawStockInCostChart(data) {
 
     if (!canvas) return;
 
+
     stockInCostChart =
         destroyChart(
             stockInCostChart
         );
 
-    const labels =
-        data.map(
-            row =>
-                `${row.code} - ${row.name}`
-        );
 
     stockInCostChart =
         new Chart(
@@ -2032,11 +1978,16 @@ function drawStockInCostChart(data) {
 
                 data: {
 
-                    labels,
+                    labels:
+                        data.map(
+                            row =>
+                                row.code
+                        ),
 
                     datasets: [
 
                         {
+
                             label:
                                 "Stock In Cost",
 
@@ -2044,16 +1995,22 @@ function drawStockInCostChart(data) {
                                 data.map(
                                     row =>
                                         row.stockInCost
-                                )
+                                ),
+
+                            borderWidth: 1
+
                         }
+
                     ]
+
                 },
 
                 options:
-                    horizontalBarOptions(
+                    getCommonOptions(
                         "💰 Stock In Cost",
                         "Cost"
                     )
+
             }
         );
 }
@@ -2072,16 +2029,12 @@ function drawStockOutCostChart(data) {
 
     if (!canvas) return;
 
+
     stockOutCostChart =
         destroyChart(
             stockOutCostChart
         );
 
-    const labels =
-        data.map(
-            row =>
-                `${row.code} - ${row.name}`
-        );
 
     stockOutCostChart =
         new Chart(
@@ -2092,11 +2045,16 @@ function drawStockOutCostChart(data) {
 
                 data: {
 
-                    labels,
+                    labels:
+                        data.map(
+                            row =>
+                                row.code
+                        ),
 
                     datasets: [
 
                         {
+
                             label:
                                 "Stock Out Cost",
 
@@ -2104,16 +2062,191 @@ function drawStockOutCostChart(data) {
                                 data.map(
                                     row =>
                                         row.stockOutCost
-                                )
+                                ),
+
+                            borderWidth: 1
+
                         }
+
                     ]
+
                 },
 
                 options:
-                    horizontalBarOptions(
+                    getCommonOptions(
                         "💰 Stock Out Cost",
                         "Cost"
                     )
+
+            }
+        );
+}
+
+
+// ============================================================
+// STOCK OUT VS COST ANALYSIS
+// ============================================================
+
+function drawStockOutVsCostChart(data) {
+
+    const canvas =
+        document.getElementById(
+            "stockOutVsCostChart"
+        );
+
+    if (!canvas) return;
+
+
+    stockOutVsCostChart =
+        destroyChart(
+            stockOutVsCostChart
+        );
+
+
+    stockOutVsCostChart =
+        new Chart(
+            canvas.getContext("2d"),
+            {
+
+                type: "bar",
+
+                data: {
+
+                    labels:
+                        data.map(
+                            row =>
+                                row.code
+                        ),
+
+                    datasets: [
+
+                        {
+
+                            label:
+                                "Stock Out Quantity",
+
+                            data:
+                                data.map(
+                                    row =>
+                                        row.stockOut
+                                ),
+
+                            yAxisID:
+                                "yQuantity",
+
+                            borderWidth: 1
+
+                        },
+
+                        {
+
+                            label:
+                                "Stock Out Cost",
+
+                            data:
+                                data.map(
+                                    row =>
+                                        row.stockOutCost
+                                ),
+
+                            yAxisID:
+                                "yCost",
+
+                            borderWidth: 1
+
+                        }
+
+                    ]
+
+                },
+
+                options: {
+
+                    responsive: true,
+
+                    maintainAspectRatio: false,
+
+                    plugins: {
+
+                        legend: {
+
+                            display: true,
+
+                            position: "top"
+
+                        },
+
+                        title: {
+
+                            display: true,
+
+                            text:
+                                "📊 Stock Out vs Cost Analysis"
+
+                        }
+
+                    },
+
+                    scales: {
+
+                        x: {
+
+                            ticks: {
+
+                                autoSkip: false,
+
+                                maxRotation: 60,
+
+                                minRotation: 30
+
+                            }
+
+                        },
+
+                        yQuantity: {
+
+                            beginAtZero: true,
+
+                            position: "left",
+
+                            title: {
+
+                                display: true,
+
+                                text:
+                                    "Stock Out Quantity"
+
+                            }
+
+                        },
+
+                        yCost: {
+
+                            beginAtZero: true,
+
+                            position: "right",
+
+                            grid: {
+
+                                drawOnChartArea: false
+
+                            },
+
+                            title: {
+
+                                display: true,
+
+                                text:
+                                    "Stock Out Cost"
+
+                            }
+
+                        }
+
+                    }
+
+                }
+
             }
         );
 }
@@ -2132,16 +2265,12 @@ function drawDemandChart(data) {
 
     if (!canvas) return;
 
+
     demandChart =
         destroyChart(
             demandChart
         );
 
-    const labels =
-        data.map(
-            row =>
-                `${row.code} - ${row.name}`
-        );
 
     demandChart =
         new Chart(
@@ -2152,11 +2281,16 @@ function drawDemandChart(data) {
 
                 data: {
 
-                    labels,
+                    labels:
+                        data.map(
+                            row =>
+                                row.code
+                        ),
 
                     datasets: [
 
                         {
+
                             label:
                                 "Demand Quantity",
 
@@ -2164,149 +2298,22 @@ function drawDemandChart(data) {
                                 data.map(
                                     row =>
                                         row.demand
-                                )
+                                ),
+
+                            borderWidth: 1
+
                         }
+
                     ]
+
                 },
 
                 options:
-                    horizontalBarOptions(
-                        "📊 Demand Quantity",
-                        "Quantity"
+                    getCommonOptions(
+                        "📈 Demand Quantity",
+                        "Demand"
                     )
-            }
-        );
-}
 
-
-// ============================================================
-// STOCK OUT VS COST
-// ============================================================
-
-function drawStockOutVsCostChart(
-    data
-) {
-
-    const canvas =
-        document.getElementById(
-            "stockOutCostChart"
-        );
-
-    if (!canvas) return;
-
-    stockOutCostChart =
-        destroyChart(
-            stockOutCostChart
-        );
-
-
-    const labels =
-        data.map(
-            row =>
-                `${row.code} - ${row.name}`
-        );
-
-
-    const options =
-        commonChartOptions();
-
-    options.plugins.title = {
-
-        display: true,
-
-        text:
-            "💰 Stock Out vs Cost Analysis",
-
-        font: {
-            size: 17,
-            weight: "bold"
-        }
-    };
-
-
-    options.scales = {
-
-        y: {
-
-            beginAtZero: true,
-
-            position: "left",
-
-            title: {
-                display: true,
-                text: "Stock Out Quantity"
-            }
-        },
-
-        costAxis: {
-
-            beginAtZero: true,
-
-            position: "right",
-
-            grid: {
-                drawOnChartArea: false
-            },
-
-            title: {
-                display: true,
-                text: "Stock Out Cost"
-            }
-        }
-    };
-
-
-    stockOutCostChart =
-        new Chart(
-            canvas.getContext("2d"),
-            {
-
-                type: "bar",
-
-                data: {
-
-                    labels,
-
-                    datasets: [
-
-                        {
-
-                            type: "bar",
-
-                            label:
-                                "Stock Out Quantity",
-
-                            data:
-                                data.map(
-                                    row =>
-                                        row.stockOut
-                                ),
-
-                            yAxisID: "y"
-                        },
-
-                        {
-
-                            type: "line",
-
-                            label:
-                                "Stock Out Cost",
-
-                            data:
-                                data.map(
-                                    row =>
-                                        row.stockOutCost
-                                ),
-
-                            yAxisID:
-                                "costAxis",
-
-                            tension: 0.25
-                        }
-                    ]
-                },
-
-                options
             }
         );
 }
@@ -2327,16 +2334,12 @@ function drawDepartmentStockInChart(
 
     if (!canvas) return;
 
+
     departmentStockInChart =
         destroyChart(
             departmentStockInChart
         );
 
-    const labels =
-        data.map(
-            row =>
-                row.department
-        );
 
     departmentStockInChart =
         new Chart(
@@ -2347,28 +2350,39 @@ function drawDepartmentStockInChart(
 
                 data: {
 
-                    labels,
+                    labels:
+                        data.map(
+                            row =>
+                                row.department
+                        ),
 
                     datasets: [
 
                         {
+
                             label:
-                                "Stock In",
+                                "Department Stock In",
 
                             data:
                                 data.map(
                                     row =>
                                         row.stockIn
-                                )
+                                ),
+
+                            borderWidth: 1
+
                         }
+
                     ]
+
                 },
 
                 options:
-                    verticalBarOptions(
-                        "📥 Department Wise Stock In",
+                    getCommonOptions(
+                        "🏢 Department Wise Stock In",
                         "Quantity"
                     )
+
             }
         );
 }
@@ -2389,16 +2403,12 @@ function drawDepartmentStockOutChart(
 
     if (!canvas) return;
 
+
     departmentStockOutChart =
         destroyChart(
             departmentStockOutChart
         );
 
-    const labels =
-        data.map(
-            row =>
-                row.department
-        );
 
     departmentStockOutChart =
         new Chart(
@@ -2409,28 +2419,39 @@ function drawDepartmentStockOutChart(
 
                 data: {
 
-                    labels,
+                    labels:
+                        data.map(
+                            row =>
+                                row.department
+                        ),
 
                     datasets: [
 
                         {
+
                             label:
-                                "Stock Out",
+                                "Department Stock Out",
 
                             data:
                                 data.map(
                                     row =>
                                         row.stockOut
-                                )
+                                ),
+
+                            borderWidth: 1
+
                         }
+
                     ]
+
                 },
 
                 options:
-                    verticalBarOptions(
-                        "📤 Department Wise Stock Out",
+                    getCommonOptions(
+                        "🏢 Department Wise Stock Out",
                         "Quantity"
                     )
+
             }
         );
 }
@@ -2451,16 +2472,12 @@ function drawDepartmentCostChart(
 
     if (!canvas) return;
 
+
     departmentCostChart =
         destroyChart(
             departmentCostChart
         );
 
-    const labels =
-        data.map(
-            row =>
-                row.department
-        );
 
     departmentCostChart =
         new Chart(
@@ -2471,11 +2488,16 @@ function drawDepartmentCostChart(
 
                 data: {
 
-                    labels,
+                    labels:
+                        data.map(
+                            row =>
+                                row.department
+                        ),
 
                     datasets: [
 
                         {
+
                             label:
                                 "Stock In Cost",
 
@@ -2483,10 +2505,14 @@ function drawDepartmentCostChart(
                                 data.map(
                                     row =>
                                         row.stockInCost
-                                )
+                                ),
+
+                            borderWidth: 1
+
                         },
 
                         {
+
                             label:
                                 "Stock Out Cost",
 
@@ -2494,105 +2520,330 @@ function drawDepartmentCostChart(
                                 data.map(
                                     row =>
                                         row.stockOutCost
-                                )
+                                ),
+
+                            borderWidth: 1
+
                         }
+
                     ]
+
                 },
 
                 options:
-                    verticalBarOptions(
-                        "💰 Department Wise Cost",
+                    getCommonOptions(
+                        "🏢 Department Wise Cost",
                         "Cost"
                     )
+
             }
         );
 }
 
 
 // ============================================================
-// GRAPH MODE UPDATE
+// UPDATE SUMMARY
+// ============================================================
+
+function updateSummary(data) {
+
+    const totalStockIn =
+        data.reduce(
+            (sum, row) =>
+                sum + safeNumber(row.stockIn),
+            0
+        );
+
+
+    const totalStockOut =
+        data.reduce(
+            (sum, row) =>
+                sum + safeNumber(row.stockOut),
+            0
+        );
+
+
+    const totalDemand =
+        data.reduce(
+            (sum, row) =>
+                sum + safeNumber(row.demand),
+            0
+        );
+
+
+    const totalCost =
+        data.reduce(
+            (sum, row) =>
+                sum +
+                safeNumber(
+                    row.stockInCost
+                ),
+            0
+        );
+
+
+    const stockInElement =
+        document.getElementById(
+            "summaryStockIn"
+        );
+
+
+    const stockOutElement =
+        document.getElementById(
+            "summaryStockOut"
+        );
+
+
+    const demandElement =
+        document.getElementById(
+            "summaryDemand"
+        );
+
+
+    const costElement =
+        document.getElementById(
+            "summaryCost"
+        );
+
+
+    if (stockInElement) {
+
+        stockInElement.textContent =
+            totalStockIn.toLocaleString();
+    }
+
+
+    if (stockOutElement) {
+
+        stockOutElement.textContent =
+            totalStockOut.toLocaleString();
+    }
+
+
+    if (demandElement) {
+
+        demandElement.textContent =
+            totalDemand.toLocaleString();
+    }
+
+
+    if (costElement) {
+
+        costElement.textContent =
+            totalCost.toLocaleString();
+    }
+}
+
+
+// ============================================================
+// UPDATE DATA TABLE
+// ============================================================
+
+function updateDataTable(data) {
+
+    const tbody =
+        document.getElementById(
+            "graphDataBody"
+        );
+
+
+    if (!tbody) return;
+
+
+    tbody.innerHTML = "";
+
+
+    if (!data.length) {
+
+        const tr =
+            document.createElement("tr");
+
+
+        tr.innerHTML = `
+            <td colspan="8" style="text-align:center;">
+                No graph data found for selected period.
+            </td>
+        `;
+
+
+        tbody.appendChild(tr);
+
+        return;
+    }
+
+
+    data.forEach(row => {
+
+        const tr =
+            document.createElement("tr");
+
+
+        tr.innerHTML = `
+
+            <td>${escapeHtml(row.code)}</td>
+
+            <td>${escapeHtml(row.name)}</td>
+
+            <td>${escapeHtml(row.unit)}</td>
+
+            <td>${safeNumber(row.stockIn).toLocaleString()}</td>
+
+            <td>${safeNumber(row.stockOut).toLocaleString()}</td>
+
+            <td>${safeNumber(row.demand).toLocaleString()}</td>
+
+            <td>${safeNumber(row.stockInCost).toLocaleString()}</td>
+
+            <td>${safeNumber(row.stockOutCost).toLocaleString()}</td>
+
+        `;
+
+
+        tbody.appendChild(tr);
+    });
+}
+
+
+// ============================================================
+// HTML ESCAPE
+// ============================================================
+
+function escapeHtml(value) {
+
+    return String(value ?? "")
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#039;");
+}
+
+
+// ============================================================
+// SET GRAPH MODE
+// ============================================================
+
+function setGraphMode(mode) {
+
+    currentGraphMode =
+        mode || "all";
+
+
+    document
+        .querySelectorAll(
+            ".graph-mode-btn"
+        )
+        .forEach(button => {
+
+            const buttonMode =
+                button.dataset.mode;
+
+
+            button.classList.toggle(
+                "active",
+                buttonMode ===
+                currentGraphMode
+            );
+        });
+
+
+    updateGraphs();
+}
+
+
+// ============================================================
+// UPDATE ALL GRAPHS
 // ============================================================
 
 function updateGraphs() {
 
-    updateItemInfo();
+    hideAllGraphSections();
+
+    clearAllCharts();
+
 
     const data =
         createGraphData();
 
+
+    const departmentData =
+        createDepartmentData();
+
+
     updateSummary(data);
 
-    buildDataTable(data);
-
-    hideAllGraphSections();
-
-    destroyAllCharts();
+    updateDataTable(data);
 
 
     // ========================================================
     // ALL
     // ========================================================
 
-    if (currentGraphMode === "all") {
+    if (
+        currentGraphMode === "all"
+    ) {
 
         showSection(
             "stockInSection"
         );
 
+        drawStockInChart(data);
+
+
         showSection(
             "stockOutSection"
         );
+
+        drawStockOutChart(data);
+
 
         showSection(
             "stockInDemandSection"
         );
 
+        drawStockInDemandChart(data);
+
+
         showSection(
             "stockInCostSection"
         );
+
+        drawStockInCostChart(data);
+
 
         showSection(
             "stockOutCostSection"
         );
 
+        drawStockOutCostChart(data);
+
+
         showSection(
             "departmentStockInSection"
         );
+
+        drawDepartmentStockInChart(
+            departmentData
+        );
+
 
         showSection(
             "departmentStockOutSection"
         );
 
+        drawDepartmentStockOutChart(
+            departmentData
+        );
+
+
         showSection(
             "departmentCostSection"
         );
 
-
-        drawStockInChart(data);
-
-        drawStockOutChart(data);
-
-        drawStockInDemandChart(data);
-
-        drawStockInCostChart(data);
-
-        drawStockOutCostChart(data);
-
-
-        const departments =
-            createDepartmentGraphData();
-
-        drawDepartmentStockInChart(
-            departments
-        );
-
-        drawDepartmentStockOutChart(
-            departments
-        );
-
         drawDepartmentCostChart(
-            departments
+            departmentData
         );
+
 
         return;
     }
@@ -2603,28 +2854,29 @@ function updateGraphs() {
     // ========================================================
 
     if (
-        currentGraphMode ===
-        "stockIn"
+        currentGraphMode === "stockIn"
     ) {
 
         showSection(
             "stockInSection"
         );
 
+        drawStockInChart(data);
+
+
         showSection(
             "stockInDemandSection"
         );
+
+        drawStockInDemandChart(data);
+
 
         showSection(
             "stockInCostSection"
         );
 
-
-        drawStockInChart(data);
-
-        drawStockInDemandChart(data);
-
         drawStockInCostChart(data);
+
 
         return;
     }
@@ -2635,24 +2887,22 @@ function updateGraphs() {
     // ========================================================
 
     if (
-        currentGraphMode ===
-        "stockOut"
+        currentGraphMode === "stockOut"
     ) {
 
         showSection(
             "stockOutSection"
         );
 
-        showSection(
-            "stockOutCostSection"
-        );
-
-
         drawStockOutChart(data);
 
-        drawStockOutVsCostChart(
-            data
+
+        showSection(
+            "stockOutVsCostSection"
         );
+
+        drawStockOutVsCostChart(data);
+
 
         return;
     }
@@ -2663,8 +2913,7 @@ function updateGraphs() {
     // ========================================================
 
     if (
-        currentGraphMode ===
-        "demand"
+        currentGraphMode === "demand"
     ) {
 
         showSection(
@@ -2672,6 +2921,7 @@ function updateGraphs() {
         );
 
         drawDemandChart(data);
+
 
         return;
     }
@@ -2682,37 +2932,35 @@ function updateGraphs() {
     // ========================================================
 
     if (
-        currentGraphMode ===
-        "department"
+        currentGraphMode === "department"
     ) {
 
         showSection(
             "departmentStockInSection"
         );
 
+        drawDepartmentStockInChart(
+            departmentData
+        );
+
+
         showSection(
             "departmentStockOutSection"
         );
+
+        drawDepartmentStockOutChart(
+            departmentData
+        );
+
 
         showSection(
             "departmentCostSection"
         );
 
-
-        const departments =
-            createDepartmentGraphData();
-
-        drawDepartmentStockInChart(
-            departments
-        );
-
-        drawDepartmentStockOutChart(
-            departments
-        );
-
         drawDepartmentCostChart(
-            departments
+            departmentData
         );
+
 
         return;
     }
@@ -2720,30 +2968,434 @@ function updateGraphs() {
 
 
 // ============================================================
-// START
+// LOAD YEAR OPTIONS
+// ============================================================
+
+function populateYearSelect() {
+
+    const select =
+        document.getElementById(
+            "yearSelect"
+        );
+
+
+    if (!select) return;
+
+
+    const years = new Set();
+
+
+    stockInData.forEach(record => {
+
+        const date =
+            getRecordDate(record);
+
+        if (date) {
+
+            years.add(
+                Number(
+                    date.substring(0, 4)
+                )
+            );
+        }
+    });
+
+
+    stockOutData.forEach(record => {
+
+        const date =
+            getRecordDate(record);
+
+        if (date) {
+
+            years.add(
+                Number(
+                    date.substring(0, 4)
+                )
+            );
+        }
+    });
+
+
+    demandHistory.forEach(record => {
+
+        const date =
+            getDemandRecordDate(record);
+
+        if (date) {
+
+            years.add(
+                Number(
+                    date.substring(0, 4)
+                )
+            );
+        }
+    });
+
+
+    const currentYear =
+        new Date().getFullYear();
+
+
+    years.add(currentYear);
+
+
+    const selectedYear =
+        getSelectedYear();
+
+
+    select.innerHTML = "";
+
+
+    Array.from(years)
+        .sort((a, b) => a - b)
+        .forEach(year => {
+
+            const option =
+                document.createElement(
+                    "option"
+                );
+
+
+            option.value =
+                year;
+
+
+            option.textContent =
+                year;
+
+
+            if (
+                year === selectedYear
+            ) {
+
+                option.selected = true;
+            }
+
+
+            select.appendChild(option);
+        });
+}
+
+
+// ============================================================
+// MONTH SELECT CHANGE
+// ============================================================
+
+function handleMonthChange() {
+
+    const monthSelect =
+        document.getElementById(
+            "monthSelect"
+        );
+
+
+    if (
+        monthSelect &&
+        monthSelect.value
+    ) {
+
+        localStorage.setItem(
+            "dashboardSelectedMonth",
+            monthSelect.value
+        );
+    }
+
+
+    updateMonthLabel();
+
+    updateGraphs();
+}
+
+
+// ============================================================
+// YEAR CHANGE
+// ============================================================
+
+function handleYearChange() {
+
+    const yearSelect =
+        document.getElementById(
+            "yearSelect"
+        );
+
+
+    if (!yearSelect) return;
+
+
+    const year =
+        Number(
+            yearSelect.value
+        );
+
+
+    const currentMonth =
+        getSelectedMonthNumber();
+
+
+    const month =
+        String(
+            currentMonth || 1
+        ).padStart(2, "0");
+
+
+    const monthKey =
+        `${year}-${month}`;
+
+
+    localStorage.setItem(
+        "dashboardSelectedMonth",
+        monthKey
+    );
+
+
+    const monthSelect =
+        document.getElementById(
+            "monthSelect"
+        );
+
+
+    if (monthSelect) {
+
+        monthSelect.value =
+            monthKey;
+    }
+
+
+    updateMonthLabel();
+
+    updateGraphs();
+}
+
+
+// ============================================================
+// ITEM SELECT
+// ============================================================
+
+function populateItemSelect() {
+
+    const select =
+        document.getElementById(
+            "itemSelect"
+        );
+
+
+    if (!select) return;
+
+
+    const previousValue =
+        localStorage.getItem(
+            "dashboardSelectedItem"
+        ) || "";
+
+
+    select.innerHTML = `
+        <option value="">All Items</option>
+    `;
+
+
+    items
+        .slice()
+        .sort((a, b) => {
+
+            return String(
+                getItemCode(a)
+            ).localeCompare(
+                String(
+                    getItemCode(b)
+                ),
+                undefined,
+                {
+                    numeric: true
+                }
+            );
+        })
+        .forEach(item => {
+
+            const code =
+                getItemCode(item);
+
+
+            if (!code) return;
+
+
+            const option =
+                document.createElement(
+                    "option"
+                );
+
+
+            option.value =
+                code;
+
+
+            option.textContent =
+                `${code} - ${getItemName(item)}`;
+
+
+            if (
+                code === previousValue
+            ) {
+
+                option.selected = true;
+            }
+
+
+            select.appendChild(option);
+        });
+
+
+    updateItemInfo();
+}
+
+
+function updateItemInfo() {
+
+    const select =
+        document.getElementById(
+            "itemSelect"
+        );
+
+
+    const info =
+        document.getElementById(
+            "itemInfo"
+        );
+
+
+    if (!select || !info) return;
+
+
+    const code =
+        cleanCode(
+            select.value
+        );
+
+
+    if (!code) {
+
+        info.textContent =
+            "All Items";
+
+        return;
+    }
+
+
+    const item =
+        items.find(
+            x =>
+                getItemCode(x) ===
+                code
+        );
+
+
+    if (!item) {
+
+        info.textContent =
+            code;
+
+        return;
+    }
+
+
+    info.textContent =
+        `${getItemName(item)} (${getItemUnit(item)})`;
+}
+
+
+// ============================================================
+// ITEM FILTER
+// ============================================================
+
+function applyItemFilter(data) {
+
+    const select =
+        document.getElementById(
+            "itemSelect"
+        );
+
+
+    if (!select || !select.value) {
+
+        return data;
+    }
+
+
+    const code =
+        cleanCode(
+            select.value
+        );
+
+
+    return data.filter(row =>
+        cleanCode(row.code) === code
+    );
+}
+
+
+// ============================================================
+// START GRAPHS
 // ============================================================
 
 async function startGraphs() {
 
-    try {
+    console.log(
+        "Graphs: Loading data from Supabase..."
+    );
 
-        await loadAllGraphData();
 
-    } catch (error) {
+    await Promise.all([
 
-        console.error(
-            "Graphs start error:",
-            error
-        );
-    }
+        loadItems(),
+
+        loadStockIn(),
+
+        loadStockOut(),
+
+        loadDemandHistory()
+
+    ]);
+
+
+    // Debug
+    logGraphData();
+
+
+    populateYearSelect();
+
+    populateItemSelect();
+
+    updateMonthLabel();
+
+
+    // --------------------------------------------------------
+    // IMPORTANT:
+    // If item filtering is required, updateGraphs() can be
+    // extended later without changing the Supabase loading.
+    // --------------------------------------------------------
+
+    updateGraphs();
+
+
+    console.log(
+        "Graphs: Ready."
+    );
 }
 
+
+// ============================================================
+// DOM CONTENT LOADED
+// ============================================================
 
 document.addEventListener(
     "DOMContentLoaded",
     () => {
 
-        // Mode buttons
+
+        // ----------------------------------------------------
+        // Graph Mode Buttons
+        // ----------------------------------------------------
+
         document
             .querySelectorAll(
                 ".graph-mode-btn"
@@ -2762,37 +3414,90 @@ document.addEventListener(
             });
 
 
-        // Period selector
-        const periodType =
-            document.getElementById(
-                "periodType"
-            );
+        // ----------------------------------------------------
+        // Month Select
+        // ----------------------------------------------------
 
-        if (periodType) {
-
-            periodType.addEventListener(
-                "change",
-                changePeriodType
-            );
-        }
-
-
-        // Month selector
         const monthSelect =
             document.getElementById(
                 "monthSelect"
             );
 
+
         if (monthSelect) {
 
             monthSelect.addEventListener(
                 "change",
-                updateGraphs
+                handleMonthChange
             );
         }
 
 
+        // ----------------------------------------------------
+        // Year Select
+        // ----------------------------------------------------
+
+        const yearSelect =
+            document.getElementById(
+                "yearSelect"
+            );
+
+
+        if (yearSelect) {
+
+            yearSelect.addEventListener(
+                "change",
+                handleYearChange
+            );
+        }
+
+
+        // ----------------------------------------------------
+        // Item Select
+        // ----------------------------------------------------
+
+        const itemSelect =
+            document.getElementById(
+                "itemSelect"
+            );
+
+
+        if (itemSelect) {
+
+            itemSelect.addEventListener(
+                "change",
+                () => {
+
+                    if (
+                        itemSelect.value
+                    ) {
+
+                        localStorage.setItem(
+                            "dashboardSelectedItem",
+                            itemSelect.value
+                        );
+
+                    } else {
+
+                        localStorage.removeItem(
+                            "dashboardSelectedItem"
+                        );
+                    }
+
+
+                    updateItemInfo();
+
+                    updateGraphs();
+                }
+            );
+        }
+
+
+        // ----------------------------------------------------
         // Start
+        // ----------------------------------------------------
+
         startGraphs();
+
     }
 );
