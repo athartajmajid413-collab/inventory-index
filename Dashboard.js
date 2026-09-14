@@ -411,15 +411,65 @@ async function loadDashboardFromSupabase() {
             );
 
 
-        // -----------------------------------------
-        // SAVE ITEMS
-        // -----------------------------------------
+    // -----------------------------------------
+// SAVE ITEMS
+// -----------------------------------------
 
-        items =
-            itemsResult?.success
-                ? (itemsResult.data || [])
-                : [];
+items =
+    itemsResult?.success
+        ? (itemsResult.data || [])
+        : [];
 
+
+// -----------------------------------------
+// SORT ITEMS BY ITEM CODE NUMBER
+// SI1, SI2, SI3 ... SI9, SI10, SI11
+// -----------------------------------------
+
+items.sort(function(a, b){
+
+    let codeA =
+        getItemCode(a);
+
+    let codeB =
+        getItemCode(b);
+
+
+    // Item Code se number nikalna
+    let numberA =
+        parseInt(
+            codeA.replace(/\D/g, ""),
+            10
+        );
+
+
+    let numberB =
+        parseInt(
+            codeB.replace(/\D/g, ""),
+            10
+        );
+
+
+    // Agar Item Code mein number na ho
+    if (isNaN(numberA)) {
+        numberA = Infinity;
+    }
+
+
+    if (isNaN(numberB)) {
+        numberB = Infinity;
+    }
+
+
+    return numberA - numberB;
+
+});
+
+
+console.log(
+    "Dashboard Items sorted by Item Code:",
+    items
+);
 
         // -----------------------------------------
         // BUILD HISTORY
