@@ -1297,14 +1297,64 @@ function createGraphData() {
 // ============================================================
 // DEPARTMENT DATA
 // ============================================================
+// IMPORTANT:
+// اگر Item منتخب ہے تو صرف اسی Item کے departments دکھائے جائیں گے.
+// اگر "All Items" ہے تو تمام items کے departments دکھائے جائیں گے.
+// ============================================================
 
 function createDepartmentData() {
 
-    const selectedStockIn =
+    let selectedStockIn =
         getSelectedStockInData();
 
-    const selectedStockOut =
+    let selectedStockOut =
         getSelectedStockOutData();
+
+
+    // --------------------------------------------------------
+    // SELECTED ITEM FILTER
+    // --------------------------------------------------------
+
+    const itemSelect =
+        document.getElementById(
+            "itemSelect"
+        );
+
+    const selectedItemCode =
+        itemSelect && itemSelect.value
+            ? cleanCode(
+                itemSelect.value
+            )
+            : "";
+
+
+    // اگر کوئی item selected ہے
+    // تو Stock In اور Stock Out دونوں کو
+    // صرف اسی item تک محدود کریں۔
+    if (selectedItemCode) {
+
+        selectedStockIn =
+            selectedStockIn.filter(
+                record =>
+                    getRecordItemCode(
+                        record
+                    ) === selectedItemCode
+            );
+
+
+        selectedStockOut =
+            selectedStockOut.filter(
+                record =>
+                    getRecordItemCode(
+                        record
+                    ) === selectedItemCode
+            );
+    }
+
+
+    // --------------------------------------------------------
+    // DEPARTMENT MAP
+    // --------------------------------------------------------
 
     const map =
         new Map();
@@ -1315,8 +1365,12 @@ function createDepartmentData() {
     ) {
 
         const dept =
-            department ||
+            String(
+                department ||
+                "Not Assigned"
+            ).trim() ||
             "Not Assigned";
+
 
         if (!map.has(dept)) {
 
@@ -1326,15 +1380,20 @@ function createDepartmentData() {
                     department: dept,
 
                     stockIn: 0,
+
                     stockOut: 0,
 
                     stockInCost: 0,
+
                     stockOutCost: 0
                 }
             );
         }
 
-        return map.get(dept);
+
+        return map.get(
+            dept
+        );
     }
 
 
@@ -1345,19 +1404,37 @@ function createDepartmentData() {
     selectedStockIn.forEach(
         record => {
 
-            const row =
-                getDepartmentRow(
-                    getRecordDepartment(
-                        record
-                    )
-                );
-
-            row.stockIn +=
+            const quantity =
                 safeNumber(
                     record.quantity ??
                     record.qty ??
                     0
                 );
+
+
+            // اگر quantity zero ہے
+            // تو department graph میں
+            // unnecessary department نہ آئے۔
+            if (quantity === 0) {
+                return;
+            }
+
+
+            const department =
+                getRecordDepartment(
+                    record
+                );
+
+
+            const row =
+                getDepartmentRow(
+                    department
+                );
+
+
+            row.stockIn +=
+                quantity;
+
 
             row.stockInCost +=
                 getStockInRecordCost(
@@ -1374,19 +1451,36 @@ function createDepartmentData() {
     selectedStockOut.forEach(
         record => {
 
-            const row =
-                getDepartmentRow(
-                    getRecordDepartment(
-                        record
-                    )
-                );
-
-            row.stockOut +=
+            const quantity =
                 safeNumber(
                     record.quantity ??
                     record.qty ??
                     0
                 );
+
+
+            // Zero quantity والا record
+            // department graph میں نہیں آئے گا۔
+            if (quantity === 0) {
+                return;
+            }
+
+
+            const department =
+                getRecordDepartment(
+                    record
+                );
+
+
+            const row =
+                getDepartmentRow(
+                    department
+                );
+
+
+            row.stockOut +=
+                quantity;
+
 
             row.stockOutCost +=
                 getStockOutRecordCost(
@@ -1396,16 +1490,47 @@ function createDepartmentData() {
     );
 
 
-    return Array.from(
-        map.values()
-    ).sort(
+    // --------------------------------------------------------
+    // صرف وہ departments رکھیں
+    // جن میں actual transaction ہوا ہے۔
+    // --------------------------------------------------------
+
+    const result =
+        Array.from(
+            map.values()
+        ).filter(row => {
+
+            return (
+                safeNumber(
+                    row.stockIn
+                ) > 0 ||
+
+                safeNumber(
+                    row.stockOut
+                ) > 0 ||
+
+                safeNumber(
+                    row.stockInCost
+                ) > 0 ||
+
+                safeNumber(
+                    row.stockOutCost
+                ) > 0
+            );
+        });
+
+
+    // --------------------------------------------------------
+    // DEPARTMENT NAME SORT
+    // --------------------------------------------------------
+
+    return result.sort(
         (a, b) =>
             a.department.localeCompare(
                 b.department
             )
     );
 }
-
 
 // ============================================================
 // CHART DESTROY
