@@ -381,35 +381,39 @@ function renderItems(){
         i++
     ){
 
+        // Sequential Item Code
+        // SI1, SI2, SI3, SI4...
+        let displayCode =
+            "SI" + (i + 1);
+
+
         addRow(
-            items[i]
+            items[i],
+            displayCode
         );
 
     }
 
 }
-
-
 // =====================================
 // ADD ROW
 // =====================================
 
-function addRow(item){
+function addRow(item, displayCode){
 
     let row =
         document.createElement("tr");
 
 
-    // ID / CODE
+  // ID / CODE
 
-    let cell1 =
-        document.createElement("td");
+let cell1 =
+    document.createElement("td");
 
-    cell1.textContent =
-        item.code || "-";
+cell1.textContent =
+    displayCode || item.code || "-";
 
-    row.appendChild(cell1);
-
+row.appendChild(cell1);
 
     // ITEM NAME
 
@@ -831,9 +835,10 @@ function searchItem(){
             name.includes(searchValue)
         ){
 
-            addRow(
-                items[i]
-            );
+          addRow(
+    items[i],
+    "SI" + (i + 1)
+);
 
         }
 
