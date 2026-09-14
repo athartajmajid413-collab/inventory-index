@@ -40,12 +40,19 @@
             margin-bottom: 20px;
         }
 
+
+        /* ====================================================
+           FILTERS
+           ==================================================== */
+
         .filters {
             background: white;
             padding: 18px;
             border-radius: 10px;
             margin-bottom: 20px;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+
+            box-shadow:
+                0 2px 8px rgba(0,0,0,0.08);
 
             display: flex;
             flex-wrap: wrap;
@@ -69,6 +76,7 @@
             border: 1px solid #ccc;
             border-radius: 6px;
             background: white;
+            min-height: 38px;
         }
 
 
@@ -296,6 +304,9 @@
 
     <div class="filters">
 
+
+        <!-- ITEM -->
+
         <div class="filter-group">
 
             <label for="itemSelect">
@@ -303,13 +314,17 @@
             </label>
 
             <select id="itemSelect">
+
                 <option value="all">
                     All Items
                 </option>
+
             </select>
 
         </div>
 
+
+        <!-- PERIOD -->
 
         <div class="filter-group">
 
@@ -321,22 +336,21 @@
                 id="periodType"
                 onchange="changePeriodType()"
             >
-</select>
-               <select
-    id="monthSelect"
-    onchange="handleMonthChange()"
->
-         </select>       
-             
-<select
-    id="yearSelect"
-    onchange="handleYearChange()"
-></select>
 
-            
+                <option value="month">
+                    Month
+                </option>
+
+                <option value="year">
+                    Year
+                </option>
+
+            </select>
 
         </div>
 
+
+        <!-- YEAR -->
 
         <div class="filter-group">
 
@@ -344,10 +358,15 @@
                 Year
             </label>
 
-            <select id="yearSelect"></select>
+            <select
+                id="yearSelect"
+                onchange="handleYearChange()"
+            ></select>
 
         </div>
 
+
+        <!-- MONTH -->
 
         <div
             class="filter-group"
@@ -358,7 +377,10 @@
                 Month
             </label>
 
-            <select id="monthSelect">
+            <select
+                id="monthSelect"
+                onchange="handleMonthChange()"
+            >
 
                 <option value="1">
                     January
@@ -429,6 +451,7 @@
             📊 All
         </button>
 
+
         <button
             type="button"
             class="graph-mode-btn"
@@ -436,6 +459,7 @@
         >
             📥 Stock In
         </button>
+
 
         <button
             type="button"
@@ -445,6 +469,7 @@
             📤 Stock Out
         </button>
 
+
         <button
             type="button"
             class="graph-mode-btn"
@@ -452,6 +477,7 @@
         >
             📊 Demand
         </button>
+
 
         <button
             type="button"
@@ -479,6 +505,9 @@
 
     <div class="summary-grid">
 
+
+        <!-- STOCK IN -->
+
         <div class="summary-card">
 
             <div class="summary-title">
@@ -494,6 +523,8 @@
 
         </div>
 
+
+        <!-- STOCK OUT -->
 
         <div class="summary-card">
 
@@ -511,6 +542,8 @@
         </div>
 
 
+        <!-- DEMAND -->
+
         <div class="summary-card">
 
             <div class="summary-title">
@@ -526,6 +559,8 @@
 
         </div>
 
+
+        <!-- COST -->
 
         <div class="summary-card">
 
@@ -809,6 +844,7 @@
 
             </thead>
 
+
             <tbody id="graphDataBody">
 
             </tbody>
@@ -819,6 +855,10 @@
 
 </div>
 
+
+<!-- ====================================================
+     GRAPH JAVASCRIPT
+     ==================================================== -->
 
 <script src="Graphs.js"></script>
 
