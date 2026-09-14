@@ -1,1777 +1,1173 @@
-// =====================================
-// GRAPHS - SUPABASE VERSION
-// MECAS ENGINEERING PVT LIMITED SUNDAR
-// =====================================
-
-
-// =====================================
-// GLOBAL DATA
-// =====================================
+// ============================================================
+// GRAPHS.JS - SUPABASE VERSION
+// Separate Graphs:
+// All
+// Stock In
+// Stock Out
+// Demand
+// Department
+// ============================================================
 
 let items = [];
 let stockInData = [];
 let stockOutData = [];
 let demandHistory = [];
 
+let currentGraphMode = "all";
 
-// =====================================
-// CHART VARIABLES
-// =====================================
+let stockInChart = null;
+let stockOutChart = null;
+let stockInDemandChart = null;
+let stockInCostChart = null;
+let stockOutCostChart = null;
+let demandChart = null;
 
-let stockDemandChart = null;
-let quantityChart = null;
-let costChart = null;
-let periodChart = null;
+let departmentStockInChart = null;
+let departmentStockOutChart = null;
+let departmentCostChart = null;
 
 
-// =====================================
+// ============================================================
 // BASIC HELPERS
-// =====================================
+// ============================================================
 
-function cleanCode(value){
-
-    return String(
-        value ?? ""
-    ).trim();
-
+function cleanCode(value) {
+    return String(value ?? "").trim();
 }
 
 
-function safeNumber(value){
-
-    let n = Number(value);
-
-    return Number.isFinite(n)
-        ? n
-        : 0;
-
+function safeNumber(value) {
+    const n = Number(value);
+    return Number.isFinite(n) ? n : 0;
 }
 
 
-function getItemCode(item){
-
+function getItemCode(item) {
     return cleanCode(
         item?.code ??
         item?.item_code ??
         item?.itemCode ??
         ""
     );
-
 }
 
 
-function getItemName(item){
-
-    return (
+function getItemName(item) {
+    return String(
         item?.item_name ??
         item?.itemName ??
-        "-"
-    );
-
+        item?.name ??
+        ""
+    ).trim();
 }
 
 
-function getItemUnit(item){
-
-    return (
+function getItemUnit(item) {
+    return String(
         item?.unit ??
-        "-"
-    );
-
+        item?.packed_unit ??
+        ""
+    ).trim();
 }
 
 
-// =====================================
-// LOAD ITEMS FROM SUPABASE
-// =====================================
-
-async function loadItems(){
-
-    let result = await supabaseRequest(
-        "items",
-        "GET",
-        null,
-        "?select=*"
-    );
-
-
-    if(!result.success){
-
-        console.error(
-            "Items Load Error:",
-            result.error
-        );
-
-        return;
-
-    }
-
-
-    items =
-        result.data || [];
-
-
-    // ---------------------------------
-    // SORT BY ITEM CODE NUMBER
-    // SI1, SI2, SI3 ... SI10
-    // ---------------------------------
-
-    items.sort(function(a,b){
-
-        let codeA =
-            getItemCode(a);
-
-        let codeB =
-            getItemCode(b);
-
-
-        let numberA =
-            parseInt(
-                codeA.replace(/\D/g,""),
-                10
-            );
-
-
-        let numberB =
-            parseInt(
-                codeB.replace(/\D/g,""),
-                10
-            );
-
-
-        if(isNaN(numberA)){
-
-            numberA = Infinity;
-
-        }
-
-
-        if(isNaN(numberB)){
-
-            numberB = Infinity;
-
-        }
-
-
-        if(numberA !== numberB){
-
-            return numberA - numberB;
-
-        }
-
-
-        return codeA.localeCompare(
-            codeB
-        );
-
-    });
-
-
-    console.log(
-        "Graph Items:",
-        items
-    );
-
-}
-
-
-// =====================================
-// LOAD STOCK IN
-// =====================================
-
-async function loadStockIn(){
-
-    let result = await supabaseRequest(
-        "stock_in",
-        "GET",
-        null,
-        "?select=*&order=id.asc"
-    );
-
-
-    if(!result.success){
-
-        console.error(
-            "Stock In Load Error:",
-            result.error
-        );
-
-        return;
-
-    }
-
-
-    stockInData =
-        result.data || [];
-
-
-    console.log(
-        "Graph Stock In:",
-        stockInData
-    );
-
-}
-
-
-// =====================================
-// LOAD STOCK OUT
-// =====================================
-
-async function loadStockOut(){
-
-    let result = await supabaseRequest(
-        "stock_issue",
-        "GET",
-        null,
-        "?select=*&order=id.asc"
-    );
-
-
-    if(!result.success){
-
-        console.error(
-            "Stock Out Load Error:",
-            result.error
-        );
-
-        return;
-
-    }
-
-
-    stockOutData =
-        result.data || [];
-
-
-    console.log(
-        "Graph Stock Out:",
-        stockOutData
-    );
-
-}
-
-
-// =====================================
-// LOAD DEMAND HISTORY
-// =====================================
-
-async function loadDemandHistory(){
-
-    let result = await supabaseRequest(
-        "demand_history",
-        "GET",
-        null,
-        "?select=*&order=id.asc"
-    );
-
-
-    if(!result.success){
-
-        console.error(
-            "Demand History Load Error:",
-            result.error
-        );
-
-        return;
-
-    }
-
-
-    demandHistory =
-        result.data || [];
-
-
-    console.log(
-        "Graph Demand History:",
-        demandHistory
-    );
-
-}
-
-
-// =====================================
-// LOAD ALL DATA
-// =====================================
-
-async function loadAllGraphData(){
-
-    console.log(
-        "================================="
-    );
-
-    console.log(
-        "Loading Graph Data from Supabase..."
-    );
-
-    console.log(
-        "================================="
-    );
-
-
-    await loadItems();
-
-    await loadStockIn();
-
-    await loadStockOut();
-
-    await loadDemandHistory();
-
-
-    loadYears();
-
-    changePeriodType();
-
-    updateGraphs();
-
-
-    console.log(
-        "================================="
-    );
-
-    console.log(
-        "Graph Data Loaded Successfully"
-    );
-
-    console.log(
-        "================================="
-    );
-
-}
-
-
-// =====================================
-// LOAD ITEMS INTO SELECT
-// =====================================
-
-function loadItemSelect(){
-
-    let select =
-        document.getElementById(
-            "itemSelect"
-        );
-
-
-    if(!select){
-
-        return;
-
-    }
-
-
-    select.innerHTML = "";
-
-
-    let allOption =
-        document.createElement(
-            "option"
-        );
-
-
-    allOption.value =
-        "all";
-
-
-    allOption.textContent =
-        "📊 All Items";
-
-
-    select.appendChild(
-        allOption
-    );
-
-
-    for(
-        let i = 0;
-        i < items.length;
-        i++
-    ){
-
-        let item =
-            items[i];
-
-
-        let option =
-            document.createElement(
-                "option"
-            );
-
-
-        option.value =
-            getItemCode(item);
-
-
-        option.textContent =
-            getItemCode(item) +
-            " - " +
-            getItemName(item);
-
-
-        select.appendChild(
-            option
-        );
-
-    }
-
-
-    let saved =
-        localStorage.getItem(
-            "dashboardSelectedItem"
-        );
-
-
-    if(saved){
-
-        let savedCode =
-            cleanCode(saved);
-
-
-        for(
-            let i = 0;
-            i < items.length;
-            i++
-        ){
-
-            if(
-                getItemCode(items[i])
-                ===
-                savedCode
-            ){
-
-                select.value =
-                    savedCode;
-
-                break;
-
-            }
-
-        }
-
-    }
-
-}
-
-
-// =====================================
-// LOAD YEARS
-// =====================================
-
-function loadYears(){
-
-    let years =
-        new Set();
-
-
-    // ---------------------------------
-    // STOCK IN YEARS
-    // ---------------------------------
-
-    for(
-        let i = 0;
-        i < stockInData.length;
-        i++
-    ){
-
-        if(!stockInData[i].date){
-
-            continue;
-
-        }
-
-
-        let date =
-            new Date(
-                stockInData[i].date
-            );
-
-
-        if(!isNaN(date)){
-
-            years.add(
-                date.getFullYear()
-            );
-
-        }
-
-    }
-
-
-    // ---------------------------------
-    // STOCK OUT YEARS
-    // ---------------------------------
-
-    for(
-        let i = 0;
-        i < stockOutData.length;
-        i++
-    ){
-
-        if(!stockOutData[i].date){
-
-            continue;
-
-        }
-
-
-        let date =
-            new Date(
-                stockOutData[i].date
-            );
-
-
-        if(!isNaN(date)){
-
-            years.add(
-                date.getFullYear()
-            );
-
-        }
-
-    }
-
-
-    // ---------------------------------
-    // DEMAND YEARS
-    // ---------------------------------
-
-    for(
-        let i = 0;
-        i < demandHistory.length;
-        i++
-    ){
-
-        let record =
-            demandHistory[i];
-
-
-        let dateValue =
-            record.date ||
-            record.generate_date;
-
-
-        if(!dateValue){
-
-            continue;
-
-        }
-
-
-        let date =
-            new Date(
-                dateValue
-            );
-
-
-        if(!isNaN(date)){
-
-            years.add(
-                date.getFullYear()
-            );
-
-        }
-
-    }
-
-
-    let yearSelect =
-        document.getElementById(
-            "yearSelect"
-        );
-
-
-    if(!yearSelect){
-
-        return;
-
-    }
-
-
-    yearSelect.innerHTML =
-        "";
-
-
-    let yearArray =
-        Array.from(
-            years
-        ).sort(
-            function(a,b){
-
-                return a - b;
-
-            }
-        );
-
-
-    if(
-        yearArray.length
-        ===
-        0
-    ){
-
-        yearArray.push(
-            new Date().getFullYear()
-        );
-
-    }
-
-
-    for(
-        let i = 0;
-        i < yearArray.length;
-        i++
-    ){
-
-        let option =
-            document.createElement(
-                "option"
-            );
-
-
-        option.value =
-            yearArray[i];
-
-
-        option.textContent =
-            yearArray[i];
-
-
-        yearSelect.appendChild(
-            option
-        );
-
-    }
-
-
-    let currentYear =
-        new Date().getFullYear();
-
-
-    if(
-        yearArray.includes(
-            currentYear
-        )
-    ){
-
-        yearSelect.value =
-            currentYear;
-
-    }
-
-
-    loadItemSelect();
-
-}
-
-
-// =====================================
-// PERIOD TYPE
-// =====================================
-
-function changePeriodType(){
-
-    let typeElement =
-        document.getElementById(
-            "periodType"
-        );
-
-
-    if(!typeElement){
-
-        return;
-
-    }
-
-
-    let type =
-        typeElement.value;
-
-
-    let month =
-        document.getElementById(
-            "monthSelect"
-        );
-
-
-    let monthLabel =
-        document.getElementById(
-            "monthLabel"
-        );
-
-
-    if(!month){
-
-        return;
-
-    }
-
-
-    if(type == "year"){
-
-        month.style.display =
-            "none";
-
-
-        if(monthLabel){
-
-            monthLabel.style.display =
-                "none";
-
-        }
-
-    }
-    else{
-
-        month.style.display =
-            "inline-block";
-
-
-        if(monthLabel){
-
-            monthLabel.style.display =
-                "inline-block";
-
-        }
-
-    }
-
-}
-
-
-// =====================================
-// GET RECORD DATE
-// =====================================
-
-function getRecordDate(record){
-
-    return (
-        record?.date ||
-        record?.generate_date ||
-        record?.generateDate ||
-        null
-    );
-
-}
-
-
-// =====================================
-// GET DATE ONLY
-// =====================================
-
-function getDateOnly(value){
-
-    if(!value){
-
-        return null;
-
-    }
-
-
-    let date =
-        new Date(value);
-
-
-    if(isNaN(date)){
-
-        return null;
-
-    }
-
-
-    return new Date(
-        date.getFullYear(),
-        date.getMonth(),
-        date.getDate()
-    );
-
-}
-
-
-// =====================================
-// DEMAND RECORD DATE
-// =====================================
-
-function getDemandRecordDate(record){
-
-    return getDateOnly(
-        getRecordDate(record)
-    );
-
-}
-
-
-// =====================================
-// SELECTED YEAR / MONTH
-// =====================================
-
-function getSelectedYear(){
-
-    let element =
-        document.getElementById(
-            "yearSelect"
-        );
-
-
-    return element
-        ? Number(element.value)
-        : new Date().getFullYear();
-
-}
-
-
-function getSelectedMonth(){
-
-    let element =
-        document.getElementById(
-            "monthSelect"
-        );
-
-
-    return element
-        ? Number(element.value)
-        : new Date().getMonth() + 1;
-
-}
-
-
-// =====================================
-// SELECTED DEMAND RECORD
-// =====================================
-//
-// Latest demand record in selected month
-//
-// =====================================
-
-function getSelectedDemandRecord(){
-
-    let selectedYear =
-        getSelectedYear();
-
-
-    let selectedMonth =
-        getSelectedMonth();
-
-
-    let latestRecord =
-        null;
-
-
-    let latestDate =
-        null;
-
-
-    let latestId =
-        -Infinity;
-
-
-    for(
-        let i = 0;
-        i < demandHistory.length;
-        i++
-    ){
-
-        let record =
-            demandHistory[i];
-
-
-        let date =
-            getDemandRecordDate(
-                record
-            );
-
-
-        if(!date){
-
-            continue;
-
-        }
-
-
-        if(
-            date.getFullYear()
-            !==
-            selectedYear
-        ){
-
-            continue;
-
-        }
-
-
-        if(
-            date.getMonth() + 1
-            !==
-            selectedMonth
-        ){
-
-            continue;
-
-        }
-
-
-        let id =
-            Number(
-                record.id || 0
-            );
-
-
-        if(
-            !latestDate ||
-            date > latestDate ||
-            (
-                date.getTime()
-                ===
-                latestDate.getTime()
-                &&
-                id > latestId
-            )
-        ){
-
-            latestRecord =
-                record;
-
-            latestDate =
-                date;
-
-            latestId =
-                id;
-
-        }
-
-    }
-
-
-    return latestRecord;
-
-}
-
-
-// =====================================
-// GET NEXT DEMAND DATE
-// =====================================
-//
-// Current demand date -> next demand date
-//
-// =====================================
-
-function getNextDemandDate(currentDate){
-
-    if(!currentDate){
-
-        return null;
-
-    }
-
-
-    let nextDate =
-        null;
-
-
-    for(
-        let i = 0;
-        i < demandHistory.length;
-        i++
-    ){
-
-        let record =
-            demandHistory[i];
-
-
-        let date =
-            getDemandRecordDate(
-                record
-            );
-
-
-        if(!date){
-
-            continue;
-
-        }
-
-
-        if(
-            date <= currentDate
-        ){
-
-            continue;
-
-        }
-
-
-        if(
-            !nextDate ||
-            date < nextDate
-        ){
-
-            nextDate =
-                date;
-
-        }
-
-    }
-
-
-    return nextDate;
-
-}
-
-
-// =====================================
-// GET ACTIVE DEMAND CYCLE
-// =====================================
-//
-// Example:
-//
-// June Demand     = 10 June
-// Next Demand     = 10 July
-//
-// Cycle:
-// 10 June <= date < 10 July
-//
-// =====================================
-
-function getActiveDemandCycle(){
-
-    let currentDemand =
-        getSelectedDemandRecord();
-
-
-    if(!currentDemand){
-
-        return {
-
-            currentDemand:
-                null,
-
-            startDate:
-                null,
-
-            endDate:
-                null
-
-        };
-
-    }
-
-
-    let startDate =
-        getDemandRecordDate(
-            currentDemand
-        );
-
-
-    let endDate =
-        getNextDemandDate(
-            startDate
-        );
-
-
-    return {
-
-        currentDemand:
-            currentDemand,
-
-        startDate:
-            startDate,
-
-        endDate:
-            endDate
-
-    };
-
-}
-
-
-// =====================================
-// DATE IS INSIDE DEMAND CYCLE
-// =====================================
-
-function dateIsInsideDemandCycle(
-    dateValue,
-    cycle
-){
-
-    let date =
-        getDateOnly(
-            dateValue
-        );
-
-
-    if(!date){
-
-        return false;
-
-    }
-
-
-    if(
-        !cycle.startDate
-    ){
-
-        return false;
-
-    }
-
-
-    let start =
-        getDateOnly(
-            cycle.startDate
-        );
-
-
-    if(
-        date < start
-    ){
-
-        return false;
-
-    }
-
-
-    // ---------------------------------
-    // If next demand exists
-    // ---------------------------------
-
-    if(
-        cycle.endDate
-    ){
-
-        let end =
-            getDateOnly(
-                cycle.endDate
-            );
-
-
-        return date < end;
-
-    }
-
-
-    // ---------------------------------
-    // No next demand yet
-    // Current cycle remains open
-    // ---------------------------------
-
-    return true;
-
-}
-
-
-// =====================================
-// DATE MATCH - OLD COMPATIBILITY
-// =====================================
-
-function dateMatches(dateValue){
-
-    if(!dateValue){
-
-        return false;
-
-    }
-
-
-    let date =
-        new Date(
-            dateValue
-        );
-
-
-    if(isNaN(date)){
-
-        return false;
-
-    }
-
-
-    let year =
-        getSelectedYear();
-
-
-    let month =
-        getSelectedMonth();
-
-
-    let typeElement =
-        document.getElementById(
-            "periodType"
-        );
-
-
-    let type =
-        typeElement
-            ? typeElement.value
-            : "month";
-
-
-    if(
-        date.getFullYear()
-        !==
-        year
-    ){
-
-        return false;
-
-    }
-
-
-    if(
-        type
-        ===
-        "year"
-    ){
-
-        return true;
-
-    }
-
-
-    return (
-        date.getMonth() + 1
-        ===
-        month
-    );
-
-}
-
-
-// =====================================
-// ITEM CODE HELPER
-// =====================================
-
-function getRecordItemCode(record){
-
+function getRecordItemCode(record) {
     return cleanCode(
         record?.item_code ??
         record?.itemCode ??
         record?.code ??
         ""
     );
-
 }
 
 
-// =====================================
-// ITEM NAME HELPER
-// =====================================
-
-function getRecordItemName(record){
-
-    return (
+function getRecordItemName(record) {
+    return String(
         record?.item_name ??
         record?.itemName ??
-        "-"
+        record?.name ??
+        ""
+    ).trim();
+}
+
+
+// ============================================================
+// DATE HELPERS
+// ============================================================
+
+function getRecordDate(record) {
+    return (
+        record?.date ??
+        record?.generate_date ??
+        record?.generateDate ??
+        null
     );
-
 }
 
 
-// =====================================
-// DEMAND VALUE
-// =====================================
+/*
+   Important:
+   YYYY-MM-DD ko directly new Date() karne se timezone ki wajah
+   se kabhi kabhi previous date aa sakti hai.
+*/
+function getDateOnly(value) {
 
-function getDemandValue(record){
+    if (!value) return null;
 
-    if(!record){
+    if (typeof value === "string") {
 
-        return 0;
-
-    }
-
-
-    let values = [
-
-        record.finalDemand,
-
-        record.final_demand,
-
-        record.approvedQty,
-
-        record.approved_qty,
-
-        record.quantity,
-
-        record.demandQuantity,
-
-        record.demand_quantity
-
-    ];
-
-
-    for(
-        let i = 0;
-        i < values.length;
-        i++
-    ){
-
-        if(
-            values[i] !== undefined &&
-            values[i] !== null &&
-            values[i] !== ""
-        ){
-
-            return safeNumber(
-                values[i]
-            );
-
-        }
-
-    }
-
-
-    return 0;
-
-}
-
-
-// =====================================
-// GET DEMAND ITEM LIST
-// =====================================
-
-function getDemandItems(record){
-
-    let list =
-        record?.demand_items ??
-        record?.demandItems ??
-        record?.items ??
-        [];
-
-
-    if(
-        typeof list
-        ===
-        "string"
-    ){
-
-        try{
-
-            list =
-                JSON.parse(
-                    list
-                );
-
-        }
-        catch(error){
-
-            list = [];
-
-        }
-
-    }
-
-
-    return Array.isArray(list)
-        ? list
-        : [];
-
-}
-
-
-// =====================================
-// GET DEMAND FOR ITEM
-// =====================================
-//
-// IMPORTANT:
-// Only selected month's latest demand
-// record is used.
-//
-// =====================================
-
-function getDemandForItem(itemCode){
-
-    let currentDemand =
-        getSelectedDemandRecord();
-
-
-    if(!currentDemand){
-
-        return 0;
-
-    }
-
-
-    let wantedCode =
-        cleanCode(
-            itemCode
+        const match = value.match(
+            /^(\d{4})-(\d{2})-(\d{2})/
         );
 
+        if (match) {
 
-    let list =
-        getDemandItems(
+            return new Date(
+                Number(match[1]),
+                Number(match[2]) - 1,
+                Number(match[3])
+            );
+        }
+    }
+
+    const date = new Date(value);
+
+    if (Number.isNaN(date.getTime())) {
+        return null;
+    }
+
+    return new Date(
+        date.getFullYear(),
+        date.getMonth(),
+        date.getDate()
+    );
+}
+
+
+function dateToKey(date) {
+
+    if (!date) return "";
+
+    const y = date.getFullYear();
+    const m = String(date.getMonth() + 1).padStart(2, "0");
+    const d = String(date.getDate()).padStart(2, "0");
+
+    return `${y}-${m}-${d}`;
+}
+
+
+function getTodayMonthKey() {
+
+    const d = new Date();
+
+    return `${d.getFullYear()}-${String(
+        d.getMonth() + 1
+    ).padStart(2, "0")}`;
+}
+
+
+// ============================================================
+// DATA LOADING
+// ============================================================
+
+async function loadItems() {
+
+    try {
+
+        const result = await supabaseRequest(
+            "items",
+            "GET",
+            null,
+            "?select=*"
+        );
+
+        items = Array.isArray(result)
+            ? result
+            : [];
+
+        // SI1, SI2, SI3 ... SI10
+        items.sort((a, b) => {
+
+            const codeA = getItemCode(a);
+            const codeB = getItemCode(b);
+
+            const numA = parseInt(
+                codeA.replace(/\D/g, ""),
+                10
+            );
+
+            const numB = parseInt(
+                codeB.replace(/\D/g, ""),
+                10
+            );
+
+            if (
+                Number.isFinite(numA) &&
+                Number.isFinite(numB)
+            ) {
+                return numA - numB;
+            }
+
+            return codeA.localeCompare(codeB);
+        });
+
+    } catch (error) {
+
+        console.error("Items loading error:", error);
+
+        items = [];
+    }
+}
+
+
+async function loadStockIn() {
+
+    try {
+
+        const result = await supabaseRequest(
+            "stock_in",
+            "GET",
+            null,
+            "?select=*&order=id.asc"
+        );
+
+        stockInData = Array.isArray(result)
+            ? result
+            : [];
+
+    } catch (error) {
+
+        console.error("Stock In loading error:", error);
+
+        stockInData = [];
+    }
+}
+
+
+async function loadStockOut() {
+
+    try {
+
+        const result = await supabaseRequest(
+            "stock_issue",
+            "GET",
+            null,
+            "?select=*&order=id.asc"
+        );
+
+        stockOutData = Array.isArray(result)
+            ? result
+            : [];
+
+    } catch (error) {
+
+        console.error("Stock Out loading error:", error);
+
+        stockOutData = [];
+    }
+}
+
+
+async function loadDemandHistory() {
+
+    try {
+
+        const result = await supabaseRequest(
+            "demand_history",
+            "GET",
+            null,
+            "?select=*&order=id.asc"
+        );
+
+        demandHistory = Array.isArray(result)
+            ? result
+            : [];
+
+    } catch (error) {
+
+        console.error(
+            "Demand History loading error:",
+            error
+        );
+
+        demandHistory = [];
+    }
+}
+
+
+async function loadAllGraphData() {
+
+    await Promise.all([
+        loadItems(),
+        loadStockIn(),
+        loadStockOut(),
+        loadDemandHistory()
+    ]);
+
+    loadItemSelect();
+    loadYears();
+    changePeriodType();
+
+    updateGraphs();
+}
+
+
+// ============================================================
+// ITEM SELECT
+// ============================================================
+
+function loadItemSelect() {
+
+    const select = document.getElementById(
+        "itemSelect"
+    );
+
+    if (!select) return;
+
+    const oldValue =
+        localStorage.getItem(
+            "dashboardSelectedItem"
+        ) || "all";
+
+    select.innerHTML = "";
+
+    const allOption =
+        document.createElement("option");
+
+    allOption.value = "all";
+    allOption.textContent = "All Items";
+
+    select.appendChild(allOption);
+
+    items.forEach(item => {
+
+        const code = getItemCode(item);
+
+        if (!code) return;
+
+        const option =
+            document.createElement("option");
+
+        option.value = code;
+
+        option.textContent =
+            `${code} - ${getItemName(item)}`;
+
+        select.appendChild(option);
+    });
+
+    const exists = [
+        ...select.options
+    ].some(
+        option => option.value === oldValue
+    );
+
+    select.value = exists
+        ? oldValue
+        : "all";
+
+    select.addEventListener(
+        "change",
+        updateGraphs
+    );
+
+    updateItemInfo();
+}
+
+
+// ============================================================
+// YEARS
+// ============================================================
+
+function loadYears() {
+
+    const select =
+        document.getElementById(
+            "yearSelect"
+        );
+
+    if (!select) return;
+
+    const years = new Set();
+
+    [...stockInData, ...stockOutData]
+        .forEach(record => {
+
+            const date =
+                getDateOnly(
+                    getRecordDate(record)
+                );
+
+            if (date) {
+                years.add(
+                    date.getFullYear()
+                );
+            }
+        });
+
+    demandHistory.forEach(record => {
+
+        const date =
+            getDateOnly(
+                getRecordDate(record)
+            );
+
+        if (date) {
+            years.add(
+                date.getFullYear()
+            );
+        }
+    });
+
+    const currentYear =
+        new Date().getFullYear();
+
+    years.add(currentYear);
+
+    const sortedYears =
+        [...years].sort(
+            (a, b) => b - a
+        );
+
+    const oldValue =
+        select.value;
+
+    select.innerHTML = "";
+
+    sortedYears.forEach(year => {
+
+        const option =
+            document.createElement("option");
+
+        option.value = year;
+        option.textContent = year;
+
+        select.appendChild(option);
+    });
+
+    if (
+        sortedYears.includes(
+            Number(oldValue)
+        )
+    ) {
+        select.value = oldValue;
+    } else {
+        select.value = currentYear;
+    }
+
+    select.onchange = updateGraphs;
+}
+
+
+// ============================================================
+// PERIOD
+// ============================================================
+
+function changePeriodType() {
+
+    const periodType =
+        document.getElementById(
+            "periodType"
+        );
+
+    const monthLabel =
+        document.getElementById(
+            "monthLabel"
+        );
+
+    const monthSelect =
+        document.getElementById(
+            "monthSelect"
+        );
+
+    if (!periodType) return;
+
+    if (periodType.value === "year") {
+
+        if (monthLabel) {
+            monthLabel.style.display =
+                "none";
+        }
+
+        if (monthSelect) {
+            monthSelect.style.display =
+                "none";
+        }
+
+    } else {
+
+        if (monthLabel) {
+            monthLabel.style.display =
+                "block";
+        }
+
+        if (monthSelect) {
+            monthSelect.style.display =
+                "block";
+        }
+    }
+
+    updateGraphs();
+}
+
+
+function getSelectedYear() {
+
+    const select =
+        document.getElementById(
+            "yearSelect"
+        );
+
+    return Number(
+        select?.value ||
+        new Date().getFullYear()
+    );
+}
+
+
+function getSelectedMonth() {
+
+    const select =
+        document.getElementById(
+            "monthSelect"
+        );
+
+    return Number(
+        select?.value ||
+        new Date().getMonth() + 1
+    );
+}
+
+
+// ============================================================
+// DEMAND DATE / CYCLE
+// ============================================================
+
+function getDemandRecordDate(record) {
+
+    return getDateOnly(
+        getRecordDate(record)
+    );
+}
+
+
+function getSelectedDemandRecord() {
+
+    const year =
+        getSelectedYear();
+
+    const month =
+        getSelectedMonth();
+
+    const records =
+        demandHistory.filter(record => {
+
+            const date =
+                getDemandRecordDate(
+                    record
+                );
+
+            if (!date) return false;
+
+            return (
+                date.getFullYear() === year &&
+                date.getMonth() + 1 === month
+            );
+        });
+
+    if (!records.length) {
+        return null;
+    }
+
+    records.sort((a, b) => {
+
+        const dateA =
+            getDemandRecordDate(a);
+
+        const dateB =
+            getDemandRecordDate(b);
+
+        const timeA =
+            dateA ? dateA.getTime() : 0;
+
+        const timeB =
+            dateB ? dateB.getTime() : 0;
+
+        if (timeA !== timeB) {
+            return timeB - timeA;
+        }
+
+        return (
+            safeNumber(b.id) -
+            safeNumber(a.id)
+        );
+    });
+
+    return records[0];
+}
+
+
+function getNextDemandDate(currentDate) {
+
+    if (!currentDate) {
+        return null;
+    }
+
+    const currentTime =
+        currentDate.getTime();
+
+    const futureDates =
+        demandHistory
+            .map(record =>
+                getDemandRecordDate(record)
+            )
+            .filter(date =>
+                date &&
+                date.getTime() >
+                currentTime
+            )
+            .sort(
+                (a, b) =>
+                    a.getTime() -
+                    b.getTime()
+            );
+
+    return futureDates.length
+        ? futureDates[0]
+        : null;
+}
+
+
+function getActiveDemandCycle() {
+
+    const currentDemand =
+        getSelectedDemandRecord();
+
+    if (!currentDemand) {
+
+        return {
+            currentDemand: null,
+            startDate: null,
+            endDate: null
+        };
+    }
+
+    const startDate =
+        getDemandRecordDate(
             currentDemand
         );
 
+    const endDate =
+        getNextDemandDate(
+            startDate
+        );
 
-    let total =
-        0;
-
-
-    for(
-        let i = 0;
-        i < list.length;
-        i++
-    ){
-
-        let demandItem =
-            list[i];
-
-
-        let code =
-            cleanCode(
-                demandItem.code ??
-                demandItem.item_code ??
-                demandItem.itemCode ??
-                ""
-            );
-
-
-        if(
-            code
-            !==
-            wantedCode
-        ){
-
-            continue;
-
-        }
-
-
-        total +=
-            getDemandValue(
-                demandItem
-            );
-
-    }
-
-
-    return total;
-
+    return {
+        currentDemand,
+        startDate,
+        endDate
+    };
 }
 
 
-// =====================================
-// GET CYCLE STOCK IN
-// =====================================
+function dateIsInsideDemandCycle(
+    dateValue,
+    cycle
+) {
+
+    const date =
+        getDateOnly(dateValue);
+
+    if (!date || !cycle.startDate) {
+        return false;
+    }
+
+    const time =
+        date.getTime();
+
+    const start =
+        cycle.startDate.getTime();
+
+    if (time < start) {
+        return false;
+    }
+
+    if (
+        cycle.endDate &&
+        time >= cycle.endDate.getTime()
+    ) {
+        return false;
+    }
+
+    return true;
+}
+
+
+// ============================================================
+// DEMAND HELPERS
+// ============================================================
+
+function getDemandValue(record) {
+
+    const fields = [
+        "finalDemand",
+        "final_demand",
+        "approvedQty",
+        "approved_qty",
+        "quantity",
+        "demandQuantity",
+        "demand_quantity"
+    ];
+
+    for (const field of fields) {
+
+        if (
+            record?.[field] !== null &&
+            record?.[field] !== undefined &&
+            record?.[field] !== ""
+        ) {
+
+            return safeNumber(
+                record[field]
+            );
+        }
+    }
+
+    return 0;
+}
+
+
+function getDemandItems(record) {
+
+    if (!record) return [];
+
+    let data =
+        record.demand_items ??
+        record.demandItems ??
+        record.items ??
+        [];
+
+    if (typeof data === "string") {
+
+        try {
+            data = JSON.parse(data);
+        } catch {
+            return [];
+        }
+    }
+
+    return Array.isArray(data)
+        ? data
+        : [];
+}
+
+
+function getDemandForItem(itemCode) {
+
+    const record =
+        getSelectedDemandRecord();
+
+    if (!record) return 0;
+
+    const demandItems =
+        getDemandItems(record);
+
+    let total = 0;
+
+    demandItems.forEach(item => {
+
+        const code =
+            getRecordItemCode(item);
+
+        if (
+            code ===
+            cleanCode(itemCode)
+        ) {
+
+            total +=
+                getDemandValue(item);
+        }
+    });
+
+    return total;
+}
+
+
+// ============================================================
+// STOCK IN / OUT CYCLE
+// ============================================================
 
 function getCycleStockIn(
     itemCode,
     cycle
-){
+) {
 
-    let total =
-        0;
+    let total = 0;
 
+    stockInData.forEach(record => {
 
-    let wantedCode =
-        cleanCode(
-            itemCode
-        );
-
-
-    for(
-        let i = 0;
-        i < stockInData.length;
-        i++
-    ){
-
-        let record =
-            stockInData[i];
-
-
-        if(
-            getRecordItemCode(record)
-            !==
-            wantedCode
-        ){
-
-            continue;
-
+        if (
+            getRecordItemCode(record) !==
+            cleanCode(itemCode)
+        ) {
+            return;
         }
 
-
-        if(
+        if (
             !dateIsInsideDemandCycle(
-                record.date,
+                getRecordDate(record),
                 cycle
             )
-        ){
-
-            continue;
-
+        ) {
+            return;
         }
 
-
-        total +=
-            safeNumber(
-                record.quantity
-            );
-
-    }
-
+        total += safeNumber(
+            record.quantity
+        );
+    });
 
     return total;
-
 }
 
-
-// =====================================
-// GET CYCLE STOCK OUT
-// =====================================
 
 function getCycleStockOut(
     itemCode,
     cycle
-){
+) {
 
-    let total =
-        0;
+    let total = 0;
 
+    stockOutData.forEach(record => {
 
-    let wantedCode =
-        cleanCode(
-            itemCode
-        );
-
-
-    for(
-        let i = 0;
-        i < stockOutData.length;
-        i++
-    ){
-
-        let record =
-            stockOutData[i];
-
-
-        if(
-            getRecordItemCode(record)
-            !==
-            wantedCode
-        ){
-
-            continue;
-
+        if (
+            getRecordItemCode(record) !==
+            cleanCode(itemCode)
+        ) {
+            return;
         }
 
-
-        if(
+        if (
             !dateIsInsideDemandCycle(
-                record.date,
+                getRecordDate(record),
                 cycle
             )
-        ){
-
-            continue;
-
+        ) {
+            return;
         }
 
-
-        total +=
-            safeNumber(
-                record.quantity
-            );
-
-    }
-
+        total += safeNumber(
+            record.quantity
+        );
+    });
 
     return total;
-
 }
 
 
-// =====================================
-// GET CYCLE PURCHASE COST
-// =====================================
+// ============================================================
+// STOCK IN COST
+// ============================================================
+
+function getStockInRecordCost(record) {
+
+    const totalCost =
+        record?.total_cost ??
+        record?.totalCost;
+
+    if (
+        totalCost !== undefined &&
+        totalCost !== null &&
+        totalCost !== ""
+    ) {
+
+        return safeNumber(
+            totalCost
+        );
+    }
+
+    const quantity =
+        safeNumber(
+            record?.quantity
+        );
+
+    const unitCost =
+        safeNumber(
+            record?.unit_cost ??
+            record?.unitCost ??
+            record?.rate
+        );
+
+    return quantity * unitCost;
+}
+
 
 function getCyclePurchaseCost(
     itemCode,
     cycle
-){
+) {
 
-    let total =
-        0;
+    let total = 0;
 
+    stockInData.forEach(record => {
 
-    let wantedCode =
-        cleanCode(
-            itemCode
-        );
-
-
-    for(
-        let i = 0;
-        i < stockInData.length;
-        i++
-    ){
-
-        let record =
-            stockInData[i];
-
-
-        if(
-            getRecordItemCode(record)
-            !==
-            wantedCode
-        ){
-
-            continue;
-
+        if (
+            getRecordItemCode(record) !==
+            cleanCode(itemCode)
+        ) {
+            return;
         }
 
-
-        if(
+        if (
             !dateIsInsideDemandCycle(
-                record.date,
+                getRecordDate(record),
                 cycle
             )
-        ){
-
-            continue;
-
+        ) {
+            return;
         }
 
-
-        let qty =
-            safeNumber(
-                record.quantity
-            );
-
-
-        let rate =
-            safeNumber(
-                record.unit_cost ??
-                record.unitCost
-            );
-
-
         total +=
-            qty * rate;
-
-    }
-
+            getStockInRecordCost(
+                record
+            );
+    });
 
     return total;
-
 }
 
 
-// =====================================
-// CREATE GRAPH DATA
-// =====================================
+// ============================================================
+// STOCK OUT COST
+// ============================================================
 
-function createGraphData(){
+/*
+   Stock Out table mein agar cost/rate saved hai
+   to wahi use hoga.
 
-    let select =
+   Agar cost saved nahi hai to issue date se pehle
+   latest Stock In rate use kiya jayega.
+*/
+
+function getStockInRateForItemOnDate(
+    itemCode,
+    issueDate
+) {
+
+    const issue =
+        getDateOnly(issueDate);
+
+    const matching =
+        stockInData.filter(record => {
+
+            if (
+                getRecordItemCode(record) !==
+                cleanCode(itemCode)
+            ) {
+                return false;
+            }
+
+            const date =
+                getDateOnly(
+                    getRecordDate(record)
+                );
+
+            if (!date) return false;
+
+            if (!issue) return true;
+
+            return (
+                date.getTime() <=
+                issue.getTime()
+            );
+        });
+
+    matching.sort((a, b) => {
+
+        const dateA =
+            getDateOnly(
+                getRecordDate(a)
+            );
+
+        const dateB =
+            getDateOnly(
+                getRecordDate(b)
+            );
+
+        const timeA =
+            dateA ? dateA.getTime() : 0;
+
+        const timeB =
+            dateB ? dateB.getTime() : 0;
+
+        if (timeA !== timeB) {
+            return timeB - timeA;
+        }
+
+        return (
+            safeNumber(b.id) -
+            safeNumber(a.id)
+        );
+    });
+
+    if (matching.length) {
+
+        return safeNumber(
+            matching[0]?.unit_cost ??
+            matching[0]?.unitCost ??
+            matching[0]?.rate
+        );
+    }
+
+    // اگر issue date se pehle rate نہ ملے
+    // تو latest Stock In rate use کریں
+    const allMatching =
+        stockInData.filter(
+            record =>
+                getRecordItemCode(record) ===
+                cleanCode(itemCode)
+        );
+
+    allMatching.sort(
+        (a, b) =>
+            safeNumber(b.id) -
+            safeNumber(a.id)
+    );
+
+    if (allMatching.length) {
+
+        return safeNumber(
+            allMatching[0]?.unit_cost ??
+            allMatching[0]?.unitCost ??
+            allMatching[0]?.rate
+        );
+    }
+
+    return 0;
+}
+
+
+function getStockOutRecordCost(record) {
+
+    const totalCost =
+        record?.total_cost ??
+        record?.totalCost ??
+        record?.issue_cost ??
+        record?.issueCost;
+
+    if (
+        totalCost !== undefined &&
+        totalCost !== null &&
+        totalCost !== ""
+    ) {
+
+        return safeNumber(
+            totalCost
+        );
+    }
+
+    const quantity =
+        safeNumber(
+            record?.quantity
+        );
+
+    const savedRate =
+        record?.unit_cost ??
+        record?.unitCost ??
+        record?.rate ??
+        record?.cost;
+
+    if (
+        savedRate !== undefined &&
+        savedRate !== null &&
+        savedRate !== ""
+    ) {
+
+        return (
+            quantity *
+            safeNumber(savedRate)
+        );
+    }
+
+    const rate =
+        getStockInRateForItemOnDate(
+            getRecordItemCode(record),
+            getRecordDate(record)
+        );
+
+    return quantity * rate;
+}
+
+
+function getCycleStockOutCost(
+    itemCode,
+    cycle
+) {
+
+    let total = 0;
+
+    stockOutData.forEach(record => {
+
+        if (
+            getRecordItemCode(record) !==
+            cleanCode(itemCode)
+        ) {
+            return;
+        }
+
+        if (
+            !dateIsInsideDemandCycle(
+                getRecordDate(record),
+                cycle
+            )
+        ) {
+            return;
+        }
+
+        total +=
+            getStockOutRecordCost(
+                record
+            );
+    });
+
+    return total;
+}
+
+
+// ============================================================
+// GRAPH ITEM DATA
+// ============================================================
+
+function createGraphData() {
+
+    const select =
         document.getElementById(
             "itemSelect"
         );
 
+    const selectedCode =
+        select?.value || "all";
 
-    if(!select){
+    const selectedItems =
+        selectedCode === "all"
+            ? items
+            : items.filter(
+                item =>
+                    getItemCode(item) ===
+                    cleanCode(selectedCode)
+            );
 
-        return [];
-
-    }
-
-
-    let selectedCode =
-        cleanCode(
-            select.value
-        );
-
-
-    let selectedItems =
-        [];
-
-
-    if(
-        selectedCode
-        ===
-        "all"
-    ){
-
-        selectedItems =
-            items.slice();
-
-    }
-    else{
-
-        for(
-            let i = 0;
-            i < items.length;
-            i++
-        ){
-
-            if(
-                getItemCode(items[i])
-                ===
-                selectedCode
-            ){
-
-                selectedItems.push(
-                    items[i]
-                );
-
-                break;
-
-            }
-
-        }
-
-    }
-
-
-    let cycle =
+    const cycle =
         getActiveDemandCycle();
 
+    return selectedItems.map(item => {
 
-    let result =
-        [];
-
-
-    for(
-        let i = 0;
-        i < selectedItems.length;
-        i++
-    ){
-
-        let item =
-            selectedItems[i];
-
-
-        let code =
+        const code =
             getItemCode(item);
 
+        return {
 
-        let stockIn =
-            getCycleStockIn(
-                code,
-                cycle
-            );
-
-
-        let stockOut =
-            getCycleStockOut(
-                code,
-                cycle
-            );
-
-
-        let demand =
-            getDemandForItem(
-                code
-            );
-
-
-        let cost =
-            getCyclePurchaseCost(
-                code,
-                cycle
-            );
-
-
-        result.push({
-
-            code:
-                code,
+            code,
 
             name:
                 getItemName(item),
@@ -1780,1946 +1176,1623 @@ function createGraphData(){
                 getItemUnit(item),
 
             stockIn:
-                stockIn,
+                getCycleStockIn(
+                    code,
+                    cycle
+                ),
 
             stockOut:
-                stockOut,
+                getCycleStockOut(
+                    code,
+                    cycle
+                ),
 
             demand:
-                demand,
+                getDemandForItem(
+                    code
+                ),
 
-            cost:
-                cost
+            stockInCost:
+                getCyclePurchaseCost(
+                    code,
+                    cycle
+                ),
 
-        });
-
-    }
-
-
-    return result;
-
+            stockOutCost:
+                getCycleStockOutCost(
+                    code,
+                    cycle
+                )
+        };
+    });
 }
 
 
-// =====================================
-// PERIOD DATA
-// =====================================
-//
-// Period graph now follows the active
-// Demand Cycle instead of calendar month.
-//
-// =====================================
+// ============================================================
+// DEPARTMENT DATA
+// ============================================================
 
-function createPeriodData(){
+function getDepartment(record) {
 
-    let cycle =
+    const department =
+        record?.department ??
+        record?.Department ??
+        record?.dept ??
+        record?.dept_name ??
+        record?.deptName ??
+        "";
+
+    const value =
+        String(department).trim();
+
+    return value || "Not Assigned";
+}
+
+
+function createDepartmentGraphData() {
+
+    const cycle =
         getActiveDemandCycle();
 
+    const map = new Map();
 
-    let labels =
-        [];
+    function getDepartmentRow(
+        department
+    ) {
 
+        if (!map.has(department)) {
 
-    let stockIn =
-        [];
-
-
-    let stockOut =
-        [];
-
-
-    let demand =
-        [];
-
-
-    let cost =
-        [];
-
-
-    let selectedCode =
-        cleanCode(
-            document.getElementById(
-                "itemSelect"
-            )?.value
-        );
-
-
-    if(
-        selectedCode
-        ===
-        "all"
-    ){
-
-        // ---------------------------------
-        // ALL ITEMS
-        // Show cycle totals only
-        // ---------------------------------
-
-        let data =
-            createGraphData();
-
-
-        labels.push(
-            "Demand Cycle"
-        );
-
-
-        let totalIn =
-            0;
-
-
-        let totalOut =
-            0;
-
-
-        let totalDemand =
-            0;
-
-
-        let totalCost =
-            0;
-
-
-        for(
-            let i = 0;
-            i < data.length;
-            i++
-        ){
-
-            totalIn +=
-                data[i].stockIn;
-
-            totalOut +=
-                data[i].stockOut;
-
-            totalDemand +=
-                data[i].demand;
-
-            totalCost +=
-                data[i].cost;
-
+            map.set(
+                department,
+                {
+                    department,
+                    stockIn: 0,
+                    stockOut: 0,
+                    stockInCost: 0,
+                    stockOutCost: 0
+                }
+            );
         }
 
-
-        stockIn.push(
-            totalIn
-        );
-
-
-        stockOut.push(
-            totalOut
-        );
-
-
-        demand.push(
-            totalDemand
-        );
-
-
-        cost.push(
-            totalCost
-        );
-
-
-        return {
-
-            labels:
-                labels,
-
-            stockIn:
-                stockIn,
-
-            stockOut:
-                stockOut,
-
-            demand:
-                demand,
-
-            cost:
-                cost
-
-        };
-
+        return map.get(department);
     }
 
 
-    // ---------------------------------
-    // SELECTED ITEM
-    // ---------------------------------
+    // --------------------------
+    // STOCK IN
+    // --------------------------
 
-    if(
-        !cycle.startDate
-    ){
+    stockInData.forEach(record => {
 
-        labels.push(
-            "No Demand"
-        );
-
-
-        stockIn.push(0);
-
-        stockOut.push(0);
-
-        demand.push(
-            getDemandForItem(
-                selectedCode
+        if (
+            !dateIsInsideDemandCycle(
+                getRecordDate(record),
+                cycle
             )
-        );
-
-        cost.push(0);
-
-
-        return {
-
-            labels:
-                labels,
-
-            stockIn:
-                stockIn,
-
-            stockOut:
-                stockOut,
-
-            demand:
-                demand,
-
-            cost:
-                cost
-
-        };
-
-    }
-
-
-    let start =
-        getDateOnly(
-            cycle.startDate
-        );
-
-
-    let end =
-        cycle.endDate
-            ? getDateOnly(
-                cycle.endDate
-              )
-            : new Date();
-
-
-    // ---------------------------------
-    // Maximum 62 days for readability
-    // ---------------------------------
-
-    let dayCount =
-        Math.ceil(
-            (
-                end - start
-            )
-            /
-            (
-                1000 *
-                60 *
-                60 *
-                24
-            )
-        );
-
-
-    if(
-        dayCount < 1
-    ){
-
-        dayCount = 1;
-
-    }
-
-
-    // ---------------------------------
-    // If cycle is very long,
-    // use weekly periods.
-    // ---------------------------------
-
-    if(
-        dayCount > 45
-    ){
-
-        let current =
-            new Date(start);
-
-
-        let weekNo =
-            1;
-
-
-        while(
-            current < end
-        ){
-
-            let weekStart =
-                new Date(current);
-
-
-            let weekEnd =
-                new Date(current);
-
-
-            weekEnd.setDate(
-                weekEnd.getDate()
-                +
-                7
-            );
-
-
-            if(
-                weekEnd > end
-            ){
-
-                weekEnd =
-                    new Date(end);
-
-            }
-
-
-            let inQty =
-                0;
-
-
-            let outQty =
-                0;
-
-
-            let purchaseCost =
-                0;
-
-
-            for(
-                let i = 0;
-                i < stockInData.length;
-                i++
-            ){
-
-                let record =
-                    stockInData[i];
-
-
-                if(
-                    getRecordItemCode(record)
-                    !==
-                    selectedCode
-                ){
-
-                    continue;
-
-                }
-
-
-                let date =
-                    getDateOnly(
-                        record.date
-                    );
-
-
-                if(
-                    !date
-                    ||
-                    date < weekStart
-                    ||
-                    date >= weekEnd
-                ){
-
-                    continue;
-
-                }
-
-
-                let qty =
-                    safeNumber(
-                        record.quantity
-                    );
-
-
-                let rate =
-                    safeNumber(
-                        record.unit_cost ??
-                        record.unitCost
-                    );
-
-
-                inQty +=
-                    qty;
-
-
-                purchaseCost +=
-                    qty * rate;
-
-            }
-
-
-            for(
-                let i = 0;
-                i < stockOutData.length;
-                i++
-            ){
-
-                let record =
-                    stockOutData[i];
-
-
-                if(
-                    getRecordItemCode(record)
-                    !==
-                    selectedCode
-                ){
-
-                    continue;
-
-                }
-
-
-                let date =
-                    getDateOnly(
-                        record.date
-                    );
-
-
-                if(
-                    !date
-                    ||
-                    date < weekStart
-                    ||
-                    date >= weekEnd
-                ){
-
-                    continue;
-
-                }
-
-
-                outQty +=
-                    safeNumber(
-                        record.quantity
-                    );
-
-            }
-
-
-            labels.push(
-                "Week " +
-                weekNo
-            );
-
-
-            stockIn.push(
-                inQty
-            );
-
-
-            stockOut.push(
-                outQty
-            );
-
-
-            demand.push(
-                weekNo === 1
-                    ? getDemandForItem(
-                        selectedCode
-                      )
-                    : 0
-            );
-
-
-            cost.push(
-                purchaseCost
-            );
-
-
-            current =
-                weekEnd;
-
-
-            weekNo++;
-
+        ) {
+            return;
         }
 
-    }
-    else{
+        const department =
+            getDepartment(record);
 
-        // ---------------------------------
-        // DAILY DATA
-        // ---------------------------------
-
-        let current =
-            new Date(start);
-
-
-        while(
-            current < end
-        ){
-
-            let dayStart =
-                new Date(current);
-
-
-            let dayEnd =
-                new Date(current);
-
-
-            dayEnd.setDate(
-                dayEnd.getDate()
-                +
-                1
+        const row =
+            getDepartmentRow(
+                department
             );
 
-
-            let inQty =
-                0;
-
-
-            let outQty =
-                0;
-
-
-            let purchaseCost =
-                0;
-
-
-            for(
-                let i = 0;
-                i < stockInData.length;
-                i++
-            ){
-
-                let record =
-                    stockInData[i];
-
-
-                if(
-                    getRecordItemCode(record)
-                    !==
-                    selectedCode
-                ){
-
-                    continue;
-
-                }
-
-
-                let date =
-                    getDateOnly(
-                        record.date
-                    );
-
-
-                if(
-                    !date
-                    ||
-                    date < dayStart
-                    ||
-                    date >= dayEnd
-                ){
-
-                    continue;
-
-                }
-
-
-                let qty =
-                    safeNumber(
-                        record.quantity
-                    );
-
-
-                let rate =
-                    safeNumber(
-                        record.unit_cost ??
-                        record.unitCost
-                    );
-
-
-                inQty +=
-                    qty;
-
-
-                purchaseCost +=
-                    qty * rate;
-
-            }
-
-
-            for(
-                let i = 0;
-                i < stockOutData.length;
-                i++
-            ){
-
-                let record =
-                    stockOutData[i];
-
-
-                if(
-                    getRecordItemCode(record)
-                    !==
-                    selectedCode
-                ){
-
-                    continue;
-
-                }
-
-
-                let date =
-                    getDateOnly(
-                        record.date
-                    );
-
-
-                if(
-                    !date
-                    ||
-                    date < dayStart
-                    ||
-                    date >= dayEnd
-                ){
-
-                    continue;
-
-                }
-
-
-                outQty +=
-                    safeNumber(
-                        record.quantity
-                    );
-
-            }
-
-
-            let label =
-                (
-                    dayStart.getDate()
-                ) +
-                "/" +
-                (
-                    dayStart.getMonth() + 1
-                );
-
-
-            labels.push(
-                label
+        row.stockIn +=
+            safeNumber(
+                record.quantity
             );
 
-
-            stockIn.push(
-                inQty
+        row.stockInCost +=
+            getStockInRecordCost(
+                record
             );
+    });
 
 
-            stockOut.push(
-                outQty
-            );
+    // --------------------------
+    // STOCK OUT
+    // --------------------------
 
+    stockOutData.forEach(record => {
 
-            // Demand is shown only on
-            // first day of the cycle
-            demand.push(
-                dayStart.getTime()
-                ===
-                start.getTime()
-                    ? getDemandForItem(
-                        selectedCode
-                      )
-                    : 0
-            );
-
-
-            cost.push(
-                purchaseCost
-            );
-
-
-            current =
-                dayEnd;
-
+        if (
+            !dateIsInsideDemandCycle(
+                getRecordDate(record),
+                cycle
+            )
+        ) {
+            return;
         }
 
-    }
+        const department =
+            getDepartment(record);
+
+        const row =
+            getDepartmentRow(
+                department
+            );
+
+        row.stockOut +=
+            safeNumber(
+                record.quantity
+            );
+
+        row.stockOutCost +=
+            getStockOutRecordCost(
+                record
+            );
+    });
 
 
-    return {
-
-        labels:
-            labels,
-
-        stockIn:
-            stockIn,
-
-        stockOut:
-            stockOut,
-
-        demand:
-            demand,
-
-        cost:
-            cost
-
-    };
-
+    return [...map.values()];
 }
 
 
-// =====================================
+// ============================================================
 // SUMMARY
-// =====================================
+// ============================================================
 
-function updateSummary(data){
+function updateSummary(data) {
 
-    let totalIn =
-        0;
+    const stockIn =
+        data.reduce(
+            (sum, row) =>
+                sum + safeNumber(row.stockIn),
+            0
+        );
 
+    const stockOut =
+        data.reduce(
+            (sum, row) =>
+                sum + safeNumber(row.stockOut),
+            0
+        );
 
-    let totalOut =
-        0;
+    const demand =
+        data.reduce(
+            (sum, row) =>
+                sum + safeNumber(row.demand),
+            0
+        );
 
-
-    let totalDemand =
-        0;
-
-
-    let totalCost =
-        0;
-
-
-    for(
-        let i = 0;
-        i < data.length;
-        i++
-    ){
-
-        totalIn +=
-            safeNumber(
-                data[i].stockIn
-            );
-
-
-        totalOut +=
-            safeNumber(
-                data[i].stockOut
-            );
+    const cost =
+        data.reduce(
+            (sum, row) =>
+                sum +
+                safeNumber(row.stockInCost),
+            0
+        );
 
 
-        totalDemand +=
-            safeNumber(
-                data[i].demand
-            );
-
-
-        totalCost +=
-            safeNumber(
-                data[i].cost
-            );
-
-    }
-
-
-    let summaryIn =
+    const elIn =
         document.getElementById(
             "summaryStockIn"
         );
 
-
-    let summaryOut =
+    const elOut =
         document.getElementById(
             "summaryStockOut"
         );
 
-
-    let summaryDemand =
+    const elDemand =
         document.getElementById(
             "summaryDemand"
         );
 
-
-    let summaryCost =
+    const elCost =
         document.getElementById(
             "summaryCost"
         );
 
 
-    if(summaryIn){
-
-        summaryIn.innerHTML =
-            totalIn.toLocaleString(
-                undefined,
-                {
-                    maximumFractionDigits:2
-                }
-            );
-
+    if (elIn) {
+        elIn.textContent =
+            stockIn.toLocaleString();
     }
 
-
-    if(summaryOut){
-
-        summaryOut.innerHTML =
-            totalOut.toLocaleString(
-                undefined,
-                {
-                    maximumFractionDigits:2
-                }
-            );
-
+    if (elOut) {
+        elOut.textContent =
+            stockOut.toLocaleString();
     }
 
-
-    if(summaryDemand){
-
-        summaryDemand.innerHTML =
-            totalDemand.toLocaleString(
-                undefined,
-                {
-                    maximumFractionDigits:2
-                }
-            );
-
+    if (elDemand) {
+        elDemand.textContent =
+            demand.toLocaleString();
     }
 
-
-    if(summaryCost){
-
-        summaryCost.innerHTML =
-            "Rs. " +
-            totalCost.toLocaleString(
-                undefined,
-                {
-                    minimumFractionDigits:2
-                }
-            );
-
+    if (elCost) {
+        elCost.textContent =
+            stockInCostText(cost);
     }
-
 }
 
 
-// =====================================
-// ITEM INFO
-// =====================================
+function stockInCostText(value) {
 
-function updateItemInfo(){
-
-    let selectedElement =
-        document.getElementById(
-            "itemSelect"
+    return Number(value || 0)
+        .toLocaleString(
+            undefined,
+            {
+                minimumFractionDigits: 0,
+                maximumFractionDigits: 2
+            }
         );
+}
 
 
-    let info =
+// ============================================================
+// ITEM INFO
+// ============================================================
+
+function updateItemInfo() {
+
+    const el =
         document.getElementById(
             "itemInfo"
         );
 
+    if (!el) return;
 
-    if(
-        !selectedElement ||
-        !info
-    ){
-
-        return;
-
-    }
-
-
-    let selected =
-        cleanCode(
-            selectedElement.value
-        );
-
-
-    let cycle =
-        getActiveDemandCycle();
-
-
-    // ---------------------------------
-    // ALL ITEMS
-    // ---------------------------------
-
-    if(
-        selected
-        ===
-        "all"
-    ){
-
-        if(
-            cycle.startDate
-        ){
-
-            let startText =
-                cycle.startDate.toLocaleDateString();
-
-
-            let endText =
-                cycle.endDate
-                    ? cycle.endDate.toLocaleDateString()
-                    : "Next Demand Pending";
-
-
-            info.innerHTML =
-                "📊 <b>ALL ITEMS</b> | " +
-                "Demand: " +
-                startText +
-                " → " +
-                endText;
-
-        }
-        else{
-
-            info.innerHTML =
-                "📊 <b>ALL ITEMS</b> | " +
-                "Selected month ki Demand abhi available nahi hai.";
-
-        }
-
-
-        return;
-
-    }
-
-
-    let item =
-        null;
-
-
-    for(
-        let i = 0;
-        i < items.length;
-        i++
-    ){
-
-        if(
-            getItemCode(items[i])
-            ===
-            selected
-        ){
-
-            item =
-                items[i];
-
-            break;
-
-        }
-
-    }
-
-
-    if(!item){
-
-        info.innerHTML =
-            "";
-
-        return;
-
-    }
-
-
-    if(
-        cycle.startDate
-    ){
-
-        let startText =
-            cycle.startDate.toLocaleDateString();
-
-
-        let endText =
-            cycle.endDate
-                ? cycle.endDate.toLocaleDateString()
-                : "Next Demand Pending";
-
-
-        info.innerHTML =
-            "✅ <b>" +
-            getItemCode(item) +
-            "</b> — " +
-            getItemName(item) +
-            " | Unit: " +
-            getItemUnit(item) +
-            " | Demand Cycle: " +
-            startText +
-            " → " +
-            endText;
-
-    }
-    else{
-
-        info.innerHTML =
-            "⚠️ <b>" +
-            getItemCode(item) +
-            "</b> — " +
-            getItemName(item) +
-            " | Selected month ki Demand nahi mili.";
-
-    }
-
-}
-
-
-// =====================================
-// DATA TABLE
-// =====================================
-
-function buildDataTable(data){
-
-    let body =
-        document.getElementById(
-            "graphDataBody"
-        );
-
-
-    if(!body){
-
-        return;
-
-    }
-
-
-    body.innerHTML =
-        "";
-
-
-    for(
-        let i = 0;
-        i < data.length;
-        i++
-    ){
-
-        let row =
-            document.createElement(
-                "tr"
-            );
-
-
-        row.innerHTML =
-
-            "<td>" +
-            data[i].code +
-            "</td>" +
-
-            "<td>" +
-            data[i].name +
-            "</td>" +
-
-            "<td>" +
-            data[i].unit +
-            "</td>" +
-
-            "<td>" +
-            safeNumber(
-                data[i].stockIn
-            ).toLocaleString(
-                undefined,
-                {
-                    maximumFractionDigits:2
-                }
-            ) +
-            "</td>" +
-
-            "<td>" +
-            safeNumber(
-                data[i].stockOut
-            ).toLocaleString(
-                undefined,
-                {
-                    maximumFractionDigits:2
-                }
-            ) +
-            "</td>" +
-
-            "<td>" +
-            safeNumber(
-                data[i].demand
-            ).toLocaleString(
-                undefined,
-                {
-                    maximumFractionDigits:2
-                }
-            ) +
-            "</td>" +
-
-            "<td>" +
-            "Rs. " +
-            safeNumber(
-                data[i].cost
-            ).toLocaleString(
-                undefined,
-                {
-                    minimumFractionDigits:2
-                }
-            ) +
-            "</td>";
-
-
-        body.appendChild(
-            row
-        );
-
-    }
-
-}
-
-
-// =====================================
-// CHART OPTIONS
-// =====================================
-
-function commonChartOptions(){
-
-    return {
-
-        responsive:
-            true,
-
-        maintainAspectRatio:
-            false,
-
-        interaction:{
-
-            mode:
-                "index",
-
-            intersect:
-                false
-
-        },
-
-        plugins:{
-
-            legend:{
-
-                position:
-                    "top"
-
-            },
-
-            tooltip:{
-
-                callbacks:{
-
-                    label:
-                        function(context){
-
-                            let value =
-                                safeNumber(
-                                    context.raw
-                                );
-
-
-                            return (
-                                context.dataset.label +
-                                ": " +
-                                value.toLocaleString(
-                                    undefined,
-                                    {
-                                        maximumFractionDigits:2
-                                    }
-                                )
-                            );
-
-                        }
-
-                }
-
-            }
-
-        }
-
-    };
-
-}
-
-
-// =====================================
-// UPDATE GRAPHS
-// =====================================
-
-function updateGraphs(){
-
-    let itemSelect =
+    const select =
         document.getElementById(
             "itemSelect"
         );
 
+    const selectedCode =
+        select?.value || "all";
 
-    if(
-        !itemSelect ||
-        !itemSelect.value
-    ){
+    const cycle =
+        getActiveDemandCycle();
+
+    if (selectedCode === "all") {
+
+        let cycleText =
+            "Demand Cycle: Not Available";
+
+        if (cycle.startDate) {
+
+            cycleText =
+                `Demand Cycle: ${dateToKey(
+                    cycle.startDate
+                )}`;
+
+            if (cycle.endDate) {
+
+                cycleText +=
+                    ` → ${dateToKey(
+                        cycle.endDate
+                    )}`;
+            }
+        }
+
+        el.innerHTML =
+            `<strong>All Items</strong><br>
+             ${cycleText}`;
 
         return;
-
     }
 
 
-    let data =
-        createGraphData();
+    const item =
+        items.find(
+            item =>
+                getItemCode(item) ===
+                cleanCode(selectedCode)
+        );
+
+    if (!item) {
+
+        el.textContent =
+            "Item not found.";
+
+        return;
+    }
 
 
-    let periodData =
-        createPeriodData();
+    let cycleText =
+        "Demand Cycle: Not Available";
+
+    if (cycle.startDate) {
+
+        cycleText =
+            `Demand Cycle: ${dateToKey(
+                cycle.startDate
+            )}`;
+
+        if (cycle.endDate) {
+
+            cycleText +=
+                ` → ${dateToKey(
+                    cycle.endDate
+                )}`;
+        }
+    }
 
 
-    updateSummary(
-        data
-    );
+    el.innerHTML =
+        `<strong>${getItemCode(item)}</strong>
+         - ${getItemName(item)}
+         <br>
+         Unit: ${getItemUnit(item)}
+         <br>
+         ${cycleText}`;
+}
 
+
+// ============================================================
+// DATA TABLE
+// ============================================================
+
+function buildDataTable(data) {
+
+    const tbody =
+        document.getElementById(
+            "graphDataBody"
+        );
+
+    if (!tbody) return;
+
+    tbody.innerHTML = "";
+
+    data.forEach(row => {
+
+        const tr =
+            document.createElement("tr");
+
+        tr.innerHTML = `
+            <td>${row.code}</td>
+            <td>${row.name}</td>
+            <td>${row.unit}</td>
+            <td>${safeNumber(
+                row.stockIn
+            ).toLocaleString()}</td>
+            <td>${safeNumber(
+                row.stockOut
+            ).toLocaleString()}</td>
+            <td>${safeNumber(
+                row.demand
+            ).toLocaleString()}</td>
+            <td>${safeNumber(
+                row.stockInCost
+            ).toLocaleString()}</td>
+        `;
+
+        tbody.appendChild(tr);
+    });
+}
+
+
+// ============================================================
+// CHART OPTIONS
+// ============================================================
+
+function commonChartOptions() {
+
+    return {
+
+        responsive: true,
+
+        maintainAspectRatio: false,
+
+        interaction: {
+            mode: "index",
+            intersect: false
+        },
+
+        plugins: {
+
+            legend: {
+                position: "top"
+            },
+
+            tooltip: {
+                callbacks: {
+
+                    label: function(context) {
+
+                        const value =
+                            context.parsed?.y ??
+                            context.parsed?.x ??
+                            0;
+
+                        return `${context.dataset.label}: ${Number(
+                            value
+                        ).toLocaleString()}`;
+                    }
+                }
+            }
+        }
+    };
+}
+
+
+function horizontalBarOptions(
+    titleText,
+    unitText = ""
+) {
+
+    const options =
+        commonChartOptions();
+
+    options.indexAxis = "y";
+
+    options.plugins.title = {
+        display: true,
+        text: titleText,
+        font: {
+            size: 17,
+            weight: "bold"
+        }
+    };
+
+    options.scales = {
+
+        x: {
+            beginAtZero: true,
+
+            title: {
+                display: true,
+                text: unitText
+            }
+        },
+
+        y: {
+            ticks: {
+                autoSkip: false
+            }
+        }
+    };
+
+    return options;
+}
+
+
+function verticalBarOptions(
+    titleText,
+    yTitle
+) {
+
+    const options =
+        commonChartOptions();
+
+    options.plugins.title = {
+        display: true,
+        text: titleText,
+        font: {
+            size: 17,
+            weight: "bold"
+        }
+    };
+
+    options.scales = {
+
+        y: {
+            beginAtZero: true,
+
+            title: {
+                display: true,
+                text: yTitle
+            }
+        }
+    };
+
+    return options;
+}
+
+
+// ============================================================
+// CHART DESTROY
+// ============================================================
+
+function destroyChart(chart) {
+
+    if (chart) {
+
+        try {
+            chart.destroy();
+        } catch (error) {
+            console.warn(
+                "Chart destroy warning:",
+                error
+            );
+        }
+    }
+
+    return null;
+}
+
+
+function destroyAllCharts() {
+
+    stockInChart =
+        destroyChart(stockInChart);
+
+    stockOutChart =
+        destroyChart(stockOutChart);
+
+    stockInDemandChart =
+        destroyChart(stockInDemandChart);
+
+    stockInCostChart =
+        destroyChart(stockInCostChart);
+
+    stockOutCostChart =
+        destroyChart(stockOutCostChart);
+
+    demandChart =
+        destroyChart(demandChart);
+
+    departmentStockInChart =
+        destroyChart(
+            departmentStockInChart
+        );
+
+    departmentStockOutChart =
+        destroyChart(
+            departmentStockOutChart
+        );
+
+    departmentCostChart =
+        destroyChart(
+            departmentCostChart
+        );
+}
+
+
+// ============================================================
+// SECTION VISIBILITY
+// ============================================================
+
+function hideAllGraphSections() {
+
+    const ids = [
+
+        "stockInSection",
+        "stockOutSection",
+        "stockInDemandSection",
+        "stockInCostSection",
+        "stockOutCostSection",
+        "demandSection",
+
+        "departmentStockInSection",
+        "departmentStockOutSection",
+        "departmentCostSection"
+    ];
+
+    ids.forEach(id => {
+
+        const el =
+            document.getElementById(id);
+
+        if (el) {
+            el.style.display = "none";
+        }
+    });
+}
+
+
+function showSection(id) {
+
+    const el =
+        document.getElementById(id);
+
+    if (el) {
+        el.style.display = "block";
+    }
+}
+
+
+// ============================================================
+// GRAPH MODE
+// ============================================================
+
+function setGraphMode(mode) {
+
+    currentGraphMode =
+        mode || "all";
+
+    document
+        .querySelectorAll(
+            ".graph-mode-btn"
+        )
+        .forEach(button => {
+
+            button.classList.toggle(
+                "active",
+                button.dataset.mode ===
+                currentGraphMode
+            );
+        });
+
+    updateGraphs();
+}
+
+
+// ============================================================
+// STOCK IN GRAPH
+// ============================================================
+
+function drawStockInChart(data) {
+
+    const canvas =
+        document.getElementById(
+            "stockInChart"
+        );
+
+    if (!canvas) return;
+
+    stockInChart =
+        destroyChart(stockInChart);
+
+    const labels =
+        data.map(
+            row =>
+                `${row.code} - ${row.name}`
+        );
+
+    stockInChart =
+        new Chart(
+            canvas.getContext("2d"),
+            {
+
+                type: "bar",
+
+                data: {
+
+                    labels,
+
+                    datasets: [
+
+                        {
+                            label:
+                                "Stock In Quantity",
+
+                            data:
+                                data.map(
+                                    row =>
+                                        row.stockIn
+                                )
+                        }
+                    ]
+                },
+
+                options:
+                    horizontalBarOptions(
+                        "📥 Stock In Quantity",
+                        "Quantity"
+                    )
+            }
+        );
+}
+
+
+// ============================================================
+// STOCK OUT GRAPH
+// ============================================================
+
+function drawStockOutChart(data) {
+
+    const canvas =
+        document.getElementById(
+            "stockOutChart"
+        );
+
+    if (!canvas) return;
+
+    stockOutChart =
+        destroyChart(stockOutChart);
+
+    const labels =
+        data.map(
+            row =>
+                `${row.code} - ${row.name}`
+        );
+
+    stockOutChart =
+        new Chart(
+            canvas.getContext("2d"),
+            {
+
+                type: "bar",
+
+                data: {
+
+                    labels,
+
+                    datasets: [
+
+                        {
+                            label:
+                                "Stock Out Quantity",
+
+                            data:
+                                data.map(
+                                    row =>
+                                        row.stockOut
+                                )
+                        }
+                    ]
+                },
+
+                options:
+                    horizontalBarOptions(
+                        "📤 Stock Out Quantity",
+                        "Quantity"
+                    )
+            }
+        );
+}
+
+
+// ============================================================
+// STOCK IN VS DEMAND
+// ============================================================
+
+function drawStockInDemandChart(data) {
+
+    const canvas =
+        document.getElementById(
+            "stockInDemandChart"
+        );
+
+    if (!canvas) return;
+
+    stockInDemandChart =
+        destroyChart(
+            stockInDemandChart
+        );
+
+    const labels =
+        data.map(
+            row =>
+                `${row.code} - ${row.name}`
+        );
+
+    stockInDemandChart =
+        new Chart(
+            canvas.getContext("2d"),
+            {
+
+                type: "bar",
+
+                data: {
+
+                    labels,
+
+                    datasets: [
+
+                        {
+                            label:
+                                "Stock In",
+
+                            data:
+                                data.map(
+                                    row =>
+                                        row.stockIn
+                                )
+                        },
+
+                        {
+                            label:
+                                "Demand",
+
+                            data:
+                                data.map(
+                                    row =>
+                                        row.demand
+                                )
+                        }
+                    ]
+                },
+
+                options:
+                    horizontalBarOptions(
+                        "📊 Stock In vs Demand",
+                        "Quantity"
+                    )
+            }
+        );
+}
+
+
+// ============================================================
+// STOCK IN COST
+// ============================================================
+
+function drawStockInCostChart(data) {
+
+    const canvas =
+        document.getElementById(
+            "stockInCostChart"
+        );
+
+    if (!canvas) return;
+
+    stockInCostChart =
+        destroyChart(
+            stockInCostChart
+        );
+
+    const labels =
+        data.map(
+            row =>
+                `${row.code} - ${row.name}`
+        );
+
+    stockInCostChart =
+        new Chart(
+            canvas.getContext("2d"),
+            {
+
+                type: "bar",
+
+                data: {
+
+                    labels,
+
+                    datasets: [
+
+                        {
+                            label:
+                                "Stock In Cost",
+
+                            data:
+                                data.map(
+                                    row =>
+                                        row.stockInCost
+                                )
+                        }
+                    ]
+                },
+
+                options:
+                    horizontalBarOptions(
+                        "💰 Stock In Cost",
+                        "Cost"
+                    )
+            }
+        );
+}
+
+
+// ============================================================
+// STOCK OUT COST
+// ============================================================
+
+function drawStockOutCostChart(data) {
+
+    const canvas =
+        document.getElementById(
+            "stockOutCostChart"
+        );
+
+    if (!canvas) return;
+
+    stockOutCostChart =
+        destroyChart(
+            stockOutCostChart
+        );
+
+    const labels =
+        data.map(
+            row =>
+                `${row.code} - ${row.name}`
+        );
+
+    stockOutCostChart =
+        new Chart(
+            canvas.getContext("2d"),
+            {
+
+                type: "bar",
+
+                data: {
+
+                    labels,
+
+                    datasets: [
+
+                        {
+                            label:
+                                "Stock Out Cost",
+
+                            data:
+                                data.map(
+                                    row =>
+                                        row.stockOutCost
+                                )
+                        }
+                    ]
+                },
+
+                options:
+                    horizontalBarOptions(
+                        "💰 Stock Out Cost",
+                        "Cost"
+                    )
+            }
+        );
+}
+
+
+// ============================================================
+// DEMAND GRAPH
+// ============================================================
+
+function drawDemandChart(data) {
+
+    const canvas =
+        document.getElementById(
+            "demandChart"
+        );
+
+    if (!canvas) return;
+
+    demandChart =
+        destroyChart(
+            demandChart
+        );
+
+    const labels =
+        data.map(
+            row =>
+                `${row.code} - ${row.name}`
+        );
+
+    demandChart =
+        new Chart(
+            canvas.getContext("2d"),
+            {
+
+                type: "bar",
+
+                data: {
+
+                    labels,
+
+                    datasets: [
+
+                        {
+                            label:
+                                "Demand Quantity",
+
+                            data:
+                                data.map(
+                                    row =>
+                                        row.demand
+                                )
+                        }
+                    ]
+                },
+
+                options:
+                    horizontalBarOptions(
+                        "📊 Demand Quantity",
+                        "Quantity"
+                    )
+            }
+        );
+}
+
+
+// ============================================================
+// STOCK OUT VS COST
+// ============================================================
+
+function drawStockOutVsCostChart(
+    data
+) {
+
+    const canvas =
+        document.getElementById(
+            "stockOutCostChart"
+        );
+
+    if (!canvas) return;
+
+    stockOutCostChart =
+        destroyChart(
+            stockOutCostChart
+        );
+
+
+    const labels =
+        data.map(
+            row =>
+                `${row.code} - ${row.name}`
+        );
+
+
+    const options =
+        commonChartOptions();
+
+    options.plugins.title = {
+
+        display: true,
+
+        text:
+            "💰 Stock Out vs Cost Analysis",
+
+        font: {
+            size: 17,
+            weight: "bold"
+        }
+    };
+
+
+    options.scales = {
+
+        y: {
+
+            beginAtZero: true,
+
+            position: "left",
+
+            title: {
+                display: true,
+                text: "Stock Out Quantity"
+            }
+        },
+
+        costAxis: {
+
+            beginAtZero: true,
+
+            position: "right",
+
+            grid: {
+                drawOnChartArea: false
+            },
+
+            title: {
+                display: true,
+                text: "Stock Out Cost"
+            }
+        }
+    };
+
+
+    stockOutCostChart =
+        new Chart(
+            canvas.getContext("2d"),
+            {
+
+                type: "bar",
+
+                data: {
+
+                    labels,
+
+                    datasets: [
+
+                        {
+
+                            type: "bar",
+
+                            label:
+                                "Stock Out Quantity",
+
+                            data:
+                                data.map(
+                                    row =>
+                                        row.stockOut
+                                ),
+
+                            yAxisID: "y"
+                        },
+
+                        {
+
+                            type: "line",
+
+                            label:
+                                "Stock Out Cost",
+
+                            data:
+                                data.map(
+                                    row =>
+                                        row.stockOutCost
+                                ),
+
+                            yAxisID:
+                                "costAxis",
+
+                            tension: 0.25
+                        }
+                    ]
+                },
+
+                options
+            }
+        );
+}
+
+
+// ============================================================
+// DEPARTMENT STOCK IN
+// ============================================================
+
+function drawDepartmentStockInChart(
+    data
+) {
+
+    const canvas =
+        document.getElementById(
+            "departmentStockInChart"
+        );
+
+    if (!canvas) return;
+
+    departmentStockInChart =
+        destroyChart(
+            departmentStockInChart
+        );
+
+    const labels =
+        data.map(
+            row =>
+                row.department
+        );
+
+    departmentStockInChart =
+        new Chart(
+            canvas.getContext("2d"),
+            {
+
+                type: "bar",
+
+                data: {
+
+                    labels,
+
+                    datasets: [
+
+                        {
+                            label:
+                                "Stock In",
+
+                            data:
+                                data.map(
+                                    row =>
+                                        row.stockIn
+                                )
+                        }
+                    ]
+                },
+
+                options:
+                    verticalBarOptions(
+                        "📥 Department Wise Stock In",
+                        "Quantity"
+                    )
+            }
+        );
+}
+
+
+// ============================================================
+// DEPARTMENT STOCK OUT
+// ============================================================
+
+function drawDepartmentStockOutChart(
+    data
+) {
+
+    const canvas =
+        document.getElementById(
+            "departmentStockOutChart"
+        );
+
+    if (!canvas) return;
+
+    departmentStockOutChart =
+        destroyChart(
+            departmentStockOutChart
+        );
+
+    const labels =
+        data.map(
+            row =>
+                row.department
+        );
+
+    departmentStockOutChart =
+        new Chart(
+            canvas.getContext("2d"),
+            {
+
+                type: "bar",
+
+                data: {
+
+                    labels,
+
+                    datasets: [
+
+                        {
+                            label:
+                                "Stock Out",
+
+                            data:
+                                data.map(
+                                    row =>
+                                        row.stockOut
+                                )
+                        }
+                    ]
+                },
+
+                options:
+                    verticalBarOptions(
+                        "📤 Department Wise Stock Out",
+                        "Quantity"
+                    )
+            }
+        );
+}
+
+
+// ============================================================
+// DEPARTMENT COST
+// ============================================================
+
+function drawDepartmentCostChart(
+    data
+) {
+
+    const canvas =
+        document.getElementById(
+            "departmentCostChart"
+        );
+
+    if (!canvas) return;
+
+    departmentCostChart =
+        destroyChart(
+            departmentCostChart
+        );
+
+    const labels =
+        data.map(
+            row =>
+                row.department
+        );
+
+    departmentCostChart =
+        new Chart(
+            canvas.getContext("2d"),
+            {
+
+                type: "bar",
+
+                data: {
+
+                    labels,
+
+                    datasets: [
+
+                        {
+                            label:
+                                "Stock In Cost",
+
+                            data:
+                                data.map(
+                                    row =>
+                                        row.stockInCost
+                                )
+                        },
+
+                        {
+                            label:
+                                "Stock Out Cost",
+
+                            data:
+                                data.map(
+                                    row =>
+                                        row.stockOutCost
+                                )
+                        }
+                    ]
+                },
+
+                options:
+                    verticalBarOptions(
+                        "💰 Department Wise Cost",
+                        "Cost"
+                    )
+            }
+        );
+}
+
+
+// ============================================================
+// GRAPH MODE UPDATE
+// ============================================================
+
+function updateGraphs() {
 
     updateItemInfo();
 
+    const data =
+        createGraphData();
 
-    buildDataTable(
-        data
-    );
+    updateSummary(data);
 
+    buildDataTable(data);
 
-    // =================================
-    // DESTROY OLD CHARTS
-    // =================================
+    hideAllGraphSections();
 
-    if(stockDemandChart){
-
-        stockDemandChart.destroy();
-
-        stockDemandChart =
-            null;
-
-    }
+    destroyAllCharts();
 
 
-    if(quantityChart){
+    // ========================================================
+    // ALL
+    // ========================================================
 
-        quantityChart.destroy();
+    if (currentGraphMode === "all") {
 
-        quantityChart =
-            null;
+        showSection(
+            "stockInSection"
+        );
 
-    }
+        showSection(
+            "stockOutSection"
+        );
 
+        showSection(
+            "stockInDemandSection"
+        );
 
-    if(costChart){
+        showSection(
+            "stockInCostSection"
+        );
 
-        costChart.destroy();
+        showSection(
+            "stockOutCostSection"
+        );
 
-        costChart =
-            null;
+        showSection(
+            "departmentStockInSection"
+        );
 
-    }
+        showSection(
+            "departmentStockOutSection"
+        );
 
-
-    if(periodChart){
-
-        periodChart.destroy();
-
-        periodChart =
-            null;
-
-    }
-
-
-    // =================================
-    // GRAPH 1
-    // STOCK IN / DEMAND / STOCK OUT
-    // =================================
-
-    let stockDemandCanvas =
-        document.getElementById(
-            "stockDemandChart"
+        showSection(
+            "departmentCostSection"
         );
 
 
-    if(stockDemandCanvas){
+        drawStockInChart(data);
 
-        let chartData =
-            data;
+        drawStockOutChart(data);
 
+        drawStockInDemandChart(data);
 
-        // ---------------------------------
-        // For ALL ITEMS show top 20 by
-        // activity so graph stays readable
-        // ---------------------------------
+        drawStockInCostChart(data);
 
-        if(
-            itemSelect.value
-            ===
-            "all"
-        ){
-
-            chartData =
-                data
-                    .slice()
-                    .sort(
-                        function(a,b){
-
-                            let aTotal =
-                                a.stockIn +
-                                a.stockOut +
-                                a.demand;
+        drawStockOutCostChart(data);
 
 
-                            let bTotal =
-                                b.stockIn +
-                                b.stockOut +
-                                b.demand;
+        const departments =
+            createDepartmentGraphData();
 
+        drawDepartmentStockInChart(
+            departments
+        );
 
-                            return bTotal - aTotal;
+        drawDepartmentStockOutChart(
+            departments
+        );
 
-                        }
-                    )
-                    .slice(
-                        0,
-                        20
-                    );
+        drawDepartmentCostChart(
+            departments
+        );
 
-        }
-
-
-        stockDemandChart =
-            new Chart(
-
-                stockDemandCanvas,
-
-                {
-
-                    type:
-                        "bar",
-
-                    data:{
-
-                        labels:
-                            chartData.map(
-                                function(x){
-
-                                    return (
-                                        x.code +
-                                        " - " +
-                                        x.name
-                                    );
-
-                                }
-                            ),
-
-                        datasets:[
-
-                            {
-
-                                label:
-                                    "Stock In",
-
-                                data:
-                                    chartData.map(
-                                        function(x){
-
-                                            return x.stockIn;
-
-                                        }
-                                    )
-
-                            },
-
-                            {
-
-                                label:
-                                    "Monthly Demand",
-
-                                data:
-                                    chartData.map(
-                                        function(x){
-
-                                            return x.demand;
-
-                                        }
-                                    )
-
-                            },
-
-                            {
-
-                                label:
-                                    "Stock Out",
-
-                                data:
-                                    chartData.map(
-                                        function(x){
-
-                                            return x.stockOut;
-
-                                        }
-                                    )
-
-                            }
-
-                        ]
-
-                    },
-
-                    options:{
-
-                        ...commonChartOptions(),
-
-                        indexAxis:
-                            "y",
-
-                        scales:{
-
-                            x:{
-
-                                beginAtZero:
-                                    true
-
-                            },
-
-                            y:{
-
-                                ticks:{
-
-                                    autoSkip:
-                                        false
-
-                                }
-
-                            }
-
-                        }
-
-                    }
-
-                }
-
-            );
-
+        return;
     }
 
 
-    // =================================
-    // GRAPH 2
-    // QUANTITY
-    // =================================
+    // ========================================================
+    // STOCK IN
+    // ========================================================
 
-    let quantityCanvas =
-        document.getElementById(
-            "quantityChart"
+    if (
+        currentGraphMode ===
+        "stockIn"
+    ) {
+
+        showSection(
+            "stockInSection"
+        );
+
+        showSection(
+            "stockInDemandSection"
+        );
+
+        showSection(
+            "stockInCostSection"
         );
 
 
-    if(quantityCanvas){
+        drawStockInChart(data);
 
-        let quantityData =
-            data;
+        drawStockInDemandChart(data);
 
+        drawStockInCostChart(data);
 
-        if(
-            itemSelect.value
-            ===
-            "all"
-        ){
-
-            quantityData =
-                data
-                    .slice()
-                    .sort(
-                        function(a,b){
-
-                            let aTotal =
-                                a.stockIn +
-                                a.stockOut +
-                                a.demand;
-
-
-                            let bTotal =
-                                b.stockIn +
-                                b.stockOut +
-                                b.demand;
-
-
-                            return bTotal - aTotal;
-
-                        }
-                    )
-                    .slice(
-                        0,
-                        20
-                    );
-
-        }
-
-
-        quantityChart =
-            new Chart(
-
-                quantityCanvas,
-
-                {
-
-                    type:
-                        "line",
-
-                    data:{
-
-                        labels:
-                            quantityData.map(
-                                function(x){
-
-                                    return x.code;
-
-                                }
-                            ),
-
-                        datasets:[
-
-                            {
-
-                                label:
-                                    "Stock In",
-
-                                data:
-                                    quantityData.map(
-                                        function(x){
-
-                                            return x.stockIn;
-
-                                        }
-                                    ),
-
-                                tension:
-                                    .3
-
-                            },
-
-                            {
-
-                                label:
-                                    "Demand",
-
-                                data:
-                                    quantityData.map(
-                                        function(x){
-
-                                            return x.demand;
-
-                                        }
-                                    ),
-
-                                tension:
-                                    .3
-
-                            },
-
-                            {
-
-                                label:
-                                    "Stock Out",
-
-                                data:
-                                    quantityData.map(
-                                        function(x){
-
-                                            return x.stockOut;
-
-                                        }
-                                    ),
-
-                                tension:
-                                    .3
-
-                            }
-
-                        ]
-
-                    },
-
-                    options:{
-
-                        ...commonChartOptions(),
-
-                        scales:{
-
-                            y:{
-
-                                beginAtZero:
-                                    true
-
-                            }
-
-                        }
-
-                    }
-
-                }
-
-            );
-
+        return;
     }
 
 
-    // =================================
-    // GRAPH 3
-    // COST
-    // =================================
+    // ========================================================
+    // STOCK OUT
+    // ========================================================
 
-    let costCanvas =
-        document.getElementById(
-            "costChart"
+    if (
+        currentGraphMode ===
+        "stockOut"
+    ) {
+
+        showSection(
+            "stockOutSection"
+        );
+
+        showSection(
+            "stockOutCostSection"
         );
 
 
-    if(costCanvas){
+        drawStockOutChart(data);
 
-        let costData =
-            data;
+        drawStockOutVsCostChart(
+            data
+        );
 
-
-        if(
-            itemSelect.value
-            ===
-            "all"
-        ){
-
-            costData =
-                data
-                    .slice()
-                    .sort(
-                        function(a,b){
-
-                            return b.cost - a.cost;
-
-                        }
-                    )
-                    .slice(
-                        0,
-                        20
-                    );
-
-        }
-
-
-        costChart =
-            new Chart(
-
-                costCanvas,
-
-                {
-
-                    type:
-                        "bar",
-
-                    data:{
-
-                        labels:
-                            costData.map(
-                                function(x){
-
-                                    return x.code;
-
-                                }
-                            ),
-
-                        datasets:[
-
-                            {
-
-                                label:
-                                    "Purchase Cost",
-
-                                data:
-                                    costData.map(
-                                        function(x){
-
-                                            return x.cost;
-
-                                        }
-                                    )
-
-                            }
-
-                        ]
-
-                    },
-
-                    options:{
-
-                        ...commonChartOptions(),
-
-                        indexAxis:
-                            "y",
-
-                        scales:{
-
-                            x:{
-
-                                beginAtZero:
-                                    true,
-
-                                ticks:{
-
-                                    callback:
-                                        function(value){
-
-                                            return (
-                                                "Rs. " +
-                                                Number(
-                                                    value
-                                                ).toLocaleString()
-                                            );
-
-                                        }
-
-                                }
-
-                            }
-
-                        },
-
-                        plugins:{
-
-                            ...commonChartOptions()
-                                .plugins,
-
-                            tooltip:{
-
-                                callbacks:{
-
-                                    label:
-                                        function(context){
-
-                                            return (
-                                                "Purchase Cost: Rs. " +
-                                                safeNumber(
-                                                    context.raw
-                                                ).toLocaleString()
-                                            );
-
-                                        }
-
-                                }
-
-                            }
-
-                        }
-
-                    }
-
-                }
-
-            );
-
+        return;
     }
 
 
-    // =================================
-    // GRAPH 4
-    // PERIOD
-    // =================================
+    // ========================================================
+    // DEMAND
+    // ========================================================
 
-    let periodCanvas =
-        document.getElementById(
-            "periodChart"
+    if (
+        currentGraphMode ===
+        "demand"
+    ) {
+
+        showSection(
+            "demandSection"
+        );
+
+        drawDemandChart(data);
+
+        return;
+    }
+
+
+    // ========================================================
+    // DEPARTMENT
+    // ========================================================
+
+    if (
+        currentGraphMode ===
+        "department"
+    ) {
+
+        showSection(
+            "departmentStockInSection"
+        );
+
+        showSection(
+            "departmentStockOutSection"
+        );
+
+        showSection(
+            "departmentCostSection"
         );
 
 
-    if(periodCanvas){
+        const departments =
+            createDepartmentGraphData();
 
-        periodChart =
-            new Chart(
+        drawDepartmentStockInChart(
+            departments
+        );
 
-                periodCanvas,
+        drawDepartmentStockOutChart(
+            departments
+        );
 
-                {
+        drawDepartmentCostChart(
+            departments
+        );
 
-                    type:
-                        "line",
-
-                    data:{
-
-                        labels:
-                            periodData.labels,
-
-                        datasets:[
-
-                            {
-
-                                label:
-                                    "Stock In",
-
-                                data:
-                                    periodData.stockIn,
-
-                                tension:
-                                    .3
-
-                            },
-
-                            {
-
-                                label:
-                                    "Demand",
-
-                                data:
-                                    periodData.demand,
-
-                                tension:
-                                    .3
-
-                            },
-
-                            {
-
-                                label:
-                                    "Stock Out",
-
-                                data:
-                                    periodData.stockOut,
-
-                                tension:
-                                    .3
-
-                            },
-
-                            {
-
-                                label:
-                                    "Purchase Cost",
-
-                                data:
-                                    periodData.cost,
-
-                                tension:
-                                    .3,
-
-                                yAxisID:
-                                    "costAxis"
-
-                            }
-
-                        ]
-
-                    },
-
-                    options:{
-
-                        ...commonChartOptions(),
-
-                        scales:{
-
-                            y:{
-
-                                beginAtZero:
-                                    true,
-
-                                title:{
-
-                                    display:
-                                        true,
-
-                                    text:
-                                        "Quantity"
-
-                                }
-
-                            },
-
-                            costAxis:{
-
-                                beginAtZero:
-                                    true,
-
-                                position:
-                                    "right",
-
-                                grid:{
-
-                                    drawOnChartArea:
-                                        false
-
-                                },
-
-                                title:{
-
-                                    display:
-                                        true,
-
-                                    text:
-                                        "Cost (Rs.)"
-
-                                }
-
-                            }
-
-                        },
-
-                        plugins:{
-
-                            ...commonChartOptions()
-                                .plugins,
-
-                            tooltip:{
-
-                                callbacks:{
-
-                                    label:
-                                        function(context){
-
-                                            if(
-                                                context.dataset.label
-                                                ===
-                                                "Purchase Cost"
-                                            ){
-
-                                                return (
-                                                    "Purchase Cost: Rs. " +
-                                                    safeNumber(
-                                                        context.raw
-                                                    ).toLocaleString()
-                                                );
-
-                                            }
-
-
-                                            return (
-                                                context.dataset.label +
-                                                ": " +
-                                                safeNumber(
-                                                    context.raw
-                                                ).toLocaleString()
-                                            );
-
-                                        }
-
-                                }
-
-                            }
-
-                        }
-
-                    }
-
-                }
-
-            );
-
+        return;
     }
-
 }
 
 
-// =====================================
-// START GRAPH
-// =====================================
-
-async function startGraphs(){
-
-    await loadAllGraphData();
-
-}
-
-
-// =====================================
+// ============================================================
 // START
-// =====================================
+// ============================================================
 
-startGraphs();
+async function startGraphs() {
+
+    try {
+
+        await loadAllGraphData();
+
+    } catch (error) {
+
+        console.error(
+            "Graphs start error:",
+            error
+        );
+    }
+}
+
+
+document.addEventListener(
+    "DOMContentLoaded",
+    () => {
+
+        // Mode buttons
+        document
+            .querySelectorAll(
+                ".graph-mode-btn"
+            )
+            .forEach(button => {
+
+                button.addEventListener(
+                    "click",
+                    () => {
+
+                        setGraphMode(
+                            button.dataset.mode
+                        );
+                    }
+                );
+            });
+
+
+        // Period selector
+        const periodType =
+            document.getElementById(
+                "periodType"
+            );
+
+        if (periodType) {
+
+            periodType.addEventListener(
+                "change",
+                changePeriodType
+            );
+        }
+
+
+        // Month selector
+        const monthSelect =
+            document.getElementById(
+                "monthSelect"
+            );
+
+        if (monthSelect) {
+
+            monthSelect.addEventListener(
+                "change",
+                updateGraphs
+            );
+        }
+
+
+        // Start
+        startGraphs();
+    }
+);
