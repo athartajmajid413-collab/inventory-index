@@ -37,6 +37,99 @@ body{margin:0;font-family:Arial,sans-serif;background:#f2f5f9}
 .current-stock-cell{font-weight:bold}.low{background:#ffd6d6;color:#b00000}.warning{background:#fff0b3;color:#9a6b00}.normal{background:#dff5e8;color:#176b3a}
 @media(max-width:1000px){.dashboard-cards{grid-template-columns:repeat(2,1fr)}}
 @media(max-width:750px){.sidebar{position:relative;width:100%;min-height:auto}.dashboard{margin-left:0}.dashboard-cards{grid-template-columns:1fr}.top-header{flex-direction:column;gap:10px}.graph-card{grid-column:auto}}
+/* ==========================================
+   ITEM SEARCH + SMALL PICTURE
+   ========================================== */
+
+.item-search-input{
+    display:flex;
+    align-items:center;
+    gap:10px;
+    flex:0 0 auto;
+}
+
+.item-search-input input{
+    width:180px;
+    min-width:180px;
+    flex:none;
+    padding:11px 12px;
+    border:1px solid #ccc;
+    border-radius:8px;
+    font-size:15px;
+}
+
+.item-search-input button{
+    flex:none;
+}
+
+/* Small selected item picture card */
+
+.item-picture-card{
+    width:125px;
+    height:125px;
+    background:#fafafa;
+    border:1px solid #ddd;
+    border-radius:10px;
+
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    justify-content:center;
+
+    padding:6px;
+    overflow:hidden;
+}
+
+.item-picture-card img{
+    width:85px;
+    height:85px;
+
+    object-fit:contain;
+
+    border-radius:7px;
+    background:white;
+}
+
+#itemPictureName{
+    width:100%;
+    margin-top:4px;
+
+    font-size:11px;
+    font-weight:bold;
+    color:#12355b;
+
+    text-align:center;
+
+    white-space:nowrap;
+    overflow:hidden;
+    text-overflow:ellipsis;
+}
+
+
+/* Mobile */
+
+@media(max-width:750px){
+
+    .item-search-input{
+        width:100%;
+    }
+
+    .item-search-input input{
+        width:160px;
+        min-width:160px;
+    }
+
+    .item-picture-card{
+        width:105px;
+        height:105px;
+    }
+
+    .item-picture-card img{
+        width:70px;
+        height:70px;
+    }
+}
+
 </style>
 </head>
 <body>
@@ -76,64 +169,51 @@ body{margin:0;font-family:Arial,sans-serif;background:#f2f5f9}
 <h2 style="color:#12355b">Dashboard</h2>
 
 <div class="search-box">
-<h2>🔎 Item Search</h2>
-<div class="search-row">
-<input id="itemSearch" type="text" placeholder="Enter Item ID / Code..." oninput="searchItem()" autocomplete="off">
-<button class="clear-btn" onclick="clearItemSearch()">Clear</button>
-</div>
-<div id="searchInfo" class="search-info">Overall Dashboard — No item selected</div>
-</div>
-<!-- =====================================
-     SELECTED ITEM ONLINE PICTURE
-===================================== -->
+    <h2>🔎 Item Search</h2>
 
-<div id="itemPictureBox" style="
-    display:none;
-    background:white;
-    padding:20px;
-    border-radius:15px;
-    margin-bottom:25px;
-    box-shadow:0 5px 15px rgba(0,0,0,.10);
-    text-align:center;
-">
+    <div class="search-row">
 
-    <h2 style="color:#12355b;margin-top:0;">
-        🖼️ Selected Item Picture
-    </h2>
+        <!-- Item ID / Code -->
+        <div class="item-search-input">
+            <input
+                id="itemSearch"
+                type="text"
+                placeholder="Enter Item ID / Code..."
+                oninput="searchItem()"
+                autocomplete="off"
+            >
+            <button
+                class="clear-btn"
+                onclick="clearItemSearch()"
+            >
+                Clear
+            </button>
+        </div>
 
-    <div id="itemPictureName"
-         style="
-            font-size:18px;
-            font-weight:bold;
-            color:#12355b;
-            margin-bottom:15px;
-         ">
+        <!-- Selected Item Picture -->
+        <div
+            id="itemPictureBox"
+            class="item-picture-card"
+            style="display:none;"
+        >
+            <img
+                id="itemOnlinePicture"
+                src=""
+                alt="Item Picture"
+                onerror="if(window.handleItemPictureError){window.handleItemPictureError();}"
+            >
+
+            <div id="itemPictureName"></div>
+        </div>
+
     </div>
 
-    <img
-    id="itemOnlinePicture"
-    src=""
-    alt="Item Picture"
-            max-width:250px;
-            max-height:220px;
-            width:auto;
-            height:auto;
-            object-fit:contain;
-            border-radius:12px;
-            border:1px solid #ddd;
-            padding:8px;
-            background:#fafafa;
-         "
-       onerror="if(window.handleItemPictureError){window.handleItemPictureError();}">
-
-    <div id="itemPictureStatus"
-         style="
-            margin-top:10px;
-            color:#777;
-            font-size:13px;
-         ">
+    <div
+        id="searchInfo"
+        class="search-info"
+    >
+        Overall Dashboard — No item selected
     </div>
-
 </div>
 <div class="dashboard-cards">
 
