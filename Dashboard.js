@@ -1690,7 +1690,295 @@ function getOverallDemand() {
     );
 
 }
+// --------------------------------------------------
+// MONTHLY DEMAND CARD LIST
+// --------------------------------------------------
+// Input خالی ہو:
+//     selected month کی پوری demand list
+//
+// Item selected ہو:
+//     صرف اسی item کی demand
+//
+// Demand نہ ہو:
+//     کچھ نہیں دکھانا
+// --------------------------------------------------
 
+function buildMonthlyDemandCardList() {
+
+    const container =
+        document.getElementById("demandInfo");
+
+    if (!container) {
+        return;
+    }
+
+
+    // =========================================
+    // ITEM SELECTED
+    // =========================================
+
+    if (selectedItem) {
+
+        const code =
+            getItemCode(selectedItem);
+
+        const demand =
+            getCurrentMonthDemand(code);
+
+
+        // Selected item کی demand نہیں ہے
+        if (
+            demand <= 0
+        ) {
+
+            container.innerHTML = "";
+
+            return;
+
+        }
+
+
+        container.innerHTML =
+
+            '<div style="' +
+            'font-size:14px;' +
+            'font-weight:bold;' +
+            'padding:5px 2px;' +
+            '">'
+
+            +
+
+            escapeHTML(
+                getItemName(selectedItem)
+            )
+
+            +
+
+            '</div>'
+
+            +
+
+            '<div style="' +
+            'display:flex;' +
+            'justify-content:space-between;' +
+            'align-items:center;' +
+            'gap:10px;' +
+            'padding:6px 3px;' +
+            'border-top:1px solid rgba(255,255,255,.25);' +
+            'font-size:14px;' +
+            '">'
+
+            +
+
+            '<span style="font-weight:bold;">' +
+            'Demand Qty' +
+            '</span>'
+
+            +
+
+            '<span style="font-weight:bold;white-space:nowrap;">' +
+
+            demand.toFixed(2) +
+
+            ' ' +
+
+            escapeHTML(
+                getItemUnit(selectedItem)
+            ) +
+
+            '</span>'
+
+            +
+
+            '</div>';
+
+        return;
+
+    }
+
+
+    // =========================================
+    // NO ITEM SELECTED
+    // PURI DEMAND LIST
+    // =========================================
+
+    const demandItems = [];
+
+
+    items.forEach(function(item) {
+
+        const code =
+            getItemCode(item);
+
+        const demand =
+            getCurrentMonthDemand(code);
+
+
+        if (
+            demand > 0
+        ) {
+
+            demandItems.push({
+
+                name:
+                    getItemName(item),
+
+                demand:
+                    demand,
+
+                unit:
+                    getItemUnit(item)
+
+            });
+
+        }
+
+    });
+
+
+    // =========================================
+    // NO DEMAND
+    // =========================================
+
+    if (
+        demandItems.length === 0
+    ) {
+
+        container.innerHTML =
+            '<div style="font-size:14px;padding:6px 0;">' +
+            'No demand for ' +
+            escapeHTML(
+                getMonthName(
+                    selectedDashboardMonth
+                )
+            ) +
+            '</div>';
+
+        return;
+
+    }
+
+
+    // =========================================
+    // SORT BY ITEM NAME
+    // =========================================
+
+    demandItems.sort(function(a, b) {
+
+        return String(a.name).localeCompare(
+            String(b.name),
+            undefined,
+            {
+                numeric: true,
+                sensitivity: "base"
+            }
+        );
+
+    });
+
+
+    // =========================================
+    // SCROLLABLE LIST
+    // =========================================
+
+    let html =
+
+        '<div style="' +
+
+        'height:105px;' +
+
+        'max-height:105px;' +
+
+        'overflow-y:auto;' +
+
+        'overflow-x:hidden;' +
+
+        'padding-right:5px;' +
+
+        '">';
+
+
+    demandItems.forEach(function(item) {
+
+        html +=
+
+            '<div style="' +
+
+            'display:flex;' +
+
+            'justify-content:space-between;' +
+
+            'align-items:center;' +
+
+            'gap:10px;' +
+
+            'padding:5px 3px;' +
+
+            'border-bottom:1px solid rgba(255,255,255,.25);' +
+
+            'font-size:14px;' +
+
+            '">'
+
+            +
+
+            '<span style="' +
+
+            'flex:1;' +
+
+            'min-width:0;' +
+
+            'overflow:hidden;' +
+
+            'text-overflow:ellipsis;' +
+
+            'white-space:nowrap;' +
+
+            'font-weight:bold;' +
+
+            '">' +
+
+            escapeHTML(
+                item.name
+            ) +
+
+            '</span>'
+
+            +
+
+            '<span style="' +
+
+            'font-weight:bold;' +
+
+            'white-space:nowrap;' +
+
+            '">' +
+
+            item.demand.toFixed(2) +
+
+            ' ' +
+
+            escapeHTML(
+                item.unit
+            ) +
+
+            '</span>'
+
+            +
+
+            '</div>';
+
+    });
+
+
+    html +=
+        '</div>';
+
+
+    container.innerHTML =
+        html;
+
+}
 
 function getPendingForItem(item) {
 
@@ -2401,13 +2689,12 @@ function updateDashboard() {
             );
 
 
-        el("demandValue").innerHTML =
-            getOverallDemand()
-                .toFixed(2);
+       el("demandValue").innerHTML =
+    getOverallDemand()
+        .toFixed(2);
 
 
-        el("demandInfo").innerHTML =
-            "Live Monthly Demand";
+buildMonthlyDemandCardList();
 
 
         el("pendingValue").innerHTML =
@@ -2593,16 +2880,14 @@ function updateDashboard() {
         );
 
 
-    el("demandValue").innerHTML =
+  el("demandValue").innerHTML =
 
-        demand.toFixed(2) +
-        " " +
-        escapeHTML(unit);
+    demand.toFixed(2) +
+    " " +
+    escapeHTML(unit);
 
 
-    el("demandInfo").innerHTML =
-        "Live Monthly Demand";
-
+buildMonthlyDemandCardList();
 
     el("pendingValue").innerHTML =
 
