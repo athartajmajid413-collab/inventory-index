@@ -2276,72 +2276,388 @@ function getOverallDemand() {
     );
 }
 
+// --------------------------------------------------
+// SELECTED MONTH PENDING DEMAND / PO
+// --------------------------------------------------
+// Pending = Selected Month Approved Demand
+//           - Selected Month Stock In (Received)
+//
+// اگر Pending صفر یا اس سے کم ہو تو item نہیں دکھے گا.
+// --------------------------------------------------
 
-function getPendingForItem(item) {
+function getSelectedMonthPendingDemandList() {
 
-    const demand =
-        getCurrentMonthDemand(
-            getItemCode(item)
-        );
+    const approvedList =
+        getSelectedMonthApprovedDemandList();
 
-
-    const currentStock =
-        getCurrentStock(item);
-
-
-    const pending =
-        Math.max(
-            demand -
-            currentStock,
-            0
-        );
+    const result = [];
 
 
-    return {
+    approvedList.forEach(function(row) {
 
-        demand:
-            demand,
-
-        pendingDemand:
-            pending,
-
-        pendingPO:
-            pending
-
-    };
-}
+        const code =
+            cleanCode(row.code);
 
 
-function getOverallPending() {
-
-    let totalDemand = 0;
-
-    let totalStock = 0;
+        if (!code) {
+            return;
+        }
 
 
-    items.forEach(item => {
+        // Selected month میں received Stock In
+        const received =
+            getSelectedMonthStockIn(code);
 
-        totalDemand +=
-            getCurrentMonthDemand(
-                getItemCode(item)
+
+        // Approved demand - received quantity
+        const pending =
+            Math.max(
+                safeNumber(row.quantity) -
+                safeNumber(received),
+                0
             );
 
 
-        totalStock +=
-            getCurrentStock(item);
+        // مکمل receive ہو چکی ہو تو list میں نہیں آئے گی
+        if (pending <= 0) {
+            return;
+        }
+
+
+        result.push({
+
+            code:
+                code,
+
+            name:
+                row.name || code,
+
+            unit:
+                row.unit || "-",
+
+            approved:
+                safeNumber(row.quantity),
+
+            received:
+                safeNumber(received),
+
+            pending:
+                pending
+
+        });
 
     });
 
 
-    return Math.max(
+    // SI1, SI2 ... SI9, SI10
+    result.sort(function(a, b) {
 
-        totalDemand -
-        totalStock,
+        let codeA =
+            cleanCode(a.code);
 
-        0
-    );
+        let codeB =
+            cleanCode(b.code);
+
+
+        let numberA =
+            parseInt(
+                codeA.replace(/\D/g, ""),
+                10
+            );
+
+
+        let numberB =
+            parseInt(
+                codeB.replace(/\D/g, ""),
+                10
+            );
+
+
+        if (isNaN(numberA)) {
+            numberA = Infinity;
+        }
+
+
+        if (isNaN(numberB)) {
+            numberB = Infinity;
+        }
+
+
+        if (numberA !== numberB) {
+
+            return (
+                numberA -
+                numberB
+            );
+
+        }
+
+
+        return codeA.localeCompare(
+            codeB,
+            undefined,
+            {
+                numeric: true,
+                sensitivity: "base"
+            }
+        );
+
+    });
+
+
+    return result;
 }
 
+
+// --------------------------------------------------
+// PENDING DEMAND / PO CARD
+// NO TOTAL
+// ONLY SELECTED MONTH PENDING LIST
+// --------------------------------------------------
+
+function buildPendingDemandCardList() {
+
+    const container =
+        document.getElementById(
+            "pendingInfo"
+        );
+
+
+    const value =
+        document.getElementById(
+            "pendingValue"
+        );
+
+
+    if (!container) {
+        return;
+    }
+
+
+    // -----------------------------------------
+    // TOTAL VALUE ختم
+    // -----------------------------------------
+
+    if (value) {
+
+        value.innerHTML = "";
+
+    }
+
+
+    const pendingList =
+        getSelectedMonthPendingDemandList();
+
+
+    // -----------------------------------------
+    // ITEM SELECTED
+    // صرف اسی item کی pending demand
+    // -----------------------------------------
+
+    if (selectedItem) {
+
+        const selectedCode =
+            getItemCode(selectedItem);
+
+
+        const found =
+            pendingList.find(function(row) {
+
+                return (
+                    cleanCode(row.code) ===
+                    cleanCode(selectedCode)
+                );
+
+            });
+
+
+        // اگر اس item کی کوئی pending demand نہیں
+        if (!found) {
+
+            container.innerHTML = "";
+
+            return;
+
+        }
+
+
+        container.innerHTML =
+
+            '<div style="' +
+            'font-size:14px;' +
+            'font-weight:bold;' +
+            'padding:4px 2px;' +
+            'overflow:hidden;' +
+            'text-overflow:ellipsis;' +
+            'white-space:nowrap;' +
+            '">' +
+
+            escapeHTML(
+                found.code
+            ) +
+
+            " - " +
+
+            escapeHTML(
+                found.name
+            ) +
+
+            '</div>' +
+
+
+            '<div style="' +
+            'padding:6px 3px;' +
+            'border-top:1px solid rgba(255,255,255,.25);' +
+            'font-size:13px;' +
+            'line-height:1.6;' +
+            '">' +
+
+            '<div>' +
+            'Approved: <b>' +
+            safeNumber(
+                found.approved
+            ).toFixed(2) +
+            ' ' +
+            escapeHTML(
+                found.unit
+            ) +
+            '</b>' +
+            '</div>' +
+
+
+            '<div>' +
+            'Received: <b>' +
+            safeNumber(
+                found.received
+            ).toFixed(2) +
+            ' ' +
+            escapeHTML(
+                found.unit
+            ) +
+            '</b>' +
+            '</div>' +
+
+
+            '<div>' +
+            'Pending: <b>' +
+            safeNumber(
+                found.pending
+            ).toFixed(2) +
+            ' ' +
+            escapeHTML(
+                found.unit
+            ) +
+            '</b>' +
+            '</div>' +
+
+
+            '</div>';
+
+        return;
+    }
+
+
+    // -----------------------------------------
+    // NO ITEM SELECTED
+    // تمام selected month کی pending list
+    // -----------------------------------------
+
+    if (
+        pendingList.length === 0
+    ) {
+
+        container.innerHTML =
+            "";
+
+        return;
+
+    }
+
+
+    // -----------------------------------------
+    // SCROLLABLE LIST
+    // -----------------------------------------
+
+    let html =
+
+        '<div style="' +
+        'height:105px;' +
+        'max-height:105px;' +
+        'overflow-y:auto;' +
+        'overflow-x:hidden;' +
+        'padding-right:5px;' +
+        '">';
+
+
+    pendingList.forEach(function(row) {
+
+        html +=
+
+            '<div style="' +
+            'padding:5px 3px;' +
+            'border-bottom:1px solid rgba(255,255,255,.25);' +
+            'font-size:14px;' +
+            '">' +
+
+            '<div style="' +
+            'display:flex;' +
+            'justify-content:space-between;' +
+            'align-items:center;' +
+            'gap:8px;' +
+            '">' +
+
+            '<span style="' +
+            'flex:1;' +
+            'min-width:0;' +
+            'overflow:hidden;' +
+            'text-overflow:ellipsis;' +
+            'white-space:nowrap;' +
+            'font-weight:bold;' +
+            '">' +
+
+            escapeHTML(
+                row.code
+            ) +
+
+            ' - ' +
+
+            escapeHTML(
+                row.name
+            ) +
+
+            '</span>' +
+
+            '<span style="' +
+            'font-weight:bold;' +
+            'white-space:nowrap;' +
+            '">' +
+
+            safeNumber(
+                row.pending
+            ).toFixed(2) +
+
+            ' ' +
+
+            escapeHTML(
+                row.unit
+            ) +
+
+            '</span>' +
+
+            '</div>' +
+
+            '</div>';
+
+    });
+
+
+    html +=
+        '</div>';
+
+
+    container.innerHTML =
+        html;
+}
 
 // --------------------------------------------------
 // COST
@@ -2954,13 +3270,9 @@ function updateDashboard() {
         buildMonthlyDemandCardList();
 
 
-        el("pendingValue").innerHTML =
-            getOverallPending()
-                .toFixed(2);
+       el("pendingValue").innerHTML = "";
 
-
-        el("pendingInfo").innerHTML =
-            "Pending Demand / PO";
+buildPendingDemandCardList();
 
 
         clearSelectedItemPicture();
@@ -3037,13 +3349,6 @@ function updateDashboard() {
         getCurrentMonthDemand(
             code
         );
-
-
-    const pending =
-        getPendingForItem(
-            item
-        );
-
 
     const cost =
         getItemCurrentCost(
@@ -3158,16 +3463,9 @@ function updateDashboard() {
     buildMonthlyDemandCardList();
 
 
-    el("pendingValue").innerHTML =
+ el("pendingValue").innerHTML = "";
 
-        pending.pendingDemand.toFixed(2) +
-        " " +
-        escapeHTML(unit);
-
-
-    el("pendingInfo").innerHTML =
-        "Pending Demand / PO";
-
+buildPendingDemandCardList();
 
     showSelectedItemPicture(
         item
