@@ -2279,136 +2279,993 @@ function getOverallDemand() {
 // --------------------------------------------------
 // SELECTED MONTH PENDING DEMAND / PO
 // --------------------------------------------------
-// Pending = Selected Month Approved Demand
-//           - Selected Month Stock In (Received)
+// IMPORTANT:
 //
-// اگر Pending صفر یا اس سے کم ہو تو item نہیں دکھے گا.
+// Pending Demand کا Received اب صرف selected
+// calendar month کا Stock In نہیں ہوگا۔
+//
+// مثال:
+//
+// June Demand Generate Date = 28-05-2026
+// July Demand Generate Date = 27-06-2026
+//
+// June Demand Received Window:
+//
+// 28-05-2026  <= Stock In Date < 27-06-2026
+//
+// یعنی 28 May سے 26 June تک آنے والا Stock In
+// June Demand کے against Received شمار ہوگا.
+//
+// Pending = Approved Demand - Cycle Received
+//
+// اگر پوری Approved Demand receive ہو گئی:
+// item Pending میں نہیں آئے گا.
+//
+// اگر کچھ quantity receive ہوئی:
+// صرف باقی quantity Pending میں آئے گی.
+// --------------------------------------------------
+
+
+// --------------------------------------------------
+// DEMAND GENERATE DATE
+// --------------------------------------------------
+
+function getDemandGenerateDate(record) {
+
+    if (!record) {
+        return null;
+    }
+
+
+    // Demand کی اصل Generate Date کو پہلے ترجیح دیں
+    const value =
+        record?.generate_date ??
+        record?.generateDate ??
+        record?.generated_date ??
+        record?.generatedDate ??
+        record?.date ??
+        record?.demand_date ??
+        record?.demandDate ??
+        record?.created_at ??
+        "";
+
+
+    if (
+        value === null ||
+        value === undefined ||
+        String(value).trim() === ""
+    ) {
+        return null;
+    }
+
+
+    const text =
+        String(value).trim();
+
+
+    // YYYY-MM-DD
+    if (
+        /^\d{4}-\d{2}-\d{2}/.test(text)
+    ) {
+
+        const d =
+            new Date(
+                text.substring(0, 10) +
+                "T00:00:00"
+            );
+
+
+        if (
+            !Number.isNaN(
+                d.getTime()
+            )
+        ) {
+
+            return d;
+        }
+    }
+
+
+    // DD/MM/YYYY
+    if (
+        /^\d{1,2}\/\d{1,2}\/\d{4}/.test(text)
+    ) {
+
+        const p =
+            text.substring(0, 10)
+                .split("/");
+
+
+        const d =
+            new Date(
+                Number(p[2]),
+                Number(p[1]) - 1,
+                Number(p[0])
+            );
+
+
+        if (
+            !Number.isNaN(
+                d.getTime()
+            )
+        ) {
+
+            return d;
+        }
+    }
+
+
+    // DD-MM-YYYY
+    if (
+        /^\d{1,2}-\d{1,2}-\d{4}/.test(text)
+    ) {
+
+        const p =
+            text.substring(0, 10)
+                .split("-");
+
+
+        const d =
+            new Date(
+                Number(p[2]),
+                Number(p[1]) - 1,
+                Number(p[0])
+            );
+
+
+        if (
+            !Number.isNaN(
+                d.getTime()
+            )
+        ) {
+
+            return d;
+        }
+    }
+
+
+    const d =
+        new Date(text);
+
+
+    return Number.isNaN(
+        d.getTime()
+    )
+        ? null
+        : d;
+}
+
+
+// --------------------------------------------------
+// FIND NEXT DEMAND GENERATE DATE
+// --------------------------------------------------
+// موجودہ Demand کی Generate Date کے بعد
+// سب سے پہلی اگلی Demand کی Generate Date
+// تلاش کی جائے گی.
+//
+// مثال:
+//
+// Current = 28-05-2026
+// Next    = 27-06-2026
+//
+// تو Stock In window:
+// 28-05-2026 <= date < 27-06-2026
+// --------------------------------------------------
+
+function getNextDemandGenerateDate(
+    currentDemandRecord
+) {
+
+    const currentDate =
+        getDemandGenerateDate(
+            currentDemandRecord
+        );
+
+
+    if (!currentDate) {
+        return null;
+    }
+
+
+    const currentTime =
+        currentDate.getTime();
+
+
+    let nextDate = null;
+
+
+    if (
+        !Array.isArray(
+            demandHistory
+        )
+    ) {
+
+        return null;
+    }
+
+
+    demandHistory.forEach(
+        function(record) {
+
+            const candidateDate =
+                getDemandGenerateDate(
+                    record
+                );
+
+
+            if (!candidateDate) {
+                return;
+            }
+
+
+            const candidateTime =
+                candidateDate.getTime();
+
+
+            // صرف current date کے بعد والی demand
+            if (
+                candidateTime <=
+                currentTime
+            ) {
+
+                return;
+            }
+
+
+            if (
+                nextDate === null ||
+                candidateTime <
+                nextDate.getTime()
+            ) {
+
+                nextDate =
+                    candidateDate;
+            }
+
+        }
+    );
+
+
+    return nextDate;
+}
+
+
+// --------------------------------------------------
+// STOCK IN RECEIVED BETWEEN TWO DEMAND DATES
+// --------------------------------------------------
+//
+// startDate شامل ہے
+// nextDemandDate شامل نہیں ہے
+//
+// مثال:
+//
+// Start = 28-05-2026
+// End   = 27-06-2026
+//
+// شامل:
+// 28-05
+// 29-05
+// ...
+// 26-06
+//
+// شامل نہیں:
+// 27-06
+// --------------------------------------------------
+
+function getStockInReceivedForDemandCycle(
+    itemCode,
+    startDate,
+    nextDemandDate
+) {
+
+    const code =
+        cleanCode(
+            itemCode
+        );
+
+
+    if (
+        !code ||
+        !startDate
+    ) {
+
+        return 0;
+    }
+
+
+    const startTime =
+        new Date(
+            startDate.getFullYear(),
+            startDate.getMonth(),
+            startDate.getDate()
+        ).getTime();
+
+
+    let endTime =
+        null;
+
+
+    if (nextDemandDate) {
+
+        endTime =
+            new Date(
+                nextDemandDate.getFullYear(),
+                nextDemandDate.getMonth(),
+                nextDemandDate.getDate()
+            ).getTime();
+    }
+
+
+    let totalReceived = 0;
+
+
+    history.forEach(
+        function(record) {
+
+            // صرف Stock In کو Received سمجھیں گے
+            if (
+                record.type !==
+                "Stock In"
+            ) {
+
+                return;
+            }
+
+
+            // صرف اسی Item کا Stock In
+            if (
+                cleanCode(
+                    record.itemCode
+                ) !== code
+            ) {
+
+                return;
+            }
+
+
+            const stockInDate =
+                getRecordDate(
+                    record
+                );
+
+
+            if (!stockInDate) {
+                return;
+            }
+
+
+            const stockInTime =
+                new Date(
+                    stockInDate.getFullYear(),
+                    stockInDate.getMonth(),
+                    stockInDate.getDate()
+                ).getTime();
+
+
+            // ---------------------------------
+            // START DATE شامل
+            // ---------------------------------
+
+            if (
+                stockInTime <
+                startTime
+            ) {
+
+                return;
+            }
+
+
+            // ---------------------------------
+            // NEXT DEMAND DATE شامل نہیں
+            // ---------------------------------
+
+            if (
+                endTime !== null &&
+                stockInTime >= endTime
+            ) {
+
+                return;
+            }
+
+
+            totalReceived +=
+                safeNumber(
+                    record.quantity
+                );
+
+        }
+    );
+
+
+    return totalReceived;
+}
+
+
+// --------------------------------------------------
+// SELECTED MONTH PENDING DEMAND LIST
+// --------------------------------------------------
+//
+// اب Pending اس طرح نکلے گی:
+//
+// Approved Demand
+//        -
+// Demand Generate Date سے اگلی Demand Generate Date
+// کے درمیان آنے والا Stock In
+//
 // --------------------------------------------------
 
 function getSelectedMonthPendingDemandList() {
 
-    const approvedList =
-        getSelectedMonthApprovedDemandList();
-
     const result = [];
 
 
-    approvedList.forEach(function(row) {
+    if (
+        !Array.isArray(
+            demandHistory
+        )
+    ) {
 
-        const code =
-            cleanCode(row.code);
-
-
-        if (!code) {
-            return;
-        }
-
-
-        // Selected month میں received Stock In
-        const received =
-            getSelectedMonthStockIn(code);
+        return result;
+    }
 
 
-        // Approved demand - received quantity
-        const pending =
-            Math.max(
-                safeNumber(row.quantity) -
-                safeNumber(received),
-                0
+    // -----------------------------------------
+    // صرف selected month کی Demand records
+    // -----------------------------------------
+
+    const selectedRecords =
+        demandHistory
+            .filter(
+                function(record) {
+
+                    return isDemandRecordSelectedMonth(
+                        record
+                    );
+
+                }
             );
 
 
-        // مکمل receive ہو چکی ہو تو list میں نہیں آئے گی
-        if (pending <= 0) {
-            return;
-        }
+    console.log(
+        "Pending Demand - Selected Month Records:",
+        selectedDashboardMonth,
+        selectedRecords
+    );
 
 
-        result.push({
+    // -----------------------------------------
+    // ہر selected Demand record
+    // -----------------------------------------
 
-            code:
-                code,
+    selectedRecords.forEach(
+        function(demandRecord) {
 
-            name:
-                row.name || code,
-
-            unit:
-                row.unit || "-",
-
-            approved:
-                safeNumber(row.quantity),
-
-            received:
-                safeNumber(received),
-
-            pending:
-                pending
-
-        });
-
-    });
+            const demandGenerateDate =
+                getDemandGenerateDate(
+                    demandRecord
+                );
 
 
-    // SI1, SI2 ... SI9, SI10
-    result.sort(function(a, b) {
+            if (!demandGenerateDate) {
 
-        let codeA =
-            cleanCode(a.code);
+                console.warn(
+                    "Pending Demand: Generate Date not found:",
+                    demandRecord
+                );
 
-        let codeB =
-            cleanCode(b.code);
+                return;
+            }
 
 
-        let numberA =
-            parseInt(
-                codeA.replace(/\D/g, ""),
-                10
+            // ---------------------------------
+            // اگلی Demand کی Generate Date
+            // ---------------------------------
+
+            const nextDemandDate =
+                getNextDemandGenerateDate(
+                    demandRecord
+                );
+
+
+            console.log(
+                "Demand Cycle:",
+                demandRecord?.demand_no ||
+                demandRecord?.demandNo ||
+                demandRecord?.id ||
+                "-",
+                "Start:",
+                demandGenerateDate,
+                "Next:",
+                nextDemandDate
             );
 
 
-        let numberB =
-            parseInt(
-                codeB.replace(/\D/g, ""),
-                10
-            );
+            // ---------------------------------
+            // Demand کے اندر Items
+            // ---------------------------------
+
+            const demandList =
+                getDemandList(
+                    demandRecord
+                );
 
 
-        if (isNaN(numberA)) {
-            numberA = Infinity;
+            if (
+                Array.isArray(
+                    demandList
+                ) &&
+                demandList.length > 0
+            ) {
+
+                demandList.forEach(
+                    function(detail) {
+
+                        const code =
+                            getApprovedDemandItemCode(
+                                detail
+                            );
+
+
+                        if (!code) {
+                            return;
+                        }
+
+
+                        const approved =
+                            getApprovedDemandQuantity(
+                                detail
+                            );
+
+
+                        if (
+                            approved <= 0
+                        ) {
+
+                            return;
+                        }
+
+
+                        const item =
+                            getItemByCode(
+                                code
+                            );
+
+
+                        const name =
+                            getApprovedDemandItemName(
+                                detail
+                            ) ||
+                            (
+                                item
+                                    ? getItemName(item)
+                                    : code
+                            );
+
+
+                        const unit =
+                            getApprovedDemandUnit(
+                                detail
+                            ) !== "-"
+                                ? getApprovedDemandUnit(
+                                    detail
+                                )
+                                : (
+                                    item
+                                        ? getItemUnit(item)
+                                        : "-"
+                                );
+
+
+                        // ---------------------------------
+                        // اس Demand Cycle میں Received
+                        // ---------------------------------
+
+                        const received =
+                            getStockInReceivedForDemandCycle(
+                                code,
+                                demandGenerateDate,
+                                nextDemandDate
+                            );
+
+
+                        // ---------------------------------
+                        // Pending
+                        // ---------------------------------
+
+                        const pending =
+                            Math.max(
+                                approved -
+                                received,
+                                0
+                            );
+
+
+                        console.log(
+                            "Pending Calculation:",
+                            code,
+                            "Approved:",
+                            approved,
+                            "Received:",
+                            received,
+                            "Pending:",
+                            pending
+                        );
+
+
+                        // پوری quantity receive ہو گئی
+                        // تو Pending میں نہ دکھائیں
+                        if (
+                            pending <= 0
+                        ) {
+
+                            return;
+                        }
+
+
+                        result.push({
+
+                            code:
+                                code,
+
+                            name:
+                                name,
+
+                            unit:
+                                unit,
+
+                            approved:
+                                approved,
+
+                            received:
+                                received,
+
+                            pending:
+                                pending,
+
+                            demandGenerateDate:
+                                demandGenerateDate,
+
+                            nextDemandDate:
+                                nextDemandDate,
+
+                            recordId:
+                                demandRecord?.id,
+
+                            demandNo:
+                                demandRecord?.demand_no ??
+                                demandRecord?.demandNo ??
+                                ""
+
+                        });
+
+                    }
+                );
+
+
+                return;
+            }
+
+
+            // ---------------------------------
+            // اگر Demand record خود item ہو
+            // ---------------------------------
+
+            const directCode =
+                getDemandCode(
+                    demandRecord
+                );
+
+
+            if (!directCode) {
+                return;
+            }
+
+
+            const approved =
+                getDemandValue(
+                    demandRecord
+                );
+
+
+            if (
+                approved <= 0
+            ) {
+
+                return;
+            }
+
+
+            const item =
+                getItemByCode(
+                    directCode
+                );
+
+
+            const name =
+                demandRecord?.item_name ??
+                demandRecord?.itemName ??
+                demandRecord?.name ??
+                (
+                    item
+                        ? getItemName(item)
+                        : directCode
+                );
+
+
+            const unit =
+                demandRecord?.unit ??
+                (
+                    item
+                        ? getItemUnit(item)
+                        : "-"
+                );
+
+
+            const received =
+                getStockInReceivedForDemandCycle(
+                    directCode,
+                    demandGenerateDate,
+                    nextDemandDate
+                );
+
+
+            const pending =
+                Math.max(
+                    approved -
+                    received,
+                    0
+                );
+
+
+            if (
+                pending <= 0
+            ) {
+
+                return;
+            }
+
+
+            result.push({
+
+                code:
+                    directCode,
+
+                name:
+                    name,
+
+                unit:
+                    unit,
+
+                approved:
+                    approved,
+
+                received:
+                    received,
+
+                pending:
+                    pending,
+
+                demandGenerateDate:
+                    demandGenerateDate,
+
+                nextDemandDate:
+                    nextDemandDate,
+
+                recordId:
+                    demandRecord?.id,
+
+                demandNo:
+                    demandRecord?.demand_no ??
+                    demandRecord?.demandNo ??
+                    ""
+
+            });
+
         }
+    );
 
 
-        if (isNaN(numberB)) {
-            numberB = Infinity;
+    // -----------------------------------------
+    // اگر ایک ہی Item ایک سے زیادہ selected
+    // demand records میں آئے تو اسے merge کریں
+    // -----------------------------------------
+
+    const merged = {};
+
+
+    result.forEach(
+        function(row) {
+
+            const code =
+                cleanCode(
+                    row.code
+                );
+
+
+            if (!code) {
+                return;
+            }
+
+
+            if (
+                !merged[code]
+            ) {
+
+                merged[code] = {
+
+                    code:
+                        code,
+
+                    name:
+                        row.name,
+
+                    unit:
+                        row.unit,
+
+                    approved:
+                        safeNumber(
+                            row.approved
+                        ),
+
+                    received:
+                        safeNumber(
+                            row.received
+                        ),
+
+                    pending:
+                        safeNumber(
+                            row.pending
+                        ),
+
+                    demandGenerateDate:
+                        row.demandGenerateDate,
+
+                    nextDemandDate:
+                        row.nextDemandDate,
+
+                    recordId:
+                        row.recordId,
+
+                    demandNo:
+                        row.demandNo
+
+                };
+
+                return;
+            }
+
+
+            // اگر ایک ہی Item کئی Demand records میں ہو
+            // تو quantities جمع کریں
+            merged[code].approved +=
+                safeNumber(
+                    row.approved
+                );
+
+
+            merged[code].received +=
+                safeNumber(
+                    row.received
+                );
+
+
+            merged[code].pending =
+                Math.max(
+                    merged[code].approved -
+                    merged[code].received,
+                    0
+                );
+
         }
+    );
 
 
-        if (numberA !== numberB) {
+    const finalResult =
+        Object.values(
+            merged
+        ).filter(
+            function(row) {
 
-            return (
-                numberA -
-                numberB
-            );
+                return (
+                    safeNumber(
+                        row.pending
+                    ) > 0
+                );
 
-        }
-
-
-        return codeA.localeCompare(
-            codeB,
-            undefined,
-            {
-                numeric: true,
-                sensitivity: "base"
             }
         );
 
-    });
+
+    // -----------------------------------------
+    // SI1, SI2 ... SI9, SI10
+    // -----------------------------------------
+
+    finalResult.sort(
+        function(a, b) {
+
+            let codeA =
+                cleanCode(
+                    a.code
+                );
 
 
-    return result;
+            let codeB =
+                cleanCode(
+                    b.code
+                );
+
+
+            let numberA =
+                parseInt(
+                    codeA.replace(
+                        /\D/g,
+                        ""
+                    ),
+                    10
+                );
+
+
+            let numberB =
+                parseInt(
+                    codeB.replace(
+                        /\D/g,
+                        ""
+                    ),
+                    10
+                );
+
+
+            if (
+                isNaN(numberA)
+            ) {
+
+                numberA =
+                    Infinity;
+            }
+
+
+            if (
+                isNaN(numberB)
+            ) {
+
+                numberB =
+                    Infinity;
+            }
+
+
+            if (
+                numberA !== numberB
+            ) {
+
+                return (
+                    numberA -
+                    numberB
+                );
+            }
+
+
+            return codeA.localeCompare(
+                codeB,
+                undefined,
+                {
+                    numeric: true,
+                    sensitivity: "base"
+                }
+            );
+
+        }
+    );
+
+
+    console.log(
+        "✅ Final Selected Month Pending Demand:",
+        selectedDashboardMonth,
+        finalResult
+    );
+
+
+    return finalResult;
 }
-
-
 // --------------------------------------------------
 // PENDING DEMAND / PO CARD
 // NO TOTAL
