@@ -6,12 +6,12 @@
 
 let items = [];
 let history = [];
-let stockInRecords = [];
 let demandHistory = [];
 let selectedItem = null;
 let dashboardChart = null;
 
-let selectedDashboardMonth = getTodayMonthKey();
+let selectedDashboardMonth =
+    localStorage.getItem("dashboardSelectedMonth") || getTodayMonthKey();
 
 
 // --------------------------------------------------
@@ -92,6 +92,11 @@ function setDashboardMonth(key) {
     }
 
     selectedDashboardMonth = String(key);
+
+    localStorage.setItem(
+        "dashboardSelectedMonth",
+        selectedDashboardMonth
+    );
 
     updateMonthUI();
     updateDashboard();
@@ -378,18 +383,6 @@ async function loadDashboardFromSupabase() {
                 null,
                 "?select=*"
             );
-
-        // Raw Stock In records.
-        // Pending Demand will use these directly.
-        stockInRecords =
-            stockInResult?.success
-                ? (stockInResult.data || [])
-                : [];
-
-        console.log(
-            "Raw Stock In Records:",
-            stockInRecords
-        );
 
 
         // -----------------------------------------
@@ -686,7 +679,6 @@ async function loadDashboardFromSupabase() {
 function getMasterOpeningStock(item) {
 
     return safeNumber(
-        item?.opening_Stock ??
         item?.opening_stock ??
         item?.openingStock ??
         item?.opening_qty ??
@@ -1287,8 +1279,42 @@ function getDemandList(record) {
 }
 
 
+function isDemandRecordSelectedMonth(record) {
+
+    const explicitMonth =
+        String(
+
+            record?.demand_month ??
+            record?.demandMonth ??
+            record?.month ??
+            ""
+
+        ).trim();
+
+
+    if (explicitMonth) {
+
+        return (
+
+            explicitMonth ===
+            selectedDashboardMonth
+
+        );
+    }
+
+
+    return isSelectedMonth(
+        record
+    );
+}
+
+
 // --------------------------------------------------
 // APPROVED DEMAND HELPERS
+// IMPORTANT:
+// Dashboard Monthly Demand card uses ONLY
+// SELECTED MONTH APPROVED DEMAND.
+// No live demand calculation is used here.
 // --------------------------------------------------
 
 function getApprovedDemandItemCode(detail) {
@@ -1349,41 +1375,17 @@ function getApprovedDemandQuantity(detail) {
 }
 
 
-function isDemandRecordSelectedMonth(record) {
-
-    const explicitMonth =
-        String(
-
-            record?.demand_month ??
-            record?.demandMonth ??
-            record?.month ??
-            ""
-
-        ).trim();
-
-
-    if (explicitMonth) {
-
-        return (
-
-            explicitMonth ===
-            selectedDashboardMonth
-
-        );
-    }
-
-
-    return isSelectedMonth(
-        record
-    );
-}
-
-
 /*
-    Selected month کی Demand History سے
-    approved demand list تیار کی جاتی ہے.
-*/
+    یہ function selected month کی demand_history
+    سے Approved Demand نکالتا ہے۔
 
+    Demand history میں اگر ایک record کے اندر
+    demand_items / demandItems / items موجود ہوں
+    تو وہ list استعمال ہوگی۔
+
+    اگر record خود ایک item کی شکل میں ہو
+    تو record بھی استعمال کیا جائے گا۔
+*/
 function getSelectedMonthApprovedDemandList() {
 
     const result = [];
@@ -1395,6 +1397,10 @@ function getSelectedMonthApprovedDemandList() {
             : [];
 
 
+    // -----------------------------------------
+    // صرف SELECTED MONTH کے records
+    // -----------------------------------------
+
     const selectedRecords =
         records.filter(
             record =>
@@ -1404,11 +1410,27 @@ function getSelectedMonthApprovedDemandList() {
         );
 
 
+    console.log(
+        "Selected Month Approved Demand Records:",
+        selectedDashboardMonth,
+        selectedRecords
+    );
+
+
+    // -----------------------------------------
+    // ہر demand_history record
+    // -----------------------------------------
+
     selectedRecords.forEach(record => {
 
         const list =
             getDemandList(record);
 
+
+        // -------------------------------------
+        // CASE 1:
+        // Record کے اندر demand_items موجود ہیں
+        // -------------------------------------
 
         if (
             Array.isArray(list) &&
@@ -1466,6 +1488,8 @@ function getSelectedMonthApprovedDemandList() {
                     );
 
 
+                // اگر approved demand zero ہے
+                // تو card میں نہیں دکھائیں گے
                 if (
                     quantity <= 0
                 ) {
@@ -1498,6 +1522,11 @@ function getSelectedMonthApprovedDemandList() {
             return;
         }
 
+
+        // -------------------------------------
+        // CASE 2:
+        // Record خود ایک item ہے
+        // -------------------------------------
 
         const directCode =
             getDemandCode(record);
@@ -1563,6 +1592,11 @@ function getSelectedMonthApprovedDemandList() {
     });
 
 
+    // -----------------------------------------
+    // اگر ایک ہی item ایک سے زیادہ records میں
+    // آئے تو latest record کی value رکھیں
+    // -----------------------------------------
+
     const unique = {};
 
 
@@ -1588,16 +1622,9 @@ function getSelectedMonthApprovedDemandList() {
 
 // --------------------------------------------------
 // MONTHLY DEMAND CARD
-// --------------------------------------------------
-
-// --------------------------------------------------
-// MONTHLY DEMAND CARD
-// --------------------------------------------------
-// Item selected:
-//     صرف اسی Item کی Approved Demand
-//
-// Item NOT selected:
-//     Selected Month کی تمام Approved Demand کی list
+// IMPORTANT:
+// یہاں LIVE DEMAND استعمال نہیں ہو رہی۔
+// صرف selected month کی APPROVED DEMAND آئے گی.
 // --------------------------------------------------
 
 function buildMonthlyDemandCardList() {
@@ -1736,8 +1763,8 @@ function buildMonthlyDemandCardList() {
 
 
     // -----------------------------------------
-    // SORT
-    // SI1, SI2 ... SI9, SI10
+    // SORT BY ITEM CODE
+    // SI1, SI2, SI3 ... SI10
     // -----------------------------------------
 
     approvedList.sort(
@@ -1804,6 +1831,7 @@ function buildMonthlyDemandCardList() {
 
     // -----------------------------------------
     // SCROLLABLE LIST
+    // Card بڑا نہیں ہوگا
     // -----------------------------------------
 
     let html =
@@ -1907,8 +1935,14 @@ function buildMonthlyDemandCardList() {
     container.innerHTML =
         html;
 }
+
+
 // --------------------------------------------------
-// LIVE MONTHLY DEMAND - COMPATIBILITY ONLY
+// LIVE MONTHLY DEMAND
+// IMPORTANT:
+// یہ functions باقی Dashboard compatibility کے لیے
+// موجود رکھے گئے ہیں.
+// Monthly Demand CARD اب ان کو استعمال نہیں کرتا.
 // --------------------------------------------------
 
 function getLiveMonthlyDemandStockMonths(itemCode) {
@@ -2215,7 +2249,9 @@ function getLiveMonthlyDemandQuantity(itemCode) {
 
 
 // CURRENT DASHBOARD DEMAND
-// یہ compatibility کے لیے موجود ہے۔
+// یہ function دوسرے Dashboard حصوں کے لیے
+// موجود ہے، مگر Monthly Demand card اب
+// اس function کو استعمال نہیں کرتا۔
 
 function getCurrentMonthDemand(itemCode) {
 
@@ -2240,583 +2276,88 @@ function getOverallDemand() {
     );
 }
 
-
 // --------------------------------------------------
 // SELECTED MONTH PENDING DEMAND / PO
 // --------------------------------------------------
-// Pending Demand:
+// Pending = Selected Month Approved Demand
+//           - Selected Month Stock In (Received)
 //
-// Demand Generate Date = cycle start
-// Next Demand Generate Date = cycle end
-//
-// Stock In:
-// start date شامل
-// next demand date شامل نہیں
-//
-// Remaining:
-// Approved Demand - Cycle Received
-// --------------------------------------------------
-
-
-// --------------------------------------------------
-// DEMAND GENERATE DATE
-// --------------------------------------------------
-
-function getDemandGenerateDate(record) {
-
-    if (!record) {
-        return null;
-    }
-
-
-    const value =
-        record?.generate_date ??
-        record?.generateDate ??
-        record?.generated_date ??
-        record?.generatedDate ??
-        record?.date ??
-        record?.demand_date ??
-        record?.demandDate ??
-        record?.created_at ??
-        "";
-
-
-    if (
-        value === null ||
-        value === undefined ||
-        String(value).trim() === ""
-    ) {
-        return null;
-    }
-
-
-    const text =
-        String(value).trim();
-
-
-    // YYYY-MM-DD
-
-    if (
-        /^\d{4}-\d{2}-\d{2}/.test(text)
-    ) {
-
-        const d =
-            new Date(
-                text.substring(0, 10) +
-                "T00:00:00"
-            );
-
-
-        if (
-            !Number.isNaN(
-                d.getTime()
-            )
-        ) {
-
-            return d;
-        }
-    }
-
-
-    // DD/MM/YYYY
-
-    if (
-        /^\d{1,2}\/\d{1,2}\/\d{4}/.test(text)
-    ) {
-
-        const p =
-            text.substring(0, 10)
-                .split("/");
-
-
-        const d =
-            new Date(
-                Number(p[2]),
-                Number(p[1]) - 1,
-                Number(p[0])
-            );
-
-
-        if (
-            !Number.isNaN(
-                d.getTime()
-            )
-        ) {
-
-            return d;
-        }
-    }
-
-
-    // DD-MM-YYYY
-
-    if (
-        /^\d{1,2}-\d{1,2}-\d{4}/.test(text)
-    ) {
-
-        const p =
-            text.substring(0, 10)
-                .split("-");
-
-
-        const d =
-            new Date(
-                Number(p[2]),
-                Number(p[1]) - 1,
-                Number(p[0])
-            );
-
-
-        if (
-            !Number.isNaN(
-                d.getTime()
-            )
-        ) {
-
-            return d;
-        }
-    }
-
-
-    const d =
-        new Date(text);
-
-
-    return Number.isNaN(
-        d.getTime()
-    )
-        ? null
-        : d;
-}
-
-
-// --------------------------------------------------
-// FIND NEXT DEMAND GENERATE DATE
-// --------------------------------------------------
-
-function getNextDemandGenerateDate(
-    currentDemandRecord
-) {
-
-    const currentDate =
-        getDemandGenerateDate(
-            currentDemandRecord
-        );
-
-
-    if (!currentDate) {
-        return null;
-    }
-
-
-    const currentTime =
-        currentDate.getTime();
-
-
-    let nextDate = null;
-
-
-    if (
-        !Array.isArray(
-            demandHistory
-        )
-    ) {
-
-        return null;
-    }
-
-
-    demandHistory.forEach(
-        function(record) {
-
-            const candidateDate =
-                getDemandGenerateDate(
-                    record
-                );
-
-
-            if (!candidateDate) {
-                return;
-            }
-
-
-            const candidateTime =
-                candidateDate.getTime();
-
-
-            if (
-                candidateTime <=
-                currentTime
-            ) {
-
-                return;
-            }
-
-
-            if (
-                nextDate === null ||
-                candidateTime <
-                nextDate.getTime()
-            ) {
-
-                nextDate =
-                    candidateDate;
-            }
-
-        }
-    );
-
-
-    return nextDate;
-}
-
-
-// --------------------------------------------------
-// STOCK IN RECEIVED BETWEEN TWO DEMAND DATES
-// --------------------------------------------------
-
-function getStockInReceivedForDemandCycle(
-    itemCode,
-    startDate,
-    nextDemandDate
-) {
-
-    const code =
-        cleanCode(itemCode);
-
-    if (!code || !startDate) {
-        return 0;
-    }
-
-    const startTime =
-        new Date(
-            startDate.getFullYear(),
-            startDate.getMonth(),
-            startDate.getDate()
-        ).getTime();
-
-    const endTime =
-        nextDemandDate
-            ? new Date(
-                nextDemandDate.getFullYear(),
-                nextDemandDate.getMonth(),
-                nextDemandDate.getDate()
-            ).getTime()
-            : null;
-
-    let totalReceived = 0;
-
-    // Raw Supabase stock_in is the source for Received.
-    const records =
-        Array.isArray(stockInRecords) &&
-        stockInRecords.length
-            ? stockInRecords
-            : history;
-
-    records.forEach(function(record) {
-
-        if (
-            record?.type !== undefined &&
-            record?.type !== "Stock In"
-        ) {
-            return;
-        }
-
-        const recordCode =
-            cleanCode(
-                record?.item_code ??
-                record?.itemCode ??
-                record?.code
-            );
-
-        if (
-            recordCode !== code
-        ) {
-            return;
-        }
-
-        const recordDate =
-            getRecordDate(record);
-
-        if (!recordDate) {
-            return;
-        }
-
-        const recordTime =
-            new Date(
-                recordDate.getFullYear(),
-                recordDate.getMonth(),
-                recordDate.getDate()
-            ).getTime();
-
-        if (
-            recordTime < startTime
-        ) {
-            return;
-        }
-
-        if (
-            endTime !== null &&
-            recordTime >= endTime
-        ) {
-            return;
-        }
-
-        totalReceived +=
-            safeNumber(
-                record?.quantity
-            );
-    });
-
-    return totalReceived;
-}
-// --------------------------------------------------
-// SELECTED MONTH PENDING DEMAND LIST
+// اگر Pending صفر یا اس سے کم ہو تو item نہیں دکھے گا.
 // --------------------------------------------------
 
 function getSelectedMonthPendingDemandList() {
 
+    const approvedList =
+        getSelectedMonthApprovedDemandList();
+
     const result = [];
 
-    if (!Array.isArray(demandHistory)) {
-        return result;
-    }
 
-    const selectedRecords =
-        demandHistory.filter(function(record) {
-            return isDemandRecordSelectedMonth(record);
-        });
-
-    selectedRecords.forEach(function(demandRecord) {
-
-        const demandGenerateDate =
-            getDemandGenerateDate(demandRecord);
-
-        if (!demandGenerateDate) {
-            return;
-        }
-
-        const nextDemandDate =
-            getNextDemandGenerateDate(demandRecord);
-
-        const demandList =
-            getDemandList(demandRecord);
-
-        if (
-            Array.isArray(demandList) &&
-            demandList.length > 0
-        ) {
-
-            demandList.forEach(function(detail) {
-
-                const code =
-                    getApprovedDemandItemCode(detail);
-
-                if (!code) {
-                    return;
-                }
-
-                const approved =
-                    getApprovedDemandQuantity(detail);
-
-                if (approved <= 0) {
-                    return;
-                }
-
-                const item =
-                    getItemByCode(code);
-
-                const name =
-                    getApprovedDemandItemName(detail) ||
-                    (
-                        item
-                            ? getItemName(item)
-                            : code
-                    );
-
-                const unit =
-                    getApprovedDemandUnit(detail) !== "-"
-                        ? getApprovedDemandUnit(detail)
-                        : (
-                            item
-                                ? getItemUnit(item)
-                                : "-"
-                        );
-
-                const received =
-                    getStockInReceivedForDemandCycle(
-                        code,
-                        demandGenerateDate,
-                        nextDemandDate
-                    );
-
-                const pending =
-                    Math.max(
-                        approved - received,
-                        0
-                    );
-
-                if (pending <= 0) {
-                    return;
-                }
-
-                result.push({
-                    code: code,
-                    name: name,
-                    unit: unit,
-                    approved: approved,
-                    received: received,
-                    pending: pending,
-                    demandGenerateDate:
-                        demandGenerateDate,
-                    nextDemandDate:
-                        nextDemandDate,
-                    recordId:
-                        demandRecord?.id,
-                    demandNo:
-                        demandRecord?.demand_no ??
-                        demandRecord?.demandNo ??
-                        ""
-                });
-
-            });
-
-            return;
-        }
-
-        const directCode =
-            getDemandCode(demandRecord);
-
-        if (!directCode) {
-            return;
-        }
-
-        const approved =
-            getDemandValue(demandRecord);
-
-        if (approved <= 0) {
-            return;
-        }
-
-        const item =
-            getItemByCode(directCode);
-
-        const name =
-            demandRecord?.item_name ??
-            demandRecord?.itemName ??
-            demandRecord?.name ??
-            (
-                item
-                    ? getItemName(item)
-                    : directCode
-            );
-
-        const unit =
-            demandRecord?.unit ??
-            (
-                item
-                    ? getItemUnit(item)
-                    : "-"
-            );
-
-        const received =
-            getStockInReceivedForDemandCycle(
-                directCode,
-                demandGenerateDate,
-                nextDemandDate
-            );
-
-        const pending =
-            Math.max(
-                approved - received,
-                0
-            );
-
-        if (pending <= 0) {
-            return;
-        }
-
-        result.push({
-            code: directCode,
-            name: name,
-            unit: unit,
-            approved: approved,
-            received: received,
-            pending: pending,
-            demandGenerateDate:
-                demandGenerateDate,
-            nextDemandDate:
-                nextDemandDate,
-            recordId:
-                demandRecord?.id,
-            demandNo:
-                demandRecord?.demand_no ??
-                demandRecord?.demandNo ??
-                ""
-        });
-
-    });
-
-    const merged = {};
-
-    result.forEach(function(row) {
+    approvedList.forEach(function(row) {
 
         const code =
             cleanCode(row.code);
+
 
         if (!code) {
             return;
         }
 
-        if (!merged[code]) {
 
-            merged[code] = {
-                code: code,
-                name: row.name,
-                unit: row.unit,
-                approved:
-                    safeNumber(row.approved),
-                received:
-                    safeNumber(row.received),
-                pending:
-                    safeNumber(row.pending),
-                demandGenerateDate:
-                    row.demandGenerateDate,
-                nextDemandDate:
-                    row.nextDemandDate,
-                recordId:
-                    row.recordId,
-                demandNo:
-                    row.demandNo
-            };
+        // Selected month میں received Stock In
+        const received =
+            getSelectedMonthStockIn(code);
 
-            return;
-        }
 
-        merged[code].approved +=
-            safeNumber(row.approved);
-
-        merged[code].received +=
-            safeNumber(row.received);
-
-        merged[code].pending =
+        // Approved demand - received quantity
+        const pending =
             Math.max(
-                merged[code].approved -
-                merged[code].received,
+                safeNumber(row.quantity) -
+                safeNumber(received),
                 0
             );
 
-    });
 
-    const finalResult =
-        Object.values(merged).filter(function(row) {
-            return safeNumber(row.pending) > 0;
+        // مکمل receive ہو چکی ہو تو list میں نہیں آئے گی
+        if (pending <= 0) {
+            return;
+        }
+
+
+        result.push({
+
+            code:
+                code,
+
+            name:
+                row.name || code,
+
+            unit:
+                row.unit || "-",
+
+            approved:
+                safeNumber(row.quantity),
+
+            received:
+                safeNumber(received),
+
+            pending:
+                pending
+
         });
 
-    finalResult.sort(function(a, b) {
+    });
 
-        let codeA = cleanCode(a.code);
-        let codeB = cleanCode(b.code);
+
+    // SI1, SI2 ... SI9, SI10
+    result.sort(function(a, b) {
+
+        let codeA =
+            cleanCode(a.code);
+
+        let codeB =
+            cleanCode(b.code);
+
 
         let numberA =
             parseInt(
@@ -2824,23 +2365,33 @@ function getSelectedMonthPendingDemandList() {
                 10
             );
 
+
         let numberB =
             parseInt(
                 codeB.replace(/\D/g, ""),
                 10
             );
 
+
         if (isNaN(numberA)) {
             numberA = Infinity;
         }
+
 
         if (isNaN(numberB)) {
             numberB = Infinity;
         }
 
+
         if (numberA !== numberB) {
-            return numberA - numberB;
+
+            return (
+                numberA -
+                numberB
+            );
+
         }
+
 
         return codeA.localeCompare(
             codeB,
@@ -2853,23 +2404,15 @@ function getSelectedMonthPendingDemandList() {
 
     });
 
-    return finalResult;
+
+    return result;
 }
 
 
 // --------------------------------------------------
-// PENDING DEMAND CARD
-// --------------------------------------------------
-// --------------------------------------------------
 // PENDING DEMAND / PO CARD
-// --------------------------------------------------
-// Item selected:
-//     صرف اسی Item کی Pending Demand
-//
-// Item NOT selected:
-//     Selected Month کی تمام Pending Demand
-//
-// Pending = Approved Demand - Cycle Received
+// NO TOTAL
+// ONLY SELECTED MONTH PENDING LIST
 // --------------------------------------------------
 
 function buildPendingDemandCardList() {
@@ -2914,30 +2457,27 @@ function buildPendingDemandCardList() {
     if (selectedItem) {
 
         const selectedCode =
-            getItemCode(
-                selectedItem
-            );
+            getItemCode(selectedItem);
 
 
         const found =
-            pendingList.find(
-                function(row) {
+            pendingList.find(function(row) {
 
-                    return (
-                        cleanCode(row.code) ===
-                        cleanCode(selectedCode)
-                    );
+                return (
+                    cleanCode(row.code) ===
+                    cleanCode(selectedCode)
+                );
 
-                }
-            );
+            });
 
 
-        // اس Item کی Pending Demand نہیں ہے
+        // اگر اس item کی کوئی pending demand نہیں
         if (!found) {
 
             container.innerHTML = "";
 
             return;
+
         }
 
 
@@ -2973,59 +2513,41 @@ function buildPendingDemandCardList() {
             '">' +
 
             '<div>' +
-
             'Approved: <b>' +
-
             safeNumber(
                 found.approved
             ).toFixed(2) +
-
             ' ' +
-
             escapeHTML(
                 found.unit
             ) +
-
             '</b>' +
-
             '</div>' +
 
 
             '<div>' +
-
             'Received: <b>' +
-
             safeNumber(
                 found.received
             ).toFixed(2) +
-
             ' ' +
-
             escapeHTML(
                 found.unit
             ) +
-
             '</b>' +
-
             '</div>' +
 
 
             '<div>' +
-
             'Pending: <b>' +
-
             safeNumber(
                 found.pending
             ).toFixed(2) +
-
             ' ' +
-
             escapeHTML(
                 found.unit
             ) +
-
             '</b>' +
-
             '</div>' +
 
 
@@ -3037,7 +2559,7 @@ function buildPendingDemandCardList() {
 
     // -----------------------------------------
     // NO ITEM SELECTED
-    // تمام selected month کی Pending list
+    // تمام selected month کی pending list
     // -----------------------------------------
 
     if (
@@ -3045,194 +2567,88 @@ function buildPendingDemandCardList() {
     ) {
 
         container.innerHTML =
-            '<div style="' +
-            'font-size:14px;' +
-            'padding:5px 0;' +
-            '">' +
-
-            'No Pending Demand for ' +
-
-            escapeHTML(
-                getMonthName(
-                    selectedDashboardMonth
-                )
-            ) +
-
-            '</div>';
+            "";
 
         return;
+
     }
 
 
     // -----------------------------------------
-    // SORT
-    // SI1, SI2 ... SI9, SI10
-    // -----------------------------------------
-
-    pendingList.sort(
-        function(a, b) {
-
-            let codeA =
-                cleanCode(a.code);
-
-            let codeB =
-                cleanCode(b.code);
-
-
-            let numberA =
-                parseInt(
-                    codeA.replace(/\D/g, ""),
-                    10
-                );
-
-
-            let numberB =
-                parseInt(
-                    codeB.replace(/\D/g, ""),
-                    10
-                );
-
-
-            if (
-                isNaN(numberA)
-            ) {
-                numberA = Infinity;
-            }
-
-
-            if (
-                isNaN(numberB)
-            ) {
-                numberB = Infinity;
-            }
-
-
-            if (
-                numberA !== numberB
-            ) {
-
-                return (
-                    numberA -
-                    numberB
-                );
-            }
-
-
-            return codeA.localeCompare(
-                codeB,
-                undefined,
-                {
-                    numeric: true,
-                    sensitivity: "base"
-                }
-            );
-
-        }
-    );
-
-
-    // -----------------------------------------
-    // SCROLLABLE PENDING LIST
+    // SCROLLABLE LIST
     // -----------------------------------------
 
     let html =
 
         '<div style="' +
-
         'height:105px;' +
-
         'max-height:105px;' +
-
         'overflow-y:auto;' +
-
         'overflow-x:hidden;' +
-
         'padding-right:5px;' +
-
         '">';
 
 
-    pendingList.forEach(
-        function(row) {
+    pendingList.forEach(function(row) {
 
-            html +=
+        html +=
 
-                '<div style="' +
+            '<div style="' +
+            'padding:5px 3px;' +
+            'border-bottom:1px solid rgba(255,255,255,.25);' +
+            'font-size:14px;' +
+            '">' +
 
-                'padding:5px 3px;' +
+            '<div style="' +
+            'display:flex;' +
+            'justify-content:space-between;' +
+            'align-items:center;' +
+            'gap:8px;' +
+            '">' +
 
-                'border-bottom:1px solid rgba(255,255,255,.25);' +
+            '<span style="' +
+            'flex:1;' +
+            'min-width:0;' +
+            'overflow:hidden;' +
+            'text-overflow:ellipsis;' +
+            'white-space:nowrap;' +
+            'font-weight:bold;' +
+            '">' +
 
-                'font-size:14px;' +
+            escapeHTML(
+                row.code
+            ) +
 
-                '">' +
+            ' - ' +
 
-                '<div style="' +
+            escapeHTML(
+                row.name
+            ) +
 
-                'display:flex;' +
+            '</span>' +
 
-                'justify-content:space-between;' +
+            '<span style="' +
+            'font-weight:bold;' +
+            'white-space:nowrap;' +
+            '">' +
 
-                'align-items:center;' +
+            safeNumber(
+                row.pending
+            ).toFixed(2) +
 
-                'gap:8px;' +
+            ' ' +
 
-                '">' +
+            escapeHTML(
+                row.unit
+            ) +
 
-                '<span style="' +
+            '</span>' +
 
-                'flex:1;' +
+            '</div>' +
 
-                'min-width:0;' +
+            '</div>';
 
-                'overflow:hidden;' +
-
-                'text-overflow:ellipsis;' +
-
-                'white-space:nowrap;' +
-
-                'font-weight:bold;' +
-
-                '">' +
-
-                escapeHTML(
-                    row.code
-                ) +
-
-                ' - ' +
-
-                escapeHTML(
-                    row.name
-                ) +
-
-                '</span>' +
-
-                '<span style="' +
-
-                'font-weight:bold;' +
-
-                'white-space:nowrap;' +
-
-                '">' +
-
-                safeNumber(
-                    row.pending
-                ).toFixed(2) +
-
-                ' ' +
-
-                escapeHTML(
-                    row.unit
-                ) +
-
-                '</span>' +
-
-                '</div>' +
-
-                '</div>';
-
-        }
-    );
+    });
 
 
     html +=
@@ -3242,169 +2658,395 @@ function buildPendingDemandCardList() {
     container.innerHTML =
         html;
 }
+
 // --------------------------------------------------
 // COST
 // --------------------------------------------------
 
 function getOverallCost() {
 
-    return items.reduce(
-        function(sum, item) {
-            return (
+    return history
+        .filter(
+            r =>
+                r.type === "Stock In" &&
+                isSelectedMonth(r)
+        )
+        .reduce(
+            (
+                sum,
+                r
+            ) =>
                 sum +
-                getItemCurrentCost(item)
-            );
-        },
-        0
-    );
+                safeNumber(r.quantity) *
+                safeNumber(r.unitCost),
+            0
+        );
 }
 
 
 function getItemCurrentCost(item) {
 
-    if (!item) {
-        return 0;
-    }
+    return (
 
-    const code =
-        getItemCode(item);
+        getCurrentStock(item) *
 
-    const stock =
-        getCurrentStock(item);
+        getLatestRate(
+            getItemCode(item)
+        )
 
-    const rate =
-        getLatestRate(code);
-
-    return stock * rate;
+    );
 }
 
 
 // --------------------------------------------------
-// ITEM IMAGE
+// SELECTED ITEM PICTURE
 // --------------------------------------------------
 
 function getItemImageURL(item) {
 
-    if (!item) {
-        return "";
-    }
-
     return String(
+
+        item?.item_image_url ??
+        item?.itemImageUrl ??
         item?.image_url ??
-        item?.imageURL ??
-        item?.image ??
-        item?.picture ??
-        item?.photo ??
+        item?.imageUrl ??
+        item?.picture_url ??
+        item?.pictureUrl ??
         ""
+
     ).trim();
 }
+
+
+const OIL_FALLBACK_IMAGE =
+    "https://www.valvolineglobal.com/4ac53b/globalassets/sitecore/asiaregion/images/products/industrialgear.png";
 
 
 function isOilTypeItem(item) {
 
     const text =
-        (
-            getItemName(item) +
-            " " +
-            String(
-                item?.category ?? ""
-            )
-        ).toLowerCase();
+        getItemName(item)
+            .toLowerCase();
 
-    return (
-        text.includes("oil") ||
-        text.includes("mobil") ||
-        text.includes("kerosene") ||
-        text.includes("diesel")
+
+    const words = [
+
+        "oil",
+        "lubricant",
+        "lubrication",
+        "grease",
+        "hydraulic",
+        "gear oil",
+        "engine oil",
+        "cutting oil",
+        "compressor oil",
+        "transformer oil",
+        "machine oil"
+
+    ];
+
+
+    return words.some(
+        word =>
+            text.includes(word)
     );
 }
 
 
 function getFallbackImage(item) {
 
-    if (isOilTypeItem(item)) {
-        return "";
+    if (
+        isOilTypeItem(item)
+    ) {
+
+        return OIL_FALLBACK_IMAGE;
     }
 
-    return "";
+
+    const svg =
+
+        '<svg xmlns="http://www.w3.org/2000/svg" width="500" height="320">' +
+
+        '<rect width="100%" height="100%" fill="#eef2f7"/>' +
+
+        '<rect x="150" y="60" width="200" height="190" rx="18" fill="#c9d2dc"/>' +
+
+        '<text x="250" y="145" text-anchor="middle" font-size="28" font-family="Arial" fill="#334155">ITEM</text>' +
+
+        '<text x="250" y="180" text-anchor="middle" font-size="18" font-family="Arial" fill="#64748b">No Picture</text>' +
+
+        '</svg>';
+
+
+    return (
+
+        "data:image/svg+xml;charset=UTF-8," +
+
+        encodeURIComponent(svg)
+
+    );
 }
 
 
-function handleItemPictureError(event) {
+// IMAGE ERROR HANDLER
 
-    const img =
-        event?.target ??
-        this;
+function handleItemPictureError() {
 
-    if (!img) {
+    const image =
+        document.getElementById(
+            "itemOnlinePicture"
+        );
+
+
+    const status =
+        document.getElementById(
+            "itemPictureStatus"
+        );
+
+
+    if (!image) {
         return;
     }
 
-    img.onerror = null;
 
-    const item =
-        selectedItem;
+    const currentFallback =
+        image.dataset.fallbackApplied ===
+        "1";
+
+
+    if (!currentFallback) {
+
+        image.dataset.fallbackApplied =
+            "1";
+
+
+        const item =
+            selectedItem;
+
+
+        if (
+
+            item &&
+            isOilTypeItem(item)
+
+        ) {
+
+            image.src =
+                OIL_FALLBACK_IMAGE;
+
+
+            if (status) {
+
+                status.innerHTML =
+                    "🛢️ Representative oil drum picture";
+            }
+
+
+            return;
+        }
+
+
+        image.src =
+            getFallbackImage(
+                item || {}
+            );
+
+
+        if (status) {
+
+            status.innerHTML =
+                "ℹ️ Picture not available — representative image";
+        }
+
+
+        return;
+    }
+
+
+    if (status) {
+
+        status.innerHTML =
+            "❌ Picture could not be loaded.";
+    }
+}
+
+
+// SHOW SELECTED ITEM PICTURE
+
+function showSelectedItemPicture(item) {
+
+    const box =
+        document.getElementById(
+            "itemPictureBox"
+        );
+
+
+    const image =
+        document.getElementById(
+            "itemOnlinePicture"
+        );
+
+
+    const name =
+        document.getElementById(
+            "itemPictureName"
+        );
+
+
+    const status =
+        document.getElementById(
+            "itemPictureStatus"
+        );
+
+
+    if (
+
+        !box ||
+        !image
+
+    ) {
+
+        return;
+    }
+
+
+    if (!item) {
+
+        box.style.display =
+            "none";
+
+
+        image.src = "";
+
+
+        image.removeAttribute(
+            "data-fallback-applied"
+        );
+
+
+        return;
+    }
+
+
+    selectedItem =
+        item;
+
+
+    box.style.display =
+        "block";
+
+
+    if (name) {
+
+        name.textContent =
+            "🔎 " +
+            getItemName(item);
+    }
+
+
+    if (status) {
+
+        status.textContent =
+            "Loading item picture...";
+    }
+
+
+    image.dataset.fallbackApplied =
+        "0";
+
+
+    image.onerror =
+        function () {
+
+            handleItemPictureError();
+
+        };
+
+
+    const supabaseImage =
+        getItemImageURL(item);
+
+
+    if (supabaseImage) {
+
+        image.src =
+            supabaseImage;
+
+
+        if (status) {
+
+            status.textContent =
+                "🖼️ Item picture from Supabase";
+        }
+
+
+        return;
+    }
+
 
     const fallback =
         getFallbackImage(item);
 
-    if (fallback) {
-        img.src = fallback;
-    } else {
-        img.style.display = "none";
+
+    image.src =
+        fallback;
+
+
+    if (status) {
+
+        if (
+            isOilTypeItem(item)
+        ) {
+
+            status.textContent =
+                "🛢️ Representative oil drum picture";
+
+        } else {
+
+            status.textContent =
+                "ℹ️ Representative item picture";
+        }
     }
 }
 
 
-function showSelectedItemPicture(item) {
-
-    const img =
-        document.getElementById(
-            "selectedItemPicture"
-        );
-
-    if (!img) {
-        return;
-    }
-
-    const url =
-        getItemImageURL(item);
-
-    if (!url) {
-        img.style.display = "none";
-        return;
-    }
-
-    img.onerror =
-        handleItemPictureError;
-
-    img.src = url;
-
-    img.style.display =
-        "block";
-}
-
+// CLEAR SELECTED ITEM PICTURE
 
 function clearSelectedItemPicture() {
 
-    const img =
+    const box =
         document.getElementById(
-            "selectedItemPicture"
+            "itemPictureBox"
         );
 
-    if (!img) {
-        return;
+
+    const image =
+        document.getElementById(
+            "itemOnlinePicture"
+        );
+
+
+    if (box) {
+
+        box.style.display =
+            "none";
     }
 
-    img.removeAttribute("src");
 
-    img.style.display =
-        "none";
+    if (image) {
+
+        image.src = "";
+
+
+        image.removeAttribute(
+            "data-fallback-applied"
+        );
+    }
 }
 
 
 // --------------------------------------------------
-// SEARCH ITEM
+// SEARCH
 // --------------------------------------------------
 
 function searchItem() {
@@ -3414,365 +3056,491 @@ function searchItem() {
             "itemSearch"
         );
 
+
     if (!input) {
         return;
     }
 
+
     const code =
-        cleanCode(input.value);
+        cleanCode(
+            input.value
+        );
+
 
     if (!code) {
 
-        selectedItem = null;
+        selectedItem =
+            null;
+
+
+        localStorage.removeItem(
+            "dashboardSelectedItem"
+        );
+
 
         clearSelectedItemPicture();
 
+
         updateDashboard();
+
 
         return;
     }
 
-    const item =
+
+    const found =
         getItemByCode(code);
 
-    if (!item) {
 
-        selectedItem = null;
+    if (found) {
 
-        clearSelectedItemPicture();
+        selectedItem =
+            found;
+
+
+        localStorage.setItem(
+
+            "dashboardSelectedItem",
+
+            getItemCode(found)
+
+        );
+
+
+        updateDashboard();
+
+
+        showSelectedItemPicture(
+            found
+        );
+
+    } else {
+
+        selectedItem =
+            null;
+
 
         const info =
             document.getElementById(
                 "searchInfo"
             );
 
+
         if (info) {
+
             info.innerHTML =
                 "❌ Item not found: " +
                 escapeHTML(code);
         }
 
-        updateDashboard();
 
-        return;
+        clearSelectedItemPicture();
+
+
+        clearSelectedCards();
+
+
+        buildCurrentStockTable();
+
+
+        clearDashboardGraph();
     }
-
-    selectedItem =
-        item;
-
-    showSelectedItemPicture(item);
-
-    const info =
-        document.getElementById(
-            "searchInfo"
-        );
-
-    if (info) {
-
-        info.innerHTML =
-            "✅ " +
-            escapeHTML(
-                getItemCode(item)
-            ) +
-            " - " +
-            escapeHTML(
-                getItemName(item)
-            );
-    }
-
-    saveSelectedItem();
-
-    updateDashboard();
 }
 
 
 function clearItemSearch() {
-
-    selectedItem = null;
 
     const input =
         document.getElementById(
             "itemSearch"
         );
 
+
     if (input) {
-        input.value = "";
+
+        input.value =
+            "";
     }
+
+
+    selectedItem =
+        null;
+
 
     localStorage.removeItem(
         "dashboardSelectedItem"
     );
 
+
     clearSelectedItemPicture();
 
-    const info =
-        document.getElementById(
-            "searchInfo"
-        );
-
-    if (info) {
-        info.innerHTML = "";
-    }
 
     updateDashboard();
 }
 
 
 // --------------------------------------------------
-// UPDATE DASHBOARD
+// DASHBOARD CARDS
 // --------------------------------------------------
 
 function updateDashboard() {
 
-    updateMonthUI();
-
-    buildMonthlyDemandCardList();
-
-    buildPendingDemandCardList();
-
-    buildCurrentStockTable();
-
-    updateDashboardTotals();
-
-    if (selectedItem) {
-
-        showSelectedItemPicture(
-            selectedItem
-        );
-
-        updateSelectedItemCards();
-
-        showDashboardGraph(
-            getItemCode(selectedItem)
-        );
-
-    } else {
-
-        clearSelectedCards();
-
-        clearDashboardGraph();
-
-    }
-}
+    const el =
+        id =>
+            document.getElementById(id);
 
 
-// --------------------------------------------------
-// DASHBOARD TOTALS
-// --------------------------------------------------
-
-function updateDashboardTotals() {
-
-    const openingElement =
-        document.getElementById(
-            "openingStockValue"
-        );
-
-    const stockInElement =
-        document.getElementById(
-            "stockInValue"
-        );
-
-    const stockOutElement =
-        document.getElementById(
-            "stockOutValue"
-        );
-
-    const currentElement =
-        document.getElementById(
-            "currentStockValue"
-        );
-
-    let openingTotal = 0;
-    let stockInTotal = 0;
-    let stockOutTotal = 0;
-    let currentTotal = 0;
-
-    items.forEach(function(item) {
-
-        openingTotal +=
-            getMonthlyOpeningStock(item);
-
-        stockInTotal +=
-            getSelectedMonthStockIn(
-                getItemCode(item)
-            );
-
-        stockOutTotal +=
-            getSelectedMonthStockOut(
-                getItemCode(item)
-            );
-
-        currentTotal +=
-            getCurrentStock(item);
-
-    });
-
-    if (selectedItem) {
-
-        openingTotal =
-            getMonthlyOpeningStock(
-                selectedItem
-            );
-
-        stockInTotal =
-            getSelectedMonthStockIn(
-                getItemCode(selectedItem)
-            );
-
-        stockOutTotal =
-            getSelectedMonthStockOut(
-                getItemCode(selectedItem)
-            );
-
-        currentTotal =
-            getCurrentStock(
-                selectedItem
-            );
-    }
-
-    if (openingElement) {
-        openingElement.textContent =
-            openingTotal.toFixed(2);
-    }
-
-    if (stockInElement) {
-        stockInElement.textContent =
-            stockInTotal.toFixed(2);
-    }
-
-    if (stockOutElement) {
-        stockOutElement.textContent =
-            stockOutTotal.toFixed(2);
-    }
-
-    if (currentElement) {
-        currentElement.textContent =
-            currentTotal.toFixed(2);
-    }
-}
-
-
-// --------------------------------------------------
-// SELECTED ITEM CARDS
-// --------------------------------------------------
-
-function updateSelectedItemCards() {
-
-    if (!selectedItem) {
+    if (!el("masterValue")) {
         return;
     }
 
+
+    updateMonthUI();
+
+
+    // =========================================
+    // OVERALL MODE
+    // =========================================
+
+    if (!selectedItem) {
+
+        if (
+            el("searchInfo")
+        ) {
+
+            el("searchInfo").innerHTML =
+                "Overall Dashboard — No item selected";
+        }
+
+
+        el("masterValue").innerHTML =
+            "-";
+
+
+        el("masterInfo").innerHTML =
+            "Select an Item ID to view item details.";
+
+
+        el("stockInValue").innerHTML =
+            "-";
+
+
+        el("stockInInfo").innerHTML =
+            "Stock In — " +
+            getMonthName(
+                selectedDashboardMonth
+            );
+
+
+        el("stockOutValue").innerHTML =
+            "-";
+
+
+        el("stockOutInfo").innerHTML =
+            "Stock Out — " +
+            getMonthName(
+                selectedDashboardMonth
+            );
+
+
+        el("costValue").innerHTML =
+            "Rs. " +
+            getOverallCost()
+                .toFixed(2);
+
+
+        el("costInfo").innerHTML =
+            "Stock In Cost — " +
+            getMonthName(
+                selectedDashboardMonth
+            );
+
+
+        // -----------------------------------------
+        // IMPORTANT:
+        // Total Demand Qty ختم
+        // اب صرف Approved Demand List آئے گی
+        // -----------------------------------------
+
+        el("demandValue").innerHTML =
+            "";
+
+
+        buildMonthlyDemandCardList();
+
+
+       el("pendingValue").innerHTML = "";
+
+buildPendingDemandCardList();
+
+
+        clearSelectedItemPicture();
+
+
+        clearDashboardGraph();
+
+
+        buildCurrentStockTable();
+
+
+        return;
+    }
+
+
+    // =========================================
+    // ITEM MODE
+    // =========================================
+
+    const item =
+        selectedItem;
+
+
     const code =
-        getItemCode(selectedItem);
+        getItemCode(item);
+
+
+    const name =
+        getItemName(item);
+
+
+    const unit =
+        getItemUnit(item);
+
 
     const opening =
         getMonthlyOpeningStock(
-            selectedItem
+            item
         );
 
+
     const stockIn =
-        getSelectedMonthStockIn(code);
+        getSelectedMonthStockIn(
+            code
+        );
+
 
     const stockOut =
-        getSelectedMonthStockOut(code);
+        getSelectedMonthStockOut(
+            code
+        );
+
 
     const current =
         getCurrentStock(
-            selectedItem
+            item
         );
 
+
     const rate =
-        getLatestRate(code);
+        getLatestRate(
+            code
+        );
 
-    const values = {
 
-        openingStockValue:
-            opening,
+    /*
+        یہ demand value باقی Dashboard
+        compatibility کے لیے موجود ہے۔
+        لیکن Monthly Demand card میں
+        live demand استعمال نہیں ہوگی۔
+    */
 
-        stockInValue:
-            stockIn,
+    const demand =
+        getCurrentMonthDemand(
+            code
+        );
 
-        stockOutValue:
-            stockOut,
+    const cost =
+        getItemCurrentCost(
+            item
+        );
 
-        currentStockValue:
-            current,
 
-        latestRateValue:
-            rate
+    if (
+        el("searchInfo")
+    ) {
 
-    };
+        el("searchInfo").innerHTML =
+            "✅ Selected: <b>" +
+            escapeHTML(code) +
+            "</b> — " +
+            escapeHTML(name);
+    }
 
-    Object.keys(values).forEach(function(id) {
 
-        const element =
-            document.getElementById(id);
+    el("masterValue").innerHTML =
+        escapeHTML(name);
 
-        if (element) {
 
-            element.textContent =
-                safeNumber(
-                    values[id]
-                ).toFixed(2);
-        }
+    el("masterInfo").innerHTML =
 
-    });
+        "ID: " +
+        escapeHTML(code) +
+
+        "<br>Unit: " +
+        escapeHTML(unit) +
+
+        "<br>Opening (" +
+
+        escapeHTML(
+            getMonthName(
+                selectedDashboardMonth
+            )
+        ) +
+
+        "): " +
+
+        opening.toFixed(2) +
+
+        "<br>Current Stock: " +
+
+        current.toFixed(2);
+
+
+    el("stockInValue").innerHTML =
+
+        stockIn.toFixed(2) +
+        " " +
+        escapeHTML(unit);
+
+
+    el("stockInInfo").innerHTML =
+
+        "Stock In — " +
+
+        escapeHTML(
+            getMonthName(
+                selectedDashboardMonth
+            )
+        );
+
+
+    el("stockOutValue").innerHTML =
+
+        stockOut.toFixed(2) +
+        " " +
+        escapeHTML(unit);
+
+
+    el("stockOutInfo").innerHTML =
+
+        "Stock Out — " +
+
+        escapeHTML(
+            getMonthName(
+                selectedDashboardMonth
+            )
+        );
+
+
+    el("costValue").innerHTML =
+
+        "Rs. " +
+        cost.toFixed(2);
+
+
+    el("costInfo").innerHTML =
+
+        "Current Stock Cost — " +
+
+        escapeHTML(
+            getMonthName(
+                selectedDashboardMonth
+            )
+        );
+
+
+    // -----------------------------------------
+    // IMPORTANT:
+    // Monthly Demand card میں
+    // صرف SELECTED MONTH APPROVED DEMAND
+    // -----------------------------------------
+
+    el("demandValue").innerHTML =
+        "";
+
+
+    buildMonthlyDemandCardList();
+
+
+ el("pendingValue").innerHTML = "";
+
+buildPendingDemandCardList();
+
+    showSelectedItemPicture(
+        item
+    );
+
+
+    showDashboardGraph(
+        code
+    );
+
+
+    buildCurrentStockTable();
 }
 
 
 // --------------------------------------------------
-// CLEAR CARDS
+// CLEAR SELECTED CARDS
 // --------------------------------------------------
 
 function clearSelectedCards() {
 
-    const ids = [
+    [
 
-        "openingStockValue",
+        "masterValue",
         "stockInValue",
         "stockOutValue",
-        "currentStockValue",
-        "latestRateValue"
+        "demandValue",
+        "pendingValue"
 
-    ];
+    ].forEach(
+        id => {
 
-    ids.forEach(function(id) {
+            const e =
+                document.getElementById(id);
 
-        const element =
-            document.getElementById(id);
 
-        if (element) {
-            element.textContent =
-                "0.00";
+            if (e) {
+
+                e.innerHTML =
+                    "-";
+            }
+
         }
+    );
 
-    });
 
-    const demandInfo =
+    const cost =
         document.getElementById(
-            "demandInfo"
+            "costValue"
         );
 
-    if (demandInfo) {
-        demandInfo.innerHTML = "";
+
+    if (cost) {
+
+        cost.innerHTML =
+            "Rs. 0.00";
     }
 
-    const pendingInfo =
+
+    const masterInfo =
         document.getElementById(
-            "pendingInfo"
+            "masterInfo"
         );
 
-    if (pendingInfo) {
-        pendingInfo.innerHTML = "";
+
+    if (masterInfo) {
+
+        masterInfo.innerHTML =
+            "❌ Item not found.";
     }
 }
 
 
 // --------------------------------------------------
 // CURRENT STOCK TABLE
-// --------------------------------------------------
-// آخری column = Remaining Qty
-// Demand Qty نہیں
 // --------------------------------------------------
 
 function buildCurrentStockTable() {
@@ -3782,116 +3550,169 @@ function buildCurrentStockTable() {
             "currentStockBody"
         );
 
+
     if (!body) {
         return;
     }
 
-    body.innerHTML = "";
 
-    const pendingList =
-        getSelectedMonthPendingDemandList();
+    body.innerHTML =
+        "";
 
-    items.forEach(function(item) {
+
+    items.forEach(item => {
 
         if (
+
             selectedItem &&
+
             getItemCode(item) !==
             getItemCode(selectedItem)
+
         ) {
+
             return;
         }
+
 
         const code =
             getItemCode(item);
 
+
         const name =
             getItemName(item);
+
 
         const unit =
             getItemUnit(item);
 
+
         const opening =
-            getMonthlyOpeningStock(item);
+            getMonthlyOpeningStock(
+                item
+            );
+
 
         const stockIn =
-            getSelectedMonthStockIn(code);
+            getSelectedMonthStockIn(
+                code
+            );
+
 
         const stockOut =
-            getSelectedMonthStockOut(code);
+            getSelectedMonthStockOut(
+                code
+            );
+
 
         const current =
-            getCurrentStock(item);
+            getCurrentStock(
+                item
+            );
+
 
         const rate =
-            getLatestRate(code);
+            getLatestRate(
+                code
+            );
 
-        const pendingRow =
-            pendingList.find(function(row) {
 
-                return (
-                    cleanCode(row.code) ===
-                    cleanCode(code)
-                );
+        const demand =
+            getCurrentMonthDemand(
+                code
+            );
 
-            });
-
-        const remaining =
-            pendingRow
-                ? safeNumber(
-                    pendingRow.pending
-                )
-                : 0;
 
         const row =
-            document.createElement("tr");
+            document.createElement(
+                "tr"
+            );
+
 
         row.innerHTML =
 
             "<td>" +
-            escapeHTML(code) +
+
+            escapeHTML(
+                code || "-"
+            ) +
+
             "</td>" +
 
-            "<td>" +
-            escapeHTML(name || "-") +
-            "</td>" +
 
             "<td>" +
-            escapeHTML(unit || "-") +
+
+            escapeHTML(
+                name || "-"
+            ) +
+
             "</td>" +
 
+
             "<td>" +
+
+            escapeHTML(
+                unit || "-"
+            ) +
+
+            "</td>" +
+
+
+            "<td>" +
+
             opening.toFixed(2) +
+
             "</td>" +
 
+
             "<td>" +
+
             stockIn.toFixed(2) +
+
             "</td>" +
 
+
             "<td>" +
+
             stockOut.toFixed(2) +
+
             "</td>" +
+
 
             "<td class='current-stock-cell'>" +
+
             current.toFixed(2) +
+
             "</td>" +
+
 
             "<td>" +
+
             "Rs. " +
+
             rate.toFixed(2) +
+
             "</td>" +
 
-            "<td class='remaining-qty-cell'>" +
-            remaining.toFixed(2) +
+
+            "<td>" +
+
+            demand.toFixed(2) +
+
             "</td>";
+
 
         const cell =
             row.querySelector(
                 ".current-stock-cell"
             );
 
+
         if (cell) {
 
-            if (current <= 0) {
+            if (
+                current <= 0
+            ) {
 
                 cell.className =
                     "current-stock-cell low";
@@ -3903,24 +3724,6 @@ function buildCurrentStockTable() {
             }
         }
 
-        const remainingCell =
-            row.querySelector(
-                ".remaining-qty-cell"
-            );
-
-        if (remainingCell) {
-
-            if (remaining > 0) {
-
-                remainingCell.className =
-                    "remaining-qty-cell pending";
-
-            } else {
-
-                remainingCell.className =
-                    "remaining-qty-cell complete";
-            }
-        }
 
         body.appendChild(row);
 
@@ -3939,17 +3742,23 @@ function showDashboardGraph(itemCode) {
             "dashboardGraph"
         );
 
+
     const info =
         document.getElementById(
             "graphInfo"
         );
 
+
     if (!canvas) {
         return;
     }
 
+
     const item =
-        getItemByCode(itemCode);
+        getItemByCode(
+            itemCode
+        );
+
 
     if (!item) {
 
@@ -3958,48 +3767,72 @@ function showDashboardGraph(itemCode) {
         return;
     }
 
+
     const opening =
-        getMonthlyOpeningStock(item);
+        getMonthlyOpeningStock(
+            item
+        );
+
 
     const stockIn =
         getSelectedMonthStockIn(
             getItemCode(item)
         );
 
+
     const stockOut =
         getSelectedMonthStockOut(
             getItemCode(item)
         );
 
+
     const current =
-        getCurrentStock(item);
+        getCurrentStock(
+            item
+        );
+
 
     if (info) {
 
         info.innerHTML =
+
             "<b>" +
+
             escapeHTML(
                 getItemCode(item)
             ) +
+
             " - " +
+
             escapeHTML(
                 getItemName(item)
             ) +
+
             "</b><br>" +
+
             escapeHTML(
                 getMonthName(
                     selectedDashboardMonth
                 )
             ) +
+
             " — Opening: " +
+
             opening.toFixed(2) +
+
             " | In: " +
+
             stockIn.toFixed(2) +
+
             " | Out: " +
+
             stockOut.toFixed(2) +
+
             " | Current: " +
+
             current.toFixed(2);
     }
+
 
     if (dashboardChart) {
 
@@ -4009,73 +3842,111 @@ function showDashboardGraph(itemCode) {
             null;
     }
 
+
     if (
         typeof Chart ===
         "undefined"
     ) {
 
         if (info) {
+
             info.innerHTML +=
                 "<br>Chart library not loaded.";
         }
 
+
         return;
     }
+
 
     dashboardChart =
         new Chart(
             canvas,
             {
-                type: "bar",
+
+                type:
+                    "bar",
+
 
                 data: {
 
                     labels: [
+
                         "Opening Stock",
                         "Stock In",
                         "Stock Out",
                         "Current Stock"
+
                     ],
 
+
                     datasets: [
+
                         {
+
                             label:
+
                                 getItemName(item) +
                                 " — " +
                                 getMonthName(
                                     selectedDashboardMonth
                                 ),
 
+
                             data: [
+
                                 opening,
                                 stockIn,
                                 stockOut,
                                 current
+
                             ],
 
-                            borderWidth: 1
+
+                            borderWidth:
+                                1
+
                         }
+
                     ]
+
                 },
+
 
                 options: {
 
-                    responsive: true,
+                    responsive:
+                        true,
 
-                    maintainAspectRatio: false,
+                    maintainAspectRatio:
+                        false,
+
 
                     plugins: {
+
                         legend: {
-                            display: true
+
+                            display:
+                                true
+
                         }
+
                     },
 
+
                     scales: {
+
                         y: {
-                            beginAtZero: true
+
+                            beginAtZero:
+                                true
+
                         }
+
                     }
+
                 }
+
             }
         );
 }
@@ -4088,11 +3959,13 @@ function clearDashboardGraph() {
             "graphInfo"
         );
 
+
     if (info) {
 
         info.innerHTML =
             "Select an Item ID to see its graph.";
     }
+
 
     if (dashboardChart) {
 
@@ -4119,10 +3992,15 @@ function saveSelectedItem() {
         return false;
     }
 
+
     localStorage.setItem(
+
         "dashboardSelectedItem",
+
         getItemCode(selectedItem)
+
     );
+
 
     return true;
 }
@@ -4131,8 +4009,10 @@ function saveSelectedItem() {
 function openMasterView() {
 
     if (selectedItem) {
+
         saveSelectedItem();
     }
+
 
     window.location.href =
         "Master List .html";
@@ -4152,10 +4032,15 @@ function openStockInView() {
         return;
     }
 
+
     localStorage.setItem(
+
         "historyViewType",
+
         "stockIn"
+
     );
+
 
     window.location.href =
         "Stock In History.html";
@@ -4167,10 +4052,14 @@ function newStockIn() {
     if (selectedItem) {
 
         localStorage.setItem(
+
             "stockInSelectedItem",
+
             getItemCode(selectedItem)
+
         );
     }
+
 
     window.location.href =
         "Stock In .html";
@@ -4183,10 +4072,15 @@ function openStockOutView() {
         return;
     }
 
+
     localStorage.setItem(
+
         "historyViewType",
+
         "stockOut"
+
     );
+
 
     window.location.href =
         "Stock Out History.html";
@@ -4198,10 +4092,14 @@ function newStockOut() {
     if (selectedItem) {
 
         localStorage.setItem(
+
             "stockOutSelectedItem",
+
             getItemCode(selectedItem)
+
         );
     }
+
 
     window.location.href =
         "Stock out .html";
@@ -4213,8 +4111,11 @@ function openCostView() {
     if (selectedItem) {
 
         localStorage.setItem(
+
             "dashboardSelectedItem",
+
             getItemCode(selectedItem)
+
         );
 
     } else {
@@ -4223,6 +4124,7 @@ function openCostView() {
             "dashboardSelectedItem"
         );
     }
+
 
     window.location.href =
         "Cost .html";
@@ -4234,10 +4136,14 @@ function newCostEntry() {
     if (selectedItem) {
 
         localStorage.setItem(
+
             "costSelectedItem",
+
             getItemCode(selectedItem)
+
         );
     }
+
 
     window.location.href =
         "Cost .html";
@@ -4250,10 +4156,15 @@ function openDemandView() {
         return;
     }
 
+
     localStorage.setItem(
+
         "demandViewItem",
+
         getItemCode(selectedItem)
+
     );
+
 
     window.location.href =
         "Demand History.html";
@@ -4265,10 +4176,14 @@ function newDemandEntry() {
     if (selectedItem) {
 
         localStorage.setItem(
+
             "demandSelectedItem",
+
             getItemCode(selectedItem)
+
         );
     }
+
 
     window.location.href =
         "Monthly Demand .html";
@@ -4280,6 +4195,7 @@ function openGraph() {
     if (!saveSelectedItem()) {
         return;
     }
+
 
     window.location.href =
         "Graphs.html";
@@ -4304,20 +4220,24 @@ function loadSavedItem() {
             "dashboardSelectedItem"
         );
 
+
     if (saved) {
 
         const item =
             getItemByCode(saved);
+
 
         if (item) {
 
             selectedItem =
                 item;
 
+
             const box =
                 document.getElementById(
                     "itemSearch"
                 );
+
 
             if (box) {
 
@@ -4326,6 +4246,7 @@ function loadSavedItem() {
             }
         }
     }
+
 
     updateMonthUI();
 
@@ -4349,20 +4270,22 @@ async function refreshDashboardData() {
 
 document.addEventListener(
     "DOMContentLoaded",
-    function() {
+    function () {
 
         updateMonthUI();
+
 
         const picker =
             document.getElementById(
                 "dashboardMonth"
             );
 
+
         if (picker) {
 
             picker.addEventListener(
                 "change",
-                function() {
+                function () {
 
                     setDashboardMonth(
                         picker.value
@@ -4371,6 +4294,7 @@ document.addEventListener(
                 }
             );
         }
+
 
         loadDashboardFromSupabase();
 
@@ -4384,15 +4308,16 @@ document.addEventListener(
 
 document.addEventListener(
     "visibilitychange",
-    function() {
+    function () {
 
         if (
+
             document.visibilityState ===
             "visible"
+
         ) {
 
             refreshDashboardData();
-
         }
 
     }
