@@ -2274,51 +2274,56 @@ function getOverallDemand() {
             ),
         0
     );
-}
 // --------------------------------------------------
 // SELECTED MONTH PENDING DEMAND / PO
 // --------------------------------------------------
-// FIXED VERSION
+// FINAL FIX
 //
-// Pending = Approved Demand - Received Stock In
+// Remaining Qty:
+//
+// Approved Demand - Received Stock In
 //
 // Demand Cycle:
 //
-// Current Demand Generate Date شامل
-// Next Demand Generate Date شامل نہیں
+// Current Generate Date INCLUDED
+// Next Generate Date EXCLUDED
 //
-// مثال:
+// Example:
 //
 // June Demand Generate = 28-05-2026
 // July Demand Generate = 27-06-2026
 //
-// June Cycle:
+// June cycle:
 //
 // 28-05-2026 <= Stock In < 27-06-2026
 //
-// یعنی:
-// 28 May سے 26 June تک Stock In
-// June Demand کے Received میں آئے گا.
+// Therefore:
+//
+// 28 May  = COUNT
+// 29 May  = COUNT
+// ...
+// 26 June = COUNT
+// 27 June = NOT COUNT
 //
 // --------------------------------------------------
 
 
 // --------------------------------------------------
-// FIXED LOCAL DATE PARSER
+// DATE KEY
 // --------------------------------------------------
-// YYYY-MM-DD کو UTC میں parse نہیں کریں گے۔
-// پاکستان سمیت local timezone میں date وہی رہے گی.
+// یہ function Date object استعمال نہیں کرتا۔
+// Database کی تاریخ کو سیدھا YYYY-MM-DD میں
+// تبدیل کرتا ہے تاکہ timezone کا مسئلہ نہ آئے.
 // --------------------------------------------------
 
-function parseDashboardLocalDate(value) {
+function getDashboardDateKey(value) {
 
     if (
         value === null ||
         value === undefined ||
         String(value).trim() === ""
     ) {
-
-        return null;
+        return "";
     }
 
 
@@ -2330,44 +2335,21 @@ function parseDashboardLocalDate(value) {
     // YYYY-MM-DD
     // -----------------------------------------
 
-    const ymd =
+    let match =
         text.match(
             /^(\d{4})-(\d{2})-(\d{2})/
         );
 
 
-    if (ymd) {
+    if (match) {
 
-        const year =
-            Number(ymd[1]);
-
-        const month =
-            Number(ymd[2]) - 1;
-
-        const day =
-            Number(ymd[3]);
-
-
-        const d =
-            new Date(
-                year,
-                month,
-                day,
-                0,
-                0,
-                0,
-                0
-            );
-
-
-        if (
-            !Number.isNaN(
-                d.getTime()
-            )
-        ) {
-
-            return d;
-        }
+        return (
+            match[1] +
+            "-" +
+            match[2] +
+            "-" +
+            match[3]
+        );
     }
 
 
@@ -2375,44 +2357,25 @@ function parseDashboardLocalDate(value) {
     // DD/MM/YYYY
     // -----------------------------------------
 
-    const dmySlash =
+    match =
         text.match(
             /^(\d{1,2})\/(\d{1,2})\/(\d{4})/
         );
 
 
-    if (dmySlash) {
+    if (match) {
 
-        const day =
-            Number(dmySlash[1]);
-
-        const month =
-            Number(dmySlash[2]) - 1;
-
-        const year =
-            Number(dmySlash[3]);
-
-
-        const d =
-            new Date(
-                year,
-                month,
-                day,
-                0,
-                0,
-                0,
-                0
-            );
-
-
-        if (
-            !Number.isNaN(
-                d.getTime()
-            )
-        ) {
-
-            return d;
-        }
+        return (
+            match[3] +
+            "-" +
+            String(
+                Number(match[2])
+            ).padStart(2, "0") +
+            "-" +
+            String(
+                Number(match[1])
+            ).padStart(2, "0")
+        );
     }
 
 
@@ -2420,44 +2383,25 @@ function parseDashboardLocalDate(value) {
     // DD-MM-YYYY
     // -----------------------------------------
 
-    const dmyDash =
+    match =
         text.match(
             /^(\d{1,2})-(\d{1,2})-(\d{4})/
         );
 
 
-    if (dmyDash) {
+    if (match) {
 
-        const day =
-            Number(dmyDash[1]);
-
-        const month =
-            Number(dmyDash[2]) - 1;
-
-        const year =
-            Number(dmyDash[3]);
-
-
-        const d =
-            new Date(
-                year,
-                month,
-                day,
-                0,
-                0,
-                0,
-                0
-            );
-
-
-        if (
-            !Number.isNaN(
-                d.getTime()
-            )
-        ) {
-
-            return d;
-        }
+        return (
+            match[3] +
+            "-" +
+            String(
+                Number(match[2])
+            ).padStart(2, "0") +
+            "-" +
+            String(
+                Number(match[1])
+            ).padStart(2, "0")
+        );
     }
 
 
@@ -2465,105 +2409,51 @@ function parseDashboardLocalDate(value) {
     // YYYY-MM
     // -----------------------------------------
 
-    const ym =
+    match =
         text.match(
             /^(\d{4})-(\d{2})$/
         );
 
 
-    if (ym) {
+    if (match) {
 
-        const d =
-            new Date(
-                Number(ym[1]),
-                Number(ym[2]) - 1,
-                1,
-                0,
-                0,
-                0,
-                0
-            );
-
-
-        if (
-            !Number.isNaN(
-                d.getTime()
-            )
-        ) {
-
-            return d;
-        }
-    }
-
-
-    // -----------------------------------------
-    // Timestamp / other valid date
-    // -----------------------------------------
-
-    const parsed =
-        new Date(text);
-
-
-    if (
-        !Number.isNaN(
-            parsed.getTime()
-        )
-    ) {
-
-        return new Date(
-            parsed.getFullYear(),
-            parsed.getMonth(),
-            parsed.getDate(),
-            0,
-            0,
-            0,
-            0
+        return (
+            match[1] +
+            "-" +
+            match[2] +
+            "-01"
         );
     }
 
 
-    return null;
-}
+    // -----------------------------------------
+    // Timestamp
+    // -----------------------------------------
+
+    const d =
+        new Date(text);
 
 
-// --------------------------------------------------
-// FIXED RECORD DATE
-// --------------------------------------------------
-//
-// اس function کو پورے Dashboard میں استعمال کیا جا
-// سکتا ہے۔ سب سے اہم تبدیلی YYYY-MM-DD کی ہے.
-// --------------------------------------------------
+    if (
+        Number.isNaN(
+            d.getTime()
+        )
+    ) {
 
-function getRecordDate(record) {
-
-    if (!record) {
-        return null;
+        return "";
     }
 
 
-    const value =
-
-        record?.date ??
-        record?.transactionDate ??
-        record?.transaction_date ??
-        record?.entryDate ??
-        record?.entry_date ??
-        record?.transaction_datetime ??
-        record?.created_at ??
-        record?.createdDate ??
-        record?.demandDate ??
-        record?.demand_date ??
-        record?.generate_date ??
-        record?.generateDate ??
-        record?.generated_date ??
-        record?.generatedDate ??
-        record?.month ??
-        record?.demand_month ??
-        "";
-
-
-    return parseDashboardLocalDate(
-        value
+    return (
+        d.getFullYear() +
+        "-" +
+        String(
+            d.getMonth() + 1
+        ).padStart(2, "0") +
+        "-" +
+        String(
+            d.getDate()
+        ).padStart(2, "0")
     );
 }
 
@@ -2572,10 +2462,10 @@ function getRecordDate(record) {
 // DEMAND GENERATE DATE
 // --------------------------------------------------
 
-function getDemandGenerateDate(record) {
+function getDemandGenerateDateKey(record) {
 
     if (!record) {
-        return null;
+        return "";
     }
 
 
@@ -2590,52 +2480,50 @@ function getDemandGenerateDate(record) {
         record?.date ??
         record?.demand_date ??
         record?.demandDate ??
-        record?.created_at ??
         "";
 
 
-    return parseDashboardLocalDate(
+    return getDashboardDateKey(
         value
     );
 }
 
 
 // --------------------------------------------------
-// FIND NEXT DEMAND GENERATE DATE
+// NEXT DEMAND GENERATE DATE
 // --------------------------------------------------
 //
-// Current Demand کے بعد آنے والی سب سے پہلی Demand
-// کی Generate Date نکالی جاتی ہے.
+// موجودہ Demand کے بعد آنے والی سب سے پہلی
+// Generate Date.
 //
 // مثال:
 //
-// 28-05-2026
-//      ↓
-// 27-06-2026
+// 2026-05-28
+// 2026-06-27
+// 2026-07-28
+//
+// اگر current = 2026-05-28
+// next = 2026-06-27
 //
 // --------------------------------------------------
 
-function getNextDemandGenerateDate(
+function getNextDemandGenerateDateKey(
     currentDemandRecord
 ) {
 
-    const currentDate =
-        getDemandGenerateDate(
+    const currentKey =
+        getDemandGenerateDateKey(
             currentDemandRecord
         );
 
 
-    if (!currentDate) {
-        return null;
+    if (!currentKey) {
+        return "";
     }
 
 
-    const currentTime =
-        currentDate.getTime();
-
-
-    let nextDate =
-        null;
+    let nextKey =
+        "";
 
 
     if (
@@ -2643,64 +2531,56 @@ function getNextDemandGenerateDate(
             demandHistory
         )
     ) {
-
-        return null;
+        return "";
     }
 
 
     demandHistory.forEach(
         function(record) {
 
-            // اگر یہی record ہے تو skip
             if (
                 record ===
                 currentDemandRecord
             ) {
-
                 return;
             }
 
 
-            const candidateDate =
-                getDemandGenerateDate(
+            const candidateKey =
+                getDemandGenerateDateKey(
                     record
                 );
 
 
-            if (!candidateDate) {
+            if (!candidateKey) {
                 return;
             }
 
 
-            const candidateTime =
-                candidateDate.getTime();
-
-
-            // صرف current Demand کے بعد والی date
+            // صرف current کے بعد والی date
             if (
-                candidateTime <=
-                currentTime
+                candidateKey <=
+                currentKey
             ) {
-
                 return;
             }
 
 
+            // سب سے قریب والی next date
             if (
-                nextDate === null ||
-                candidateTime <
-                nextDate.getTime()
+                !nextKey ||
+                candidateKey < nextKey
             ) {
 
-                nextDate =
-                    candidateDate;
+                nextKey =
+                    candidateKey;
             }
 
         }
     );
 
 
-    return nextDate;
+    return nextKey;
 }
 
 
@@ -2708,26 +2588,29 @@ function getNextDemandGenerateDate(
 // STOCK IN RECEIVED FOR DEMAND CYCLE
 // --------------------------------------------------
 //
-// startDate شامل
-// nextDemandDate شامل نہیں
+// start شامل
+// next شامل نہیں
 //
-// مثال:
+// start = 2026-05-28
+// end   = 2026-06-27
 //
-// Start = 28-05-2026
-// End   = 27-06-2026
+// COUNT:
 //
-// 28-05  ✅
-// 29-05  ✅
+// 2026-05-28
+// 2026-05-29
 // ...
-// 26-06  ✅
-// 27-06  ❌
+// 2026-06-26
+//
+// NOT COUNT:
+//
+// 2026-06-27
 //
 // --------------------------------------------------
 
 function getStockInReceivedForDemandCycle(
     itemCode,
-    startDate,
-    nextDemandDate
+    startDateKey,
+    nextDateKey
 ) {
 
     const code =
@@ -2738,57 +2621,10 @@ function getStockInReceivedForDemandCycle(
 
     if (
         !code ||
-        !startDate
+        !startDateKey
     ) {
 
         return 0;
-    }
-
-
-    // -----------------------------------------
-    // Start date کو local midnight بنائیں
-    // -----------------------------------------
-
-    const start =
-        new Date(
-            startDate.getFullYear(),
-            startDate.getMonth(),
-            startDate.getDate(),
-            0,
-            0,
-            0,
-            0
-        );
-
-
-    const startTime =
-        start.getTime();
-
-
-    // -----------------------------------------
-    // End date
-    // -----------------------------------------
-
-    let endTime =
-        null;
-
-
-    if (nextDemandDate) {
-
-        const end =
-            new Date(
-                nextDemandDate.getFullYear(),
-                nextDemandDate.getMonth(),
-                nextDemandDate.getDate(),
-                0,
-                0,
-                0,
-                0
-            );
-
-
-        endTime =
-            end.getTime();
     }
 
 
@@ -2815,13 +2651,19 @@ function getStockInReceivedForDemandCycle(
 
 
             // ---------------------------------
-            // صرف اسی Item کا Stock In
+            // Item Code
             // ---------------------------------
 
-            if (
+            const stockCode =
                 cleanCode(
-                    record?.itemCode
-                ) !== code
+                    record?.itemCode ??
+                    record?.item_code ??
+                    record?.code
+                );
+
+
+            if (
+                stockCode !== code
             ) {
 
                 return;
@@ -2829,19 +2671,25 @@ function getStockInReceivedForDemandCycle(
 
 
             // ---------------------------------
-            // Stock In date
+            // Stock In Date
             // ---------------------------------
 
-            const stockInDate =
-                getRecordDate(
-                    record
+            const stockDateKey =
+                getDashboardDateKey(
+                    record?.date ??
+                    record?.transactionDate ??
+                    record?.transaction_date ??
+                    record?.entryDate ??
+                    record?.entry_date ??
+                    record?.transaction_datetime ??
+                    record?.created_at
                 );
 
 
-            if (!stockInDate) {
+            if (!stockDateKey) {
 
                 console.warn(
-                    "Pending: Stock In date not found:",
+                    "⚠️ Stock In date missing:",
                     record
                 );
 
@@ -2849,29 +2697,13 @@ function getStockInReceivedForDemandCycle(
             }
 
 
-            const stockIn =
-                new Date(
-                    stockInDate.getFullYear(),
-                    stockInDate.getMonth(),
-                    stockInDate.getDate(),
-                    0,
-                    0,
-                    0,
-                    0
-                );
-
-
-            const stockInTime =
-                stockIn.getTime();
-
-
             // ---------------------------------
-            // Start سے پہلے والا Stock In نہیں
+            // START INCLUDED
             // ---------------------------------
 
             if (
-                stockInTime <
-                startTime
+                stockDateKey <
+                startDateKey
             ) {
 
                 return;
@@ -2879,27 +2711,27 @@ function getStockInReceivedForDemandCycle(
 
 
             // ---------------------------------
-            // Next Demand date پر آنے والا
-            // Stock In موجودہ Demand میں نہیں
+            // NEXT DEMAND EXCLUDED
             // ---------------------------------
 
             if (
-                endTime !== null &&
-                stockInTime >= endTime
+                nextDateKey &&
+                stockDateKey >=
+                nextDateKey
             ) {
 
                 return;
             }
 
 
-            const qty =
+            const quantity =
                 safeNumber(
-                    record.quantity
+                    record?.quantity
                 );
 
 
             if (
-                qty <= 0
+                quantity <= 0
             ) {
 
                 return;
@@ -2907,16 +2739,18 @@ function getStockInReceivedForDemandCycle(
 
 
             totalReceived +=
-                qty;
+                quantity;
 
 
             console.log(
-                "✅ Pending Stock In Counted:",
-                code,
-                "Date:",
-                stockIn.toLocaleDateString(),
-                "Qty:",
-                qty
+                "📦 PENDING STOCK IN COUNTED:",
+                {
+                    item: code,
+                    stockDate: stockDateKey,
+                    quantity: quantity,
+                    cycleStart: startDateKey,
+                    cycleEnd: nextDateKey || "NO NEXT DEMAND"
+                }
             );
 
         }
@@ -2924,16 +2758,13 @@ function getStockInReceivedForDemandCycle(
 
 
     console.log(
-        "📦 Total Cycle Received:",
-        code,
-        "Start:",
-        start.toLocaleDateString(),
-        "End:",
-        nextDemandDate
-            ? nextDemandDate.toLocaleDateString()
-            : "No Next Demand",
-        "Received:",
-        totalReceived
+        "📊 CYCLE RECEIVED:",
+        {
+            item: code,
+            start: startDateKey,
+            end: nextDateKey || "NO NEXT DEMAND",
+            received: totalReceived
+        }
     );
 
 
@@ -2982,7 +2813,7 @@ function getSelectedMonthPendingDemandList() {
     );
 
     console.log(
-        "PENDING DEMAND CALCULATION"
+        "🔵 PENDING DEMAND CALCULATION"
     );
 
     console.log(
@@ -3003,13 +2834,13 @@ function getSelectedMonthPendingDemandList() {
     selectedRecords.forEach(
         function(demandRecord) {
 
-            const demandGenerateDate =
-                getDemandGenerateDate(
+            const generateDateKey =
+                getDemandGenerateDateKey(
                     demandRecord
                 );
 
 
-            if (!demandGenerateDate) {
+            if (!generateDateKey) {
 
                 console.warn(
                     "❌ Demand Generate Date not found:",
@@ -3021,11 +2852,11 @@ function getSelectedMonthPendingDemandList() {
 
 
             // ---------------------------------
-            // اگلی Demand Generate Date
+            // Next Demand Generate Date
             // ---------------------------------
 
-            const nextDemandDate =
-                getNextDemandGenerateDate(
+            const nextDateKey =
+                getNextDemandGenerateDateKey(
                     demandRecord
                 );
 
@@ -3035,22 +2866,20 @@ function getSelectedMonthPendingDemandList() {
             );
 
             console.log(
-                "Demand Record:",
+                "Demand ID:",
                 demandRecord?.id ??
-                demandRecord?.demand_no ??
                 "-"
             );
 
             console.log(
                 "Demand Generate Date:",
-                demandGenerateDate.toLocaleDateString()
+                generateDateKey
             );
 
             console.log(
-                "Next Demand Date:",
-                nextDemandDate
-                    ? nextDemandDate.toLocaleDateString()
-                    : "No Next Demand"
+                "Next Demand Generate Date:",
+                nextDateKey ||
+                "NO NEXT DEMAND"
             );
 
 
@@ -3066,7 +2895,7 @@ function getSelectedMonthPendingDemandList() {
 
             // =================================
             // CASE 1:
-            // Demand record کے اندر items list
+            // Record کے اندر demand_items ہیں
             // =================================
 
             if (
@@ -3138,14 +2967,14 @@ function getSelectedMonthPendingDemandList() {
 
 
                         // ---------------------------------
-                        // Cycle Stock In
+                        // RECEIVED
                         // ---------------------------------
 
                         const received =
                             getStockInReceivedForDemandCycle(
                                 code,
-                                demandGenerateDate,
-                                nextDemandDate
+                                generateDateKey,
+                                nextDateKey
                             );
 
 
@@ -3162,21 +2991,30 @@ function getSelectedMonthPendingDemandList() {
 
 
                         console.log(
-                            "🔎 ITEM:",
-                            code,
-                            "| Approved:",
-                            approved,
-                            "| Received:",
-                            received,
-                            "| Remaining:",
-                            pending
+                            "🔎 DEMAND ITEM:",
+                            {
+                                code: code,
+                                approved: approved,
+                                received: received,
+                                remaining: pending,
+                                generateDate: generateDateKey,
+                                nextDate: nextDateKey
+                            }
                         );
 
 
+                        // ---------------------------------
                         // مکمل receive ہو گیا
+                        // ---------------------------------
+
                         if (
                             pending <= 0
                         ) {
+
+                            console.log(
+                                "✅ FULLY RECEIVED:",
+                                code
+                            );
 
                             return;
                         }
@@ -3203,10 +3041,10 @@ function getSelectedMonthPendingDemandList() {
                                 pending,
 
                             demandGenerateDate:
-                                demandGenerateDate,
+                                generateDateKey,
 
                             nextDemandDate:
-                                nextDemandDate,
+                                nextDateKey,
 
                             recordId:
                                 demandRecord?.id,
@@ -3228,7 +3066,7 @@ function getSelectedMonthPendingDemandList() {
 
             // =================================
             // CASE 2:
-            // Demand record خود item ہے
+            // Record خود ایک item ہے
             // =================================
 
             const directCode =
@@ -3282,13 +3120,21 @@ function getSelectedMonthPendingDemandList() {
                 );
 
 
+            // ---------------------------------
+            // RECEIVED
+            // ---------------------------------
+
             const received =
                 getStockInReceivedForDemandCycle(
                     directCode,
-                    demandGenerateDate,
-                    nextDemandDate
+                    generateDateKey,
+                    nextDateKey
                 );
 
+
+            // ---------------------------------
+            // REMAINING
+            // ---------------------------------
 
             const pending =
                 Math.max(
@@ -3299,14 +3145,15 @@ function getSelectedMonthPendingDemandList() {
 
 
             console.log(
-                "🔎 DIRECT ITEM:",
-                directCode,
-                "| Approved:",
-                approved,
-                "| Received:",
-                received,
-                "| Remaining:",
-                pending
+                "🔎 DIRECT DEMAND ITEM:",
+                {
+                    code: directCode,
+                    approved: approved,
+                    received: received,
+                    remaining: pending,
+                    generateDate: generateDateKey,
+                    nextDate: nextDateKey
+                }
             );
 
 
@@ -3339,10 +3186,10 @@ function getSelectedMonthPendingDemandList() {
                     pending,
 
                 demandGenerateDate:
-                    demandGenerateDate,
+                    generateDateKey,
 
                 nextDemandDate:
-                    nextDemandDate,
+                    nextDateKey,
 
                 recordId:
                     demandRecord?.id,
@@ -3359,7 +3206,7 @@ function getSelectedMonthPendingDemandList() {
 
 
     // -----------------------------------------
-    // SAME ITEM کو merge کریں
+    // SAME ITEM MERGE
     // -----------------------------------------
 
     const merged =
@@ -3473,6 +3320,7 @@ function getSelectedMonthPendingDemandList() {
 
 
     // -----------------------------------------
+    // ITEM CODE SORT
     // SI1, SI2 ... SI9, SI10
     // -----------------------------------------
 
@@ -3558,7 +3406,7 @@ function getSelectedMonthPendingDemandList() {
     );
 
     console.log(
-        "✅ FINAL PENDING / REMAINING LIST:",
+        "🟢 FINAL REMAINING LIST:",
         finalResult
     );
 
@@ -3574,8 +3422,9 @@ function getSelectedMonthPendingDemandList() {
 // --------------------------------------------------
 // PENDING DEMAND / PO CARD
 // --------------------------------------------------
-// یہاں اب Demand Qty نہیں بلکہ Remaining Qty
-// دکھائی جائے گی.
+// IMPORTANT:
+// یہاں APPROVED Demand نہیں دکھانی۔
+// صرف REMAINING دکھانا ہے.
 // --------------------------------------------------
 
 function buildPendingDemandCardList() {
@@ -3598,7 +3447,7 @@ function buildPendingDemandCardList() {
 
 
     // -----------------------------------------
-    // Total value استعمال نہیں کرنا
+    // Total number/value ختم
     // -----------------------------------------
 
     if (value) {
@@ -3642,7 +3491,10 @@ function buildPendingDemandCardList() {
             );
 
 
-        // اس item کی Remaining نہیں
+        // -----------------------------------------
+        // اس item کی Remaining نہیں ہے
+        // -----------------------------------------
+
         if (!found) {
 
             container.innerHTML =
@@ -3760,7 +3612,7 @@ function buildPendingDemandCardList() {
 
 
     // -----------------------------------------
-    // Scrollable list
+    // SCROLLABLE LIST
     // -----------------------------------------
 
     let html =
@@ -3791,6 +3643,7 @@ function buildPendingDemandCardList() {
                 'align-items:center;' +
                 'gap:8px;' +
                 '">' +
+
 
                 '<span style="' +
                 'flex:1;' +
@@ -3847,250 +3700,6 @@ function buildPendingDemandCardList() {
     container.innerHTML =
         html;
 }
-function buildPendingDemandCardList() {
-
-    const container =
-        document.getElementById(
-            "pendingInfo"
-        );
-
-
-    const value =
-        document.getElementById(
-            "pendingValue"
-        );
-
-
-    if (!container) {
-        return;
-    }
-
-
-    // -----------------------------------------
-    // TOTAL VALUE ختم
-    // -----------------------------------------
-
-    if (value) {
-
-        value.innerHTML = "";
-
-    }
-
-
-    const pendingList =
-        getSelectedMonthPendingDemandList();
-
-
-    // -----------------------------------------
-    // ITEM SELECTED
-    // صرف اسی item کی pending demand
-    // -----------------------------------------
-
-    if (selectedItem) {
-
-        const selectedCode =
-            getItemCode(selectedItem);
-
-
-        const found =
-            pendingList.find(function(row) {
-
-                return (
-                    cleanCode(row.code) ===
-                    cleanCode(selectedCode)
-                );
-
-            });
-
-
-        // اگر اس item کی کوئی pending demand نہیں
-        if (!found) {
-
-            container.innerHTML = "";
-
-            return;
-
-        }
-
-
-        container.innerHTML =
-
-            '<div style="' +
-            'font-size:14px;' +
-            'font-weight:bold;' +
-            'padding:4px 2px;' +
-            'overflow:hidden;' +
-            'text-overflow:ellipsis;' +
-            'white-space:nowrap;' +
-            '">' +
-
-            escapeHTML(
-                found.code
-            ) +
-
-            " - " +
-
-            escapeHTML(
-                found.name
-            ) +
-
-            '</div>' +
-
-
-            '<div style="' +
-            'padding:6px 3px;' +
-            'border-top:1px solid rgba(255,255,255,.25);' +
-            'font-size:13px;' +
-            'line-height:1.6;' +
-            '">' +
-
-            '<div>' +
-            'Approved: <b>' +
-            safeNumber(
-                found.approved
-            ).toFixed(2) +
-            ' ' +
-            escapeHTML(
-                found.unit
-            ) +
-            '</b>' +
-            '</div>' +
-
-
-            '<div>' +
-            'Received: <b>' +
-            safeNumber(
-                found.received
-            ).toFixed(2) +
-            ' ' +
-            escapeHTML(
-                found.unit
-            ) +
-            '</b>' +
-            '</div>' +
-
-
-            '<div>' +
-            'Pending: <b>' +
-            safeNumber(
-                found.pending
-            ).toFixed(2) +
-            ' ' +
-            escapeHTML(
-                found.unit
-            ) +
-            '</b>' +
-            '</div>' +
-
-
-            '</div>';
-
-        return;
-    }
-
-
-    // -----------------------------------------
-    // NO ITEM SELECTED
-    // تمام selected month کی pending list
-    // -----------------------------------------
-
-    if (
-        pendingList.length === 0
-    ) {
-
-        container.innerHTML =
-            "";
-
-        return;
-
-    }
-
-
-    // -----------------------------------------
-    // SCROLLABLE LIST
-    // -----------------------------------------
-
-    let html =
-
-        '<div style="' +
-        'height:105px;' +
-        'max-height:105px;' +
-        'overflow-y:auto;' +
-        'overflow-x:hidden;' +
-        'padding-right:5px;' +
-        '">';
-
-
-    pendingList.forEach(function(row) {
-
-        html +=
-
-            '<div style="' +
-            'padding:5px 3px;' +
-            'border-bottom:1px solid rgba(255,255,255,.25);' +
-            'font-size:14px;' +
-            '">' +
-
-            '<div style="' +
-            'display:flex;' +
-            'justify-content:space-between;' +
-            'align-items:center;' +
-            'gap:8px;' +
-            '">' +
-
-            '<span style="' +
-            'flex:1;' +
-            'min-width:0;' +
-            'overflow:hidden;' +
-            'text-overflow:ellipsis;' +
-            'white-space:nowrap;' +
-            'font-weight:bold;' +
-            '">' +
-
-            escapeHTML(
-                row.code
-            ) +
-
-            ' - ' +
-
-            escapeHTML(
-                row.name
-            ) +
-
-            '</span>' +
-
-            '<span style="' +
-            'font-weight:bold;' +
-            'white-space:nowrap;' +
-            '">' +
-
-            safeNumber(
-                row.pending
-            ).toFixed(2) +
-
-            ' ' +
-
-            escapeHTML(
-                row.unit
-            ) +
-
-            '</span>' +
-
-            '</div>' +
-
-            '</div>';
-
-    });
-
-
-    html +=
-        '</div>';
-
-
-    container.innerHTML =
-        html;
-}
-
 // --------------------------------------------------
 // COST
 // --------------------------------------------------
