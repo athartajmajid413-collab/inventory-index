@@ -2449,97 +2449,81 @@ function getSelectedMonthPendingDemandList() {
     // DEMAND GENERATE DATE
     // --------------------------------------------------
 
-    function getDemandGenerateDateLocal(record) {
+   function getDemandGenerateDateLocal(record) {
 
-        if (!record) {
-            return null;
-        }
-
-
-        const value =
-
-            record?.generate_date ??
-            record?.generateDate ??
-            record?.generated_date ??
-            record?.generatedDate ??
-            record?.date ??
-            record?.demand_date ??
-            record?.demandDate ??
-            record?.created_at ??
-            "";
-
-
-        return getCycleDate(value);
+    if (!record) {
+        return null;
     }
 
+    const value =
+        record?.demand_date ??
+        record?.demandDate ??
+        "";
 
-    // --------------------------------------------------
-    // NEXT DEMAND GENERATE DATE
-    // --------------------------------------------------
+    if (
+        value === null ||
+        value === undefined ||
+        String(value).trim() === ""
+    ) {
+        return null;
+    }
 
-    function getNextDemandGenerateDateLocal(
-        currentRecord
+    const text =
+        String(value).trim();
+
+    // YYYY-MM-DD
+    if (
+        /^\d{4}-\d{2}-\d{2}/.test(text)
     ) {
 
-        const currentDate =
-            getDemandGenerateDateLocal(
-                currentRecord
-            );
+        const p =
+            text.substring(0, 10)
+                .split("-")
+                .map(Number);
 
-
-        if (!currentDate) {
-            return null;
-        }
-
-
-        let nextDate = null;
-
-
-        records.forEach(function(record) {
-
-            if (
-                record === currentRecord
-            ) {
-                return;
-            }
-
-
-            const date =
-                getDemandGenerateDateLocal(
-                    record
-                );
-
-
-            if (!date) {
-                return;
-            }
-
-
-            if (
-                date.getTime() <=
-                currentDate.getTime()
-            ) {
-                return;
-            }
-
-
-            if (
-                !nextDate ||
-                date.getTime() <
-                nextDate.getTime()
-            ) {
-
-                nextDate =
-                    date;
-            }
-
-        });
-
-
-        return nextDate;
+        return new Date(
+            p[0],
+            p[1] - 1,
+            p[2]
+        );
     }
 
+    // DD-MM-YYYY
+    if (
+        /^\d{1,2}-\d{1,2}-\d{4}/.test(text)
+    ) {
 
+        const p =
+            text.substring(0, 10)
+                .split("-")
+                .map(Number);
+
+        return new Date(
+            p[2],
+            p[1] - 1,
+            p[0]
+        );
+    }
+
+    // DD/MM/YYYY
+    if (
+        /^\d{1,2}\/\d{1,2}\/\d{4}/.test(text)
+    ) {
+
+        const p =
+            text.substring(0, 10)
+                .split("/")
+                .map(Number);
+
+        return new Date(
+            p[2],
+            p[1] - 1,
+            p[0]
+        );
+    }
+
+    return null;
+}
     // --------------------------------------------------
     // GET STOCK IN RECEIVED FOR DEMAND CYCLE
     // START = INCLUSIVE
