@@ -4064,10 +4064,13 @@ buildPendingDemandCardList();
         live demand استعمال نہیں ہوگی۔
     */
 
-    const demand =
-        getCurrentMonthDemand(
-            code
-        );
+   const demand = getCurrentMonthDemand(code);
+
+const remainingBalance = Math.max(
+    safeNumber(demand) -
+    safeNumber(getSelectedMonthStockIn(code)),
+    0
+);
 
     const cost =
         getItemCurrentCost(
@@ -4336,11 +4339,13 @@ function buildCurrentStockTable() {
             );
 
 
-        const demand =
-            getCurrentMonthDemand(
-                code
-            );
+      const demand = getCurrentMonthDemand(code);
 
+const remainingBalance = Math.max(
+    safeNumber(demand) -
+    safeNumber(getSelectedMonthStockIn(code)),
+    0
+);
 
         const row =
             document.createElement(
@@ -4414,11 +4419,7 @@ function buildCurrentStockTable() {
             "</td>" +
 
 
-            "<td>" +
-
-            demand.toFixed(2) +
-
-            "</td>";
+          "<td>" + remainingBalance.toFixed(2) + "</td>"
 
 
         const cell =
