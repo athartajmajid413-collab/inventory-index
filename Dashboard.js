@@ -5309,7 +5309,7 @@ async function refreshDashboardData() {
 // START
 // --------------------------------------------------
 
-document.addEventListener(
+document.addEventListene(
     "DOMContentLoaded",
     function () {
 
@@ -5376,3 +5376,4 @@ window.handleItemPictureError =
 console.log(
     "✅ Dashboard.js loaded successfully."
 );
+}
