@@ -4339,14 +4339,18 @@ function buildCurrentStockTable() {
             );
 
 
-      const demand = getCurrentMonthDemand(code);
+   const pendingList =
+    getSelectedMonthPendingDemandList();
 
-const remainingBalance = Math.max(
-    safeNumber(demand) -
-    safeNumber(getSelectedMonthStockIn(code)),
-    0
-);
+const pendingRow =
+    pendingList.find(
+        row => cleanCode(row.code) === cleanCode(code)
+    );
 
+const remainingBalance =
+    pendingRow
+        ? safeNumber(pendingRow.pending)
+        : 0;
         const row =
             document.createElement(
                 "tr"
