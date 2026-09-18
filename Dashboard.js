@@ -2448,17 +2448,13 @@ function getSelectedMonthPendingDemandList() {
     // --------------------------------------------------
     // DEMAND GENERATE DATE
     // --------------------------------------------------
-
-    function getDemandGenerateDateLocal(record) {
+function getDemandGenerateDateLocal(record) {
 
     if (!record) {
         return null;
     }
 
-    const value =
-        record?.demand_date ??
-        record?.demandDate ??
-        "";
+    const value = record.demand_date;
 
     if (
         value === null ||
@@ -2468,18 +2464,15 @@ function getSelectedMonthPendingDemandList() {
         return null;
     }
 
-    const text =
-        String(value).trim();
+    const text = String(value).trim();
 
     // YYYY-MM-DD
-    if (
-        /^\d{4}-\d{2}-\d{2}/.test(text)
-    ) {
+    if (/^\d{4}-\d{2}-\d{2}/.test(text)) {
 
-        const p =
-            text.substring(0, 10)
-                .split("-")
-                .map(Number);
+        const p = text
+            .substring(0, 10)
+            .split("-")
+            .map(Number);
 
         return new Date(
             p[0],
@@ -2489,14 +2482,12 @@ function getSelectedMonthPendingDemandList() {
     }
 
     // DD-MM-YYYY
-    if (
-        /^\d{1,2}-\d{1,2}-\d{4}/.test(text)
-    ) {
+    if (/^\d{1,2}-\d{1,2}-\d{4}/.test(text)) {
 
-        const p =
-            text.substring(0, 10)
-                .split("-")
-                .map(Number);
+        const p = text
+            .substring(0, 10)
+            .split("-")
+            .map(Number);
 
         return new Date(
             p[2],
@@ -2506,14 +2497,12 @@ function getSelectedMonthPendingDemandList() {
     }
 
     // DD/MM/YYYY
-    if (
-        /^\d{1,2}\/\d{1,2}\/\d{4}/.test(text)
-    ) {
+    if (/^\d{1,2}\/\d{1,2}\/\d{4}/.test(text)) {
 
-        const p =
-            text.substring(0, 10)
-                .split("/")
-                .map(Number);
+        const p = text
+            .substring(0, 10)
+            .split("/")
+            .map(Number);
 
         return new Date(
             p[2],
@@ -2524,7 +2513,6 @@ function getSelectedMonthPendingDemandList() {
 
     return null;
 }
-
     // --------------------------------------------------
     // NEXT DEMAND GENERATE DATE
     // --------------------------------------------------
