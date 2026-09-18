@@ -1590,6 +1590,16 @@ function getSelectedMonthApprovedDemandList() {
 // MONTHLY DEMAND CARD
 // --------------------------------------------------
 
+// --------------------------------------------------
+// MONTHLY DEMAND CARD
+// --------------------------------------------------
+// Item selected:
+//     صرف اسی Item کی Approved Demand
+//
+// Item NOT selected:
+//     Selected Month کی تمام Approved Demand کی list
+// --------------------------------------------------
+
 function buildMonthlyDemandCardList() {
 
     const container =
@@ -1603,9 +1613,18 @@ function buildMonthlyDemandCardList() {
     }
 
 
+    // -----------------------------------------
+    // SELECTED MONTH APPROVED DEMAND
+    // -----------------------------------------
+
     const approvedList =
         getSelectedMonthApprovedDemandList();
 
+
+    // -----------------------------------------
+    // ITEM SELECTED
+    // صرف selected item
+    // -----------------------------------------
 
     if (selectedItem) {
 
@@ -1623,6 +1642,7 @@ function buildMonthlyDemandCardList() {
             );
 
 
+        // Selected item کی approved demand نہیں
         if (!found) {
 
             container.innerHTML = "";
@@ -1686,6 +1706,11 @@ function buildMonthlyDemandCardList() {
     }
 
 
+    // -----------------------------------------
+    // NO ITEM SELECTED
+    // پورے selected month کی approved list
+    // -----------------------------------------
+
     if (
         approvedList.length === 0
     ) {
@@ -1709,6 +1734,11 @@ function buildMonthlyDemandCardList() {
         return;
     }
 
+
+    // -----------------------------------------
+    // SORT
+    // SI1, SI2 ... SI9, SI10
+    // -----------------------------------------
 
     approvedList.sort(
         function(a, b) {
@@ -1771,6 +1801,10 @@ function buildMonthlyDemandCardList() {
         }
     );
 
+
+    // -----------------------------------------
+    // SCROLLABLE LIST
+    // -----------------------------------------
 
     let html =
 
@@ -1873,8 +1907,6 @@ function buildMonthlyDemandCardList() {
     container.innerHTML =
         html;
 }
-
-
 // --------------------------------------------------
 // LIVE MONTHLY DEMAND - COMPATIBILITY ONLY
 // --------------------------------------------------
@@ -2828,45 +2860,89 @@ function getSelectedMonthPendingDemandList() {
 // --------------------------------------------------
 // PENDING DEMAND CARD
 // --------------------------------------------------
+// --------------------------------------------------
+// PENDING DEMAND / PO CARD
+// --------------------------------------------------
+// Item selected:
+//     صرف اسی Item کی Pending Demand
+//
+// Item NOT selected:
+//     Selected Month کی تمام Pending Demand
+//
+// Pending = Approved Demand - Cycle Received
+// --------------------------------------------------
 
 function buildPendingDemandCardList() {
 
     const container =
-        document.getElementById("pendingInfo");
+        document.getElementById(
+            "pendingInfo"
+        );
+
 
     const value =
-        document.getElementById("pendingValue");
+        document.getElementById(
+            "pendingValue"
+        );
+
 
     if (!container) {
         return;
     }
 
+
+    // -----------------------------------------
+    // TOTAL VALUE ختم
+    // -----------------------------------------
+
     if (value) {
+
         value.innerHTML = "";
+
     }
+
 
     const pendingList =
         getSelectedMonthPendingDemandList();
 
+
+    // -----------------------------------------
+    // ITEM SELECTED
+    // صرف اسی item کی pending demand
+    // -----------------------------------------
+
     if (selectedItem) {
 
         const selectedCode =
-            getItemCode(selectedItem);
+            getItemCode(
+                selectedItem
+            );
+
 
         const found =
-            pendingList.find(function(row) {
-                return (
-                    cleanCode(row.code) ===
-                    cleanCode(selectedCode)
-                );
-            });
+            pendingList.find(
+                function(row) {
 
+                    return (
+                        cleanCode(row.code) ===
+                        cleanCode(selectedCode)
+                    );
+
+                }
+            );
+
+
+        // اس Item کی Pending Demand نہیں ہے
         if (!found) {
+
             container.innerHTML = "";
+
             return;
         }
 
+
         container.innerHTML =
+
             '<div style="' +
             'font-size:14px;' +
             'font-weight:bold;' +
@@ -2875,110 +2951,297 @@ function buildPendingDemandCardList() {
             'text-overflow:ellipsis;' +
             'white-space:nowrap;' +
             '">' +
-            escapeHTML(found.code) +
+
+            escapeHTML(
+                found.code
+            ) +
+
             " - " +
-            escapeHTML(found.name) +
-            "</div>" +
+
+            escapeHTML(
+                found.name
+            ) +
+
+            '</div>' +
+
 
             '<div style="' +
             'padding:6px 3px;' +
             'border-top:1px solid rgba(255,255,255,.25);' +
             'font-size:13px;' +
+            'line-height:1.6;' +
             '">' +
 
-            "Approved: " +
-            safeNumber(found.approved).toFixed(2) +
+            '<div>' +
 
-            " | Received: " +
-            safeNumber(found.received).toFixed(2) +
+            'Approved: <b>' +
 
-            " | Pending: " +
-            safeNumber(found.pending).toFixed(2) +
+            safeNumber(
+                found.approved
+            ).toFixed(2) +
 
-            " " +
-            escapeHTML(found.unit) +
+            ' ' +
 
-            "</div>";
+            escapeHTML(
+                found.unit
+            ) +
+
+            '</b>' +
+
+            '</div>' +
+
+
+            '<div>' +
+
+            'Received: <b>' +
+
+            safeNumber(
+                found.received
+            ).toFixed(2) +
+
+            ' ' +
+
+            escapeHTML(
+                found.unit
+            ) +
+
+            '</b>' +
+
+            '</div>' +
+
+
+            '<div>' +
+
+            'Pending: <b>' +
+
+            safeNumber(
+                found.pending
+            ).toFixed(2) +
+
+            ' ' +
+
+            escapeHTML(
+                found.unit
+            ) +
+
+            '</b>' +
+
+            '</div>' +
+
+
+            '</div>';
 
         return;
     }
 
-    if (pendingList.length === 0) {
+
+    // -----------------------------------------
+    // NO ITEM SELECTED
+    // تمام selected month کی Pending list
+    // -----------------------------------------
+
+    if (
+        pendingList.length === 0
+    ) {
 
         container.innerHTML =
             '<div style="' +
             'font-size:14px;' +
             'padding:5px 0;' +
             '">' +
-            "No Pending Demand for " +
+
+            'No Pending Demand for ' +
+
             escapeHTML(
                 getMonthName(
                     selectedDashboardMonth
                 )
             ) +
-            "</div>";
+
+            '</div>';
 
         return;
     }
 
+
+    // -----------------------------------------
+    // SORT
+    // SI1, SI2 ... SI9, SI10
+    // -----------------------------------------
+
+    pendingList.sort(
+        function(a, b) {
+
+            let codeA =
+                cleanCode(a.code);
+
+            let codeB =
+                cleanCode(b.code);
+
+
+            let numberA =
+                parseInt(
+                    codeA.replace(/\D/g, ""),
+                    10
+                );
+
+
+            let numberB =
+                parseInt(
+                    codeB.replace(/\D/g, ""),
+                    10
+                );
+
+
+            if (
+                isNaN(numberA)
+            ) {
+                numberA = Infinity;
+            }
+
+
+            if (
+                isNaN(numberB)
+            ) {
+                numberB = Infinity;
+            }
+
+
+            if (
+                numberA !== numberB
+            ) {
+
+                return (
+                    numberA -
+                    numberB
+                );
+            }
+
+
+            return codeA.localeCompare(
+                codeB,
+                undefined,
+                {
+                    numeric: true,
+                    sensitivity: "base"
+                }
+            );
+
+        }
+    );
+
+
+    // -----------------------------------------
+    // SCROLLABLE PENDING LIST
+    // -----------------------------------------
+
     let html =
+
         '<div style="' +
+
         'height:105px;' +
+
         'max-height:105px;' +
+
         'overflow-y:auto;' +
+
         'overflow-x:hidden;' +
+
         'padding-right:5px;' +
+
         '">';
 
-    pendingList.forEach(function(row) {
 
-        html +=
-            '<div style="' +
-            'display:flex;' +
-            'justify-content:space-between;' +
-            'align-items:center;' +
-            'gap:10px;' +
-            'padding:5px 3px;' +
-            'border-bottom:1px solid rgba(255,255,255,.25);' +
-            'font-size:14px;' +
-            '">' +
+    pendingList.forEach(
+        function(row) {
 
-            '<span style="' +
-            'flex:1;' +
-            'min-width:0;' +
-            'overflow:hidden;' +
-            'text-overflow:ellipsis;' +
-            'white-space:nowrap;' +
-            'font-weight:bold;' +
-            '">' +
+            html +=
 
-            escapeHTML(row.code) +
-            " - " +
-            escapeHTML(row.name) +
+                '<div style="' +
 
-            "</span>" +
+                'padding:5px 3px;' +
 
-            '<span style="' +
-            'font-weight:bold;' +
-            'white-space:nowrap;' +
-            '">' +
+                'border-bottom:1px solid rgba(255,255,255,.25);' +
 
-            safeNumber(row.pending).toFixed(2) +
-            " " +
-            escapeHTML(row.unit) +
+                'font-size:14px;' +
 
-            "</span>" +
+                '">' +
 
-            "</div>";
+                '<div style="' +
 
-    });
+                'display:flex;' +
 
-    html += "</div>";
+                'justify-content:space-between;' +
 
-    container.innerHTML = html;
+                'align-items:center;' +
+
+                'gap:8px;' +
+
+                '">' +
+
+                '<span style="' +
+
+                'flex:1;' +
+
+                'min-width:0;' +
+
+                'overflow:hidden;' +
+
+                'text-overflow:ellipsis;' +
+
+                'white-space:nowrap;' +
+
+                'font-weight:bold;' +
+
+                '">' +
+
+                escapeHTML(
+                    row.code
+                ) +
+
+                ' - ' +
+
+                escapeHTML(
+                    row.name
+                ) +
+
+                '</span>' +
+
+                '<span style="' +
+
+                'font-weight:bold;' +
+
+                'white-space:nowrap;' +
+
+                '">' +
+
+                safeNumber(
+                    row.pending
+                ).toFixed(2) +
+
+                ' ' +
+
+                escapeHTML(
+                    row.unit
+                ) +
+
+                '</span>' +
+
+                '</div>' +
+
+                '</div>';
+
+        }
+    );
+
+
+    html +=
+        '</div>';
+
+
+    container.innerHTML =
+        html;
 }
-
-
 // --------------------------------------------------
 // COST
 // --------------------------------------------------
