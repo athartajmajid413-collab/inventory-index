@@ -2449,7 +2449,7 @@ function getSelectedMonthPendingDemandList() {
     // DEMAND GENERATE DATE
     // --------------------------------------------------
 
-   function getDemandGenerateDateLocal(record) {
+    function getDemandGenerateDateLocal(record) {
 
     if (!record) {
         return null;
@@ -2524,6 +2524,74 @@ function getSelectedMonthPendingDemandList() {
 
     return null;
 }
+
+    // --------------------------------------------------
+    // NEXT DEMAND GENERATE DATE
+    // --------------------------------------------------
+
+    function getNextDemandGenerateDateLocal(
+        currentRecord
+    ) {
+
+        const currentDate =
+            getDemandGenerateDateLocal(
+                currentRecord
+            );
+
+
+        if (!currentDate) {
+            return null;
+        }
+
+
+        let nextDate = null;
+
+
+        records.forEach(function(record) {
+
+            if (
+                record === currentRecord
+            ) {
+                return;
+            }
+
+
+            const date =
+                getDemandGenerateDateLocal(
+                    record
+                );
+
+
+            if (!date) {
+                return;
+            }
+
+
+            if (
+                date.getTime() <=
+                currentDate.getTime()
+            ) {
+                return;
+            }
+
+
+            if (
+                !nextDate ||
+                date.getTime() <
+                nextDate.getTime()
+            ) {
+
+                nextDate =
+                    date;
+            }
+
+        });
+
+
+        return nextDate;
+    }
+
+
     // --------------------------------------------------
     // GET STOCK IN RECEIVED FOR DEMAND CYCLE
     // START = INCLUSIVE
