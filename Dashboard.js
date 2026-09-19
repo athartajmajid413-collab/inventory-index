@@ -391,7 +391,7 @@ async function loadDashboardFromSupabase() {
 
         const stockOutResult =
             await supabaseRequest(
-                "stock issue",
+                "stock_issue",
                 "GET",
                 null,
                 "?select=*"
