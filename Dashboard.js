@@ -805,32 +805,151 @@ function getSelectedMonthStockOut(itemCode) {
 
     history.forEach(r => {
 
+        // -----------------------------------------
+        // صرف STOCK ISSUE / STOCK OUT
+        // -----------------------------------------
+
         if (
+            r.type !== "Stock Issue" &&
+            r.type !== "Stock Out"
+        ) {
+            return;
+        }
 
-            (
-                r.type === "Stock Issue" ||
-                r.type === "Stock Out"
-            ) &&
 
-            cleanCode(r.itemCode) ===
-            code &&
+        // -----------------------------------------
+        // ITEM CODE MATCH
+        // -----------------------------------------
 
-            isSelectedMonth(r)
+        if (
+            cleanCode(r.itemCode) !== code
+        ) {
+            return;
+        }
 
+
+        // -----------------------------------------
+        // IMPORTANT:
+        // Stock Issue کے لیے صرف اس کا اپنا DATE
+        // استعمال ہوگا۔
+        //
+        // Demand Date کا یہاں کوئی تعلق نہیں۔
+        // -----------------------------------------
+
+        if (!r.date) {
+            return;
+        }
+
+
+        const text =
+            String(r.date).trim();
+
+
+        let issueDate = null;
+
+
+        // YYYY-MM-DD
+        if (
+            /^\d{4}-\d{2}-\d{2}/.test(text)
         ) {
 
-            total +=
-                safeNumber(
-                    r.quantity
+            issueDate =
+                new Date(
+                    text.substring(0, 10) +
+                    "T00:00:00"
                 );
         }
+
+
+        // DD/MM/YYYY
+        else if (
+            /^\d{1,2}\/\d{1,2}\/\d{4}/.test(text)
+        ) {
+
+            const p =
+                text
+                    .substring(0, 10)
+                    .split("/");
+
+
+            issueDate =
+                new Date(
+                    Number(p[2]),
+                    Number(p[1]) - 1,
+                    Number(p[0])
+                );
+        }
+
+
+        // DD-MM-YYYY
+        else if (
+            /^\d{1,2}-\d{1,2}-\d{4}/.test(text)
+        ) {
+
+            const p =
+                text
+                    .substring(0, 10)
+                    .split("-");
+
+
+            issueDate =
+                new Date(
+                    Number(p[2]),
+                    Number(p[1]) - 1,
+                    Number(p[0])
+                );
+        }
+
+
+        // اگر date سمجھ نہ آئے تو record چھوڑ دیں
+        if (
+            !issueDate ||
+            Number.isNaN(
+                issueDate.getTime()
+            )
+        ) {
+            return;
+        }
+
+
+        // -----------------------------------------
+        // SELECTED MONTH
+        // -----------------------------------------
+
+        const selected =
+            getSelectedMonthParts();
+
+
+        if (
+            issueDate.getFullYear() !==
+            selected.year
+        ) {
+            return;
+        }
+
+
+        if (
+            issueDate.getMonth() !==
+            selected.month
+        ) {
+            return;
+        }
+
+
+        // -----------------------------------------
+        // صرف اسی مہینے کا Stock Issue
+        // -----------------------------------------
+
+        total +=
+            safeNumber(
+                r.quantity
+            );
 
     });
 
 
     return total;
 }
-
 
 function getCurrentStock(item) {
 
