@@ -577,7 +577,7 @@ async function loadDashboardFromSupabase() {
                         0,
 
                     type:
-                        "Stock Issue"
+                        "stock_issue"
                 });
 
             });
@@ -609,7 +609,7 @@ async function loadDashboardFromSupabase() {
         console.log(
             "Supabase Stock Out:",
             history.filter(
-                x => x.type === "Stock Issue"
+                x => x.type === "stock_issue"
             ).length
         );
 
@@ -725,7 +725,7 @@ function getStockBeforeMonth(itemCode) {
 
 
         if (
-            r.type === "Stock Issue" ||
+            r.type === "stock_issue" ||
             r.type === "Stock Out"
         ) {
 
@@ -808,7 +808,7 @@ function getSelectedMonthStockOut(itemCode) {
         if (
 
             (
-                r.type === "Stock Issue" ||
+                r.type === "stock_issue" ||
                 r.type === "Stock Out"
             ) &&
 
@@ -918,7 +918,7 @@ function getAllStockOut(itemCode) {
         .filter(
             r =>
                 (
-                    r.type === "Stock Issue" ||
+                    r.type === "stock_issue" ||
                     r.type === "Stock Out"
                 ) &&
                 cleanCode(r.itemCode) ===
@@ -2032,7 +2032,7 @@ function getLiveAverageConsumption(itemCode) {
 
         if (
             record.type !==
-            "Stock Issue"
+            "stock_issue"
         ) {
             return;
         }
@@ -2162,7 +2162,7 @@ function getLiveMonthlyDemandCurrentStock(item) {
         if (
 
             record.type ===
-            "Stock Issue" ||
+            "stock_issue" ||
 
             record.type ===
             "Stock Out"
