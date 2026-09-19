@@ -337,6 +337,126 @@ function getItemByCode(code) {
 
 
 // --------------------------------------------------
+// LOAD ALL SUPABASE ROWS
+// IMPORTANT:
+// Supabase/PostgREST normally returns maximum
+// 1000 rows per request.
+// Stock Issue history can be larger than 1000.
+// Therefore Stock Issue data is loaded in pages.
+// --------------------------------------------------
+
+async function loadAllSupabaseRows(
+    table,
+    orderColumns = "date.asc,time.asc"
+) {
+
+    const allRows = [];
+
+    const pageSize = 1000;
+
+    let offset = 0;
+
+
+    while (true) {
+
+        const query =
+            "?select=*" +
+            "&order=" +
+            encodeURIComponent(orderColumns) +
+            "&limit=" +
+            pageSize +
+            "&offset=" +
+            offset;
+
+
+        console.log(
+            "Loading Supabase rows:",
+            table,
+            "offset:",
+            offset
+        );
+
+
+        const result =
+            await supabaseRequest(
+                table,
+                "GET",
+                null,
+                query
+            );
+
+
+        if (!result?.success) {
+
+            throw new Error(
+                "Could not load " +
+                table +
+                ": " +
+                JSON.stringify(
+                    result?.error || result
+                )
+            );
+        }
+
+
+        const rows =
+            Array.isArray(result.data)
+                ? result.data
+                : [];
+
+
+        allRows.push(
+            ...rows
+        );
+
+
+        console.log(
+            table +
+            " page loaded:",
+            rows.length,
+            "Total:",
+            allRows.length
+        );
+
+
+        // No more rows
+        if (
+            rows.length === 0
+        ) {
+
+            break;
+
+        }
+
+
+        // Last page
+        if (
+            rows.length < pageSize
+        ) {
+
+            break;
+
+        }
+
+
+        offset +=
+            rows.length;
+
+    }
+
+
+    console.log(
+        "All Supabase rows loaded:",
+        table,
+        allRows.length
+    );
+
+
+    return allRows;
+}
+
+
+// --------------------------------------------------
 // SUPABASE LOAD
 // --------------------------------------------------
 
@@ -387,15 +507,53 @@ async function loadDashboardFromSupabase() {
 
         // -----------------------------------------
         // STOCK OUT
+        // IMPORTANT:
+        // Load ALL Stock Issue records with pagination.
         // -----------------------------------------
 
-        const stockOutResult =
-            await supabaseRequest(
-                "stock_issue",
-                "GET",
-                null,
-                "?select=*"
+        let stockOutRows = [];
+
+
+        try {
+
+            stockOutRows =
+                await loadAllSupabaseRows(
+                    "stock_issue",
+                    "date.asc,time.asc"
+                );
+
+        } catch (stockOutError) {
+
+            console.error(
+                "Stock Issue complete load error:",
+                stockOutError
             );
+
+
+            // Fallback to normal request
+            const stockOutResult =
+                await supabaseRequest(
+                    "stock_issue",
+                    "GET",
+                    null,
+                    "?select=*&order=date.asc,time.asc"
+                );
+
+
+            if (
+                stockOutResult?.success
+            ) {
+
+                stockOutRows =
+                    stockOutResult.data || [];
+
+            } else {
+
+                throw stockOutError;
+
+            }
+
+        }
 
 
         // -----------------------------------------
@@ -422,6 +580,7 @@ async function loadDashboardFromSupabase() {
 
 
         // SORT ITEMS BY ITEM CODE NUMBER
+
         items.sort(function(a, b) {
 
             let codeA = getItemCode(a);
@@ -464,7 +623,10 @@ async function loadDashboardFromSupabase() {
         history = [];
 
 
+        // -----------------------------------------
         // STOCK IN
+        // -----------------------------------------
+
         if (stockInResult?.success) {
 
             (stockInResult.data || []).forEach(r => {
@@ -528,60 +690,63 @@ async function loadDashboardFromSupabase() {
         }
 
 
-        // STOCK OUT
-        if (stockOutResult?.success) {
+        // -----------------------------------------
+        // STOCK OUT / STOCK ISSUE
+        // -----------------------------------------
 
-            (stockOutResult.data || []).forEach(r => {
+        stockOutRows.forEach(r => {
 
-                history.push({
+            history.push({
 
-                    id: r.id,
+                id: r.id,
 
-                    date: r.date,
+                // IMPORTANT:
+                // Stock Out History confirmed that
+                // the actual date field is r.date.
+                date: r.date,
 
-                    time: r.time,
+                time: r.time,
 
-                    itemCode:
-                        r.item_code ??
-                        r.itemCode ??
-                        r.code,
+                itemCode:
+                    r.item_code ??
+                    r.itemCode ??
+                    r.code,
 
-                    itemName:
-                        r.item_name ??
-                        r.itemName,
+                itemName:
+                    r.item_name ??
+                    r.itemName,
 
-                    unit:
-                        r.unit,
+                unit:
+                    r.unit,
 
-                    source:
-                        r.source,
+                source:
+                    r.source,
 
-                    supplier:
-                        r.supplier,
+                supplier:
+                    r.supplier,
 
-                    location:
-                        r.location,
+                location:
+                    r.location,
 
-                    department:
-                        r.department,
+                department:
+                    r.department,
 
-                    quantity:
-                        safeNumber(
-                            r.quantity
-                        ),
+                quantity:
+                    safeNumber(
+                        r.quantity
+                    ),
 
-                    unitCost:
-                        0,
+                unitCost:
+                    0,
 
-                    totalCost:
-                        0,
+                totalCost:
+                    0,
 
-                    type:
-                        "Stock Issue"
-                });
-
+                type:
+                    "Stock Issue"
             });
-        }
+
+        });
 
 
         // -----------------------------------------
@@ -599,12 +764,14 @@ async function loadDashboardFromSupabase() {
             items.length
         );
 
+
         console.log(
             "Supabase Stock In:",
             history.filter(
                 x => x.type === "Stock In"
             ).length
         );
+
 
         console.log(
             "Supabase Stock Out:",
@@ -613,9 +780,50 @@ async function loadDashboardFromSupabase() {
             ).length
         );
 
+
         console.log(
             "Supabase Demand History:",
             demandHistory.length
+        );
+
+
+        // -----------------------------------------
+        // CHECK SELECTED MONTH STOCK ISSUE
+        // -----------------------------------------
+
+        let selectedMonthStockIssueTotal = 0;
+
+
+        history.forEach(record => {
+
+            if (
+                record.type !==
+                "Stock Issue"
+            ) {
+                return;
+            }
+
+
+            if (
+                isStockIssueSelectedMonth(
+                    record
+                )
+            ) {
+
+                selectedMonthStockIssueTotal +=
+                    safeNumber(
+                        record.quantity
+                    );
+
+            }
+
+        });
+
+
+        console.log(
+            "Selected Month Stock Issue Total:",
+            selectedDashboardMonth,
+            selectedMonthStockIssueTotal
         );
 
 
@@ -634,6 +842,7 @@ async function loadDashboardFromSupabase() {
                 "✅ Supabase connected — " +
                 items.length +
                 " items loaded.";
+
         }
 
 
@@ -662,6 +871,7 @@ async function loadDashboardFromSupabase() {
                 escapeHTML(
                     error.message || error
                 );
+
         }
 
 
@@ -669,6 +879,194 @@ async function loadDashboardFromSupabase() {
 
         buildCurrentStockTable();
     }
+}
+
+
+// --------------------------------------------------
+// STOCK ISSUE DATE
+// IMPORTANT:
+// Stock Issue date comes ONLY from stock_issue.date
+// --------------------------------------------------
+
+function getStockIssueDate(record) {
+
+    if (!record) {
+        return null;
+    }
+
+
+    const value =
+        record.date;
+
+
+    if (
+        value === null ||
+        value === undefined ||
+        String(value).trim() === ""
+    ) {
+
+        return null;
+    }
+
+
+    const text =
+        String(value).trim();
+
+
+    // -----------------------------------------
+    // YYYY-MM-DD
+    // -----------------------------------------
+
+    if (
+        /^\d{4}-\d{2}-\d{2}/.test(text)
+    ) {
+
+        const dateText =
+            text.substring(0, 10);
+
+
+        const parts =
+            dateText.split("-");
+
+
+        const d =
+            new Date(
+                Number(parts[0]),
+                Number(parts[1]) - 1,
+                Number(parts[2])
+            );
+
+
+        if (
+            !Number.isNaN(
+                d.getTime()
+            )
+        ) {
+
+            return d;
+
+        }
+
+    }
+
+
+    // -----------------------------------------
+    // DD/MM/YYYY
+    // -----------------------------------------
+
+    if (
+        /^\d{1,2}\/\d{1,2}\/\d{4}/.test(text)
+    ) {
+
+        const parts =
+            text
+                .substring(0, 10)
+                .split("/");
+
+
+        const d =
+            new Date(
+                Number(parts[2]),
+                Number(parts[1]) - 1,
+                Number(parts[0])
+            );
+
+
+        if (
+            !Number.isNaN(
+                d.getTime()
+            )
+        ) {
+
+            return d;
+
+        }
+
+    }
+
+
+    // -----------------------------------------
+    // DD-MM-YYYY
+    // -----------------------------------------
+
+    if (
+        /^\d{1,2}-\d{1,2}-\d{4}/.test(text)
+    ) {
+
+        const parts =
+            text
+                .substring(0, 10)
+                .split("-");
+
+
+        const d =
+            new Date(
+                Number(parts[2]),
+                Number(parts[1]) - 1,
+                Number(parts[0])
+            );
+
+
+        if (
+            !Number.isNaN(
+                d.getTime()
+            )
+        ) {
+
+            return d;
+
+        }
+
+    }
+
+
+    // -----------------------------------------
+    // FINAL FALLBACK
+    // -----------------------------------------
+
+    const d =
+        new Date(text);
+
+
+    if (
+        Number.isNaN(
+            d.getTime()
+        )
+    ) {
+
+        return null;
+
+    }
+
+
+    return d;
+}
+
+
+function isStockIssueSelectedMonth(record) {
+
+    const d =
+        getStockIssueDate(record);
+
+
+    if (!d) {
+        return false;
+    }
+
+
+    const selected =
+        getSelectedMonthParts();
+
+
+    return (
+
+        d.getFullYear() ===
+        selected.year &&
+
+        d.getMonth() ===
+        selected.month
+
+    );
 }
 
 
@@ -705,6 +1103,7 @@ function getStockBeforeMonth(itemCode) {
         ) {
             return;
         }
+
 
         if (
             !isBeforeSelectedMonth(r)
@@ -795,6 +1194,13 @@ function getSelectedMonthStockIn(itemCode) {
 }
 
 
+// --------------------------------------------------
+// SELECTED MONTH STOCK ISSUE
+// IMPORTANT:
+// ONLY stock_issue.date is used.
+// Demand date is NOT used.
+// --------------------------------------------------
+
 function getSelectedMonthStockOut(itemCode) {
 
     const code =
@@ -806,14 +1212,16 @@ function getSelectedMonthStockOut(itemCode) {
     history.forEach(r => {
 
         // -----------------------------------------
-        // صرف STOCK ISSUE / STOCK OUT
+        // ONLY STOCK ISSUE / STOCK OUT
         // -----------------------------------------
 
         if (
             r.type !== "Stock Issue" &&
             r.type !== "Stock Out"
         ) {
+
             return;
+
         }
 
 
@@ -822,122 +1230,30 @@ function getSelectedMonthStockOut(itemCode) {
         // -----------------------------------------
 
         if (
-            cleanCode(r.itemCode) !== code
+            cleanCode(r.itemCode) !==
+            code
         ) {
+
             return;
+
         }
 
 
         // -----------------------------------------
-        // IMPORTANT:
-        // Stock Issue کے لیے صرف اس کا اپنا DATE
-        // استعمال ہوگا۔
-        //
-        // Demand Date کا یہاں کوئی تعلق نہیں۔
+        // STOCK ISSUE OWN DATE
         // -----------------------------------------
-
-        if (!r.date) {
-            return;
-        }
-
-
-        const text =
-            String(r.date).trim();
-
-
-        let issueDate = null;
-
-
-        // YYYY-MM-DD
-        if (
-            /^\d{4}-\d{2}-\d{2}/.test(text)
-        ) {
-
-            issueDate =
-                new Date(
-                    text.substring(0, 10) +
-                    "T00:00:00"
-                );
-        }
-
-
-        // DD/MM/YYYY
-        else if (
-            /^\d{1,2}\/\d{1,2}\/\d{4}/.test(text)
-        ) {
-
-            const p =
-                text
-                    .substring(0, 10)
-                    .split("/");
-
-
-            issueDate =
-                new Date(
-                    Number(p[2]),
-                    Number(p[1]) - 1,
-                    Number(p[0])
-                );
-        }
-
-
-        // DD-MM-YYYY
-        else if (
-            /^\d{1,2}-\d{1,2}-\d{4}/.test(text)
-        ) {
-
-            const p =
-                text
-                    .substring(0, 10)
-                    .split("-");
-
-
-            issueDate =
-                new Date(
-                    Number(p[2]),
-                    Number(p[1]) - 1,
-                    Number(p[0])
-                );
-        }
-
-
-        // اگر date سمجھ نہ آئے تو record چھوڑ دیں
-        if (
-            !issueDate ||
-            Number.isNaN(
-                issueDate.getTime()
-            )
-        ) {
-            return;
-        }
-
-
-        // -----------------------------------------
-        // SELECTED MONTH
-        // -----------------------------------------
-
-        const selected =
-            getSelectedMonthParts();
-
 
         if (
-            issueDate.getFullYear() !==
-            selected.year
+            !isStockIssueSelectedMonth(r)
         ) {
-            return;
-        }
 
-
-        if (
-            issueDate.getMonth() !==
-            selected.month
-        ) {
             return;
+
         }
 
 
         // -----------------------------------------
-        // صرف اسی مہینے کا Stock Issue
+        // ADD QUANTITY
         // -----------------------------------------
 
         total +=
@@ -950,6 +1266,49 @@ function getSelectedMonthStockOut(itemCode) {
 
     return total;
 }
+
+
+// --------------------------------------------------
+// OVERALL SELECTED MONTH STOCK ISSUE
+// --------------------------------------------------
+
+function getOverallSelectedMonthStockOut() {
+
+    let total = 0;
+
+
+    history.forEach(r => {
+
+        if (
+            r.type !== "Stock Issue" &&
+            r.type !== "Stock Out"
+        ) {
+
+            return;
+
+        }
+
+
+        if (
+            !isStockIssueSelectedMonth(r)
+        ) {
+
+            return;
+
+        }
+
+
+        total +=
+            safeNumber(
+                r.quantity
+            );
+
+    });
+
+
+    return total;
+}
+
 
 function getCurrentStock(item) {
 
@@ -1505,6 +1864,7 @@ function getApprovedDemandQuantity(detail) {
     اگر record خود ایک item کی شکل میں ہو
     تو record بھی استعمال کیا جائے گا۔
 */
+
 function getSelectedMonthApprovedDemandList() {
 
     const result = [];
@@ -1609,6 +1969,7 @@ function getSelectedMonthApprovedDemandList() {
 
                 // اگر approved demand zero ہے
                 // تو card میں نہیں دکھائیں گے
+
                 if (
                     quantity <= 0
                 ) {
@@ -1789,6 +2150,7 @@ function buildMonthlyDemandCardList() {
 
 
         // Selected item کی approved demand نہیں
+
         if (!found) {
 
             container.innerHTML = "";
@@ -2368,9 +2730,6 @@ function getLiveMonthlyDemandQuantity(itemCode) {
 
 
 // CURRENT DASHBOARD DEMAND
-// یہ function دوسرے Dashboard حصوں کے لیے
-// موجود ہے، مگر Monthly Demand card اب
-// اس function کو استعمال نہیں کرتا۔
 
 function getCurrentMonthDemand(itemCode) {
 
@@ -2395,13 +2754,16 @@ function getOverallDemand() {
     );
 }
 
+
 // --------------------------------------------------
 // SELECTED MONTH PENDING DEMAND / PO
 // --------------------------------------------------
 // Pending = Selected Month Approved Demand
 //           - Selected Month Stock In (Received)
 //
-// اگر Pending صفر یا اس سے کم ہو تو item نہیں دکھے گا.
+// IMPORTANT:
+// Stock Issue / Stock Out کا Pending Demand
+// سے کوئی تعلق نہیں ہے.
 // --------------------------------------------------
 
 function getSelectedMonthPendingDemandList() {
@@ -2631,6 +2993,7 @@ function buildPendingDemandCardList() {
             'line-height:1.6;' +
             '">' +
 
+
             '<div>' +
             'Approved: <b>' +
             safeNumber(
@@ -2777,6 +3140,7 @@ function buildPendingDemandCardList() {
     container.innerHTML =
         html;
 }
+
 
 // --------------------------------------------------
 // COST
@@ -3352,12 +3716,24 @@ function updateDashboard() {
             );
 
 
+        // -----------------------------------------
+        // STOCK ISSUE
+        // Selected month total
+        // -----------------------------------------
+
+        const overallStockIssue =
+            getOverallSelectedMonthStockOut();
+
+
         el("stockOutValue").innerHTML =
-            "-";
+
+            overallStockIssue.toFixed(2);
 
 
         el("stockOutInfo").innerHTML =
-            "Stock Out — " +
+
+            "Stock Issue — " +
+
             getMonthName(
                 selectedDashboardMonth
             );
@@ -3389,9 +3765,11 @@ function updateDashboard() {
         buildMonthlyDemandCardList();
 
 
-       el("pendingValue").innerHTML = "";
+        el("pendingValue").innerHTML =
+            "";
 
-buildPendingDemandCardList();
+
+        buildPendingDemandCardList();
 
 
         clearSelectedItemPicture();
@@ -3469,6 +3847,7 @@ buildPendingDemandCardList();
             code
         );
 
+
     const cost =
         getItemCurrentCost(
             item
@@ -3543,7 +3922,7 @@ buildPendingDemandCardList();
 
     el("stockOutInfo").innerHTML =
 
-        "Stock Out — " +
+        "Stock Issue — " +
 
         escapeHTML(
             getMonthName(
@@ -3582,9 +3961,12 @@ buildPendingDemandCardList();
     buildMonthlyDemandCardList();
 
 
- el("pendingValue").innerHTML = "";
+    el("pendingValue").innerHTML =
+        "";
 
-buildPendingDemandCardList();
+
+    buildPendingDemandCardList();
+
 
     showSelectedItemPicture(
         item
